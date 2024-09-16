@@ -1,0 +1,73 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  matricule Int @id @default(autoincrement()) 
+  nom String 
+  prenom String
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+  password String
+  role Role
+  status Status? @default(INACTIVE)
+  userSince DateTime?
+  grade String
+  category Category
+  structure Structure? @relation(fields: [serviceId], references: [code])
+  serviceId String? 
+  soft_delete Boolean? @default(false)
+  missions Mission[]
+}
+
+model Structure {
+  code String  @id
+  name String
+  soft_delete Boolean? @default(false)
+  users User[]
+}
+model Mission {
+  n_mission Int @default(autoincrement()) @id
+  date_sortie DateTime
+  heure_sortie DateTime @db.Timestamptz
+  date_retour DateTime
+  heure_retour DateTime @db.Timestamptz
+  motif String
+  transport String
+  Destination String
+  montant Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId],references: [matricule])
+  soft_delete Boolean @default(false)
+  userId Int
+}
+
+
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+enum Status {
+  ACTIVE
+  INACTIVE
+}
+
+enum Category {
+  CADRE
+  CADRE_SUPERIEUR
+  EXECUTION_MAITRISE
+}
+
+enum UniteType {
+  SERVICE 
+  DIRECTION
+  SOUS_DIRECTION
+  DEPARTEMENT
+}
