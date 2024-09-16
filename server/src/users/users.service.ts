@@ -5,7 +5,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Category, Prisma, Role } from '@prisma/client';
-import { DatabaseService } from 'src/database/database.service';
+import { DatabaseService } from 'server/src/database/database.service';
 import { createUserDto } from './dtos/create-user.dto';
 import * as bcrypt from 'bcrypt';
 @Injectable()

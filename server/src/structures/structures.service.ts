@@ -1,4 +1,4 @@
-import { DatabaseService } from './../database/database.service';
+import { DatabaseService } from '../database/database.service';
 import { Injectable } from '@nestjs/common';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
