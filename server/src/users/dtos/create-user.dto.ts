@@ -37,6 +37,13 @@ export class createUserDto {
   })
   prenom: string;
   @ApiProperty({
+    description: 'User email',
+    default: 'mohammed',
+    type: 'string',
+    example: 'mohammed@gmail.com',
+  })
+  email: string;
+  @ApiProperty({
     description: 'User Role (super_admin,admin, user)',
     default: 'user',
     type: 'string',

@@ -11,6 +11,7 @@ model User {
   matricule Int @id @default(autoincrement()) 
   nom String 
   prenom String
+  email String @unique
   createdAt DateTime? @default(now())
   updatedAt DateTime? @updatedAt
   password String

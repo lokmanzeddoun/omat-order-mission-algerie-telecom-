@@ -1,20 +1,32 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-
+import { Observable } from 'rxjs';
+import { META_ROLES } from './role.decorator';
+import { User } from '@prisma/client';
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
-  canActivate(context: ExecutionContext): boolean {
-    const roles = this.reflector.getAllAndOverride<number[]>('roles', [
-      context.getClass(),
+  canActivate(
+    context: ExecutionContext,
+  ): boolean | Promise<boolean> | Observable<boolean> {
+    const roles: string[] = this.reflector.get(
+      META_ROLES,
       context.getHandler(),
-    ]);
-    if (!roles.length) {
+    );
+    if (!roles.length || !roles) {
       return true;
     }
     const request = context.switchToHttp().getRequest();
-
-    return roles.includes(request.user?.role?.id);
+    const user = request.user as User;
+    if (roles.includes(user.role)) return true;
+    throw new ForbiddenException(
+      `${user.nom} is not authorized for this resource.`,
+    );
   }
 }

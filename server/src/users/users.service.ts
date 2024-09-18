@@ -5,9 +5,9 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Category, Prisma, Role } from '@prisma/client';
-import { DatabaseService } from 'server/src/database/database.service';
+import { DatabaseService } from 'src/database/database.service';
 import { createUserDto } from './dtos/create-user.dto';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 @Injectable()
 export class UsersService {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -16,7 +16,7 @@ export class UsersService {
     // check if the user exist
     const user = await this.databaseService.user.findUnique({
       where: {
-        matricule: createUserDto.matricule,
+        email: createUserDto.email,
       },
     });
     if (!user) {
@@ -30,6 +30,7 @@ export class UsersService {
       throw new BadRequestException('Invalid category');
     // hash the password
     const password = Math.random().toString(36).slice(-8);
+    console.log(password);
     //Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
     try {

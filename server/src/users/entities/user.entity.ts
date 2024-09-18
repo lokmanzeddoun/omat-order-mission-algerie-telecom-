@@ -28,16 +28,15 @@ export class User {
     example: 'ghomari',
   })
   prenom: string;
-
   @ApiProperty({
-    description:
-      'Password: Min 6 characters, 1 uppercase, 1 lowercase and 1 number',
+    description: 'email',
     nullable: false,
     required: true,
     type: 'string',
-    example: 'Password123',
+    example: 'ghomari@gmail.com',
   })
-  password: string;
+  email: string;
+
 
   @ApiProperty({
     description: 'User Role (admin, user)',
