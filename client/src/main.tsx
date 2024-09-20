@@ -6,15 +6,18 @@ import router from "routes/router";
 import { RouterProvider } from "react-router-dom";
 import { ThemeProvider } from "@emotion/react";
 import { CssBaseline } from "@mui/material";
-import store from "store";
+import { store, persistor } from "store";
+import { PersistGate } from "redux-persist/integration/react";
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<Provider store={store}>
-			<ThemeProvider theme={theme}>
-				<CssBaseline />
-				<RouterProvider router={router} />
-			</ThemeProvider>
+			<PersistGate loading={null} persistor={persistor}>
+				<ThemeProvider theme={theme}>
+					<CssBaseline />
+					<RouterProvider router={router} />
+				</ThemeProvider>
+			</PersistGate>
 		</Provider>
 	</StrictMode>
 );
