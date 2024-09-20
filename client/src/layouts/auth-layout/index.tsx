@@ -4,7 +4,7 @@ import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
-
+import AppAlert from "components/alert";
 const AuthLayout = ({ children }: PropsWithChildren) => {
 	return (
 		<Stack
@@ -17,11 +17,12 @@ const AuthLayout = ({ children }: PropsWithChildren) => {
 			minHeight="100vh"
 			position="relative"
 		>
+			<AppAlert  />
 			<ButtonBase
 				component={Link}
 				href="/"
 				disableRipple
-				sx={{ position: "absolute", top: 24, left: 24 }}
+				sx={{ position: "absolute", top: 28, left: 24 }}
 			>
 				{/* <Image src={LogoImg} alt="logo" height={80} width={80} sx={{ mr: 1 }} /> */}
 				<Typography variant="h4" color="text.primary" letterSpacing={1}>

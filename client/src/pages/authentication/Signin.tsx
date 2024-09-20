@@ -9,125 +9,144 @@ import IconButton from "@mui/material/IconButton";
 import TextField from "@mui/material/TextField";
 import Checkbox from "@mui/material/Checkbox";
 import IconifyIcon from "components/base/IconifyIcon";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch } from "store";
+import { RootState } from "store/rootReducer";
+import { login } from "components/auth/auth.thunk";
 
-interface User {
-	[key: string]: string;
-}
+// interface User {
+// 	[key: string]: string;
+// }
 
 const Signin = () => {
-	const [user, setUser] = useState<User>({ username: "", password: "" });
+	const dispatch = useDispatch<AppDispatch>();
+	const { isAuthenticated, user } = useSelector(
+		(state: RootState) => state.auth
+	);
+
+	const [userData, setUser] = useState<ReqLogin>({ email: "", password: "" });
 	const [showPassword, setShowPassword] = useState(false);
 
 	const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-		setUser({ ...user, [e.target.name]: e.target.value });
+		setUser({ ...userData, [e.target.name]: e.target.value });
 	};
 
-	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
-		console.log(user);
+		await dispatch(login(userData));
 	};
 
 	return (
 		<>
-			<Typography align="center" variant="h4">
-				Se Connecter
-			</Typography>
-			<Typography mt={1.5} align="center" variant="body2">
-				Connextion à OMAT
-			</Typography>
+			{isAuthenticated ? (
+				<div>
+					<h3>Welcome, {user.email}</h3>
+				</div>
+			) : (
+				<>
+					<Typography align="center" variant="h4">
+						Se Connecter
+					</Typography>
+					<Typography mt={1.5} align="center" variant="body2">
+						Connextion à OMAT
+					</Typography>
 
-			<Stack
-				component="form"
-				mt={3}
-				onSubmit={handleSubmit}
-				direction="column"
-				gap={2}
-			>
-				<TextField
-					id="username"
-					name="username"
-					type="username"
-					value={user.username}
-					onChange={handleInputChange}
-					variant="filled"
-					placeholder="Votre nom d'utilisateur"
-					autoComplete="username"
-					fullWidth
-					autoFocus
-					required
-					InputProps={{
-						startAdornment: (
-							<InputAdornment position="start">
-								<IconifyIcon icon="icon-park-outline:edit-name" />
-							</InputAdornment>
-						),
-					}}
-				/>
-				<TextField
-					id="password"
-					name="password"
-					type={showPassword ? "text" : "password"}
-					value={user.password}
-					onChange={handleInputChange}
-					variant="filled"
-					placeholder="Votre mot de pass"
-					autoComplete="current-password"
-					fullWidth
-					required
-					InputProps={{
-						startAdornment: (
-							<InputAdornment position="start">
-								<IconifyIcon icon="hugeicons:lock-key" />
-							</InputAdornment>
-						),
-						endAdornment: (
-							<InputAdornment
-								position="end"
-								sx={{
-									opacity: user.password ? 1 : 0,
-									pointerEvents: user.password ? "auto" : "none",
-								}}
-							>
-								<IconButton
-									aria-label="toggle password visibility"
-									onClick={() => setShowPassword(!showPassword)}
-									sx={{ border: "none", bgcolor: "transparent !important" }}
-									edge="end"
-								>
-									<IconifyIcon
-										icon={
-											showPassword ? "fluent-mdl2:view" : "fluent-mdl2:hide-3"
-										}
-										color="neutral.light"
+					<Stack
+						component="form"
+						mt={3}
+						onSubmit={handleSubmit}
+						direction="column"
+						gap={2}
+					>
+						<TextField
+							id="email"
+							name="email"
+							type="email"
+							value={userData.email}
+							onChange={handleInputChange}
+							variant="filled"
+							placeholder="Votre nom Email"
+							autoComplete="email"
+							fullWidth
+							autoFocus
+							required
+							InputProps={{
+								startAdornment: (
+									<InputAdornment position="start">
+										<IconifyIcon icon="hugeicons:mail-at-sign-02" />
+									</InputAdornment>
+								),
+							}}
+						/>
+						<TextField
+							id="password"
+							name="password"
+							type={showPassword ? "text" : "password"}
+							value={userData.password}
+							onChange={handleInputChange}
+							variant="filled"
+							placeholder="Votre mot de pass"
+							autoComplete="current-password"
+							fullWidth
+							required
+							InputProps={{
+								startAdornment: (
+									<InputAdornment position="start">
+										<IconifyIcon icon="hugeicons:lock-key" />
+									</InputAdornment>
+								),
+								endAdornment: (
+									<InputAdornment
+										position="end"
+										sx={{
+											opacity: userData.password ? 1 : 0,
+											pointerEvents: userData.password ? "auto" : "none",
+										}}
+									>
+										<IconButton
+											aria-label="toggle password visibility"
+											onClick={() => setShowPassword(!showPassword)}
+											sx={{ border: "none", bgcolor: "transparent !important" }}
+											edge="end"
+										>
+											<IconifyIcon
+												icon={
+													showPassword
+														? "fluent-mdl2:view"
+														: "fluent-mdl2:hide-3"
+												}
+												color="neutral.light"
+											/>
+										</IconButton>
+									</InputAdornment>
+								),
+							}}
+						/>
+
+						<Stack mt={-2} alignItems="center" justifyContent="space-between">
+							<FormControlLabel
+								control={
+									<Checkbox
+										id="checkbox"
+										name="checkbox"
+										size="small"
+										color="primary"
 									/>
-								</IconButton>
-							</InputAdornment>
-						),
-					}}
-				/>
-
-				<Stack mt={-2} alignItems="center" justifyContent="space-between">
-					<FormControlLabel
-						control={
-							<Checkbox
-								id="checkbox"
-								name="checkbox"
-								size="small"
-								color="primary"
+								}
+								label="Se souvenir de moi"
+								sx={{ ml: -1 }}
 							/>
-						}
-						label="Se souvenir de moi"
-						sx={{ ml: -1 }}
-					/>
-					<Link href="#!" fontSize="body2.fontSize">
-						Mot de pass oublié?
-					</Link>
-				</Stack>
+							<Link href="#!" fontSize="body2.fontSize">
+								Mot de pass oublié?
+							</Link>
+						</Stack>
 
-				<Button type="submit" variant="contained" size="medium" fullWidth>
-					Se connecter
-				</Button>
-			</Stack>
+						<Button type="submit" variant="contained" size="medium" fullWidth>
+							Se connecter
+						</Button>
+					</Stack>
+				</>
+			)}
 		</>
 	);
 };
