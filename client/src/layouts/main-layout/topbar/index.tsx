@@ -8,7 +8,7 @@ import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconifyIcon from 'components/base/IconifyIcon';
 import Image from 'components/base/Image';
-import LogoImg from 'assets/images/Logo.png';
+import LogoImg from 'assets/Logo.png';
 import LanguageSelect from './LanguageSelect';
 import ProfileMenu from './ProfileMenu';
 

@@ -1,23 +1,19 @@
-import { useState } from 'react';
 import { MenuItem } from 'routes/sitemap';
-import Link from '@mui/material/Link';
+import { Link } from 'react-router-dom';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemButton from '@mui/material/ListItemButton';
 import ListItemText from '@mui/material/ListItemText';
 import IconifyIcon from 'components/base/IconifyIcon';
-
-const ListItem = ({ subheader, icon, path, active }: MenuItem) => {
-  const [open, setOpen] = useState(false);
-
-  const handleClick = () => {
-    setOpen(!open);
-  };
-
+import sitemap from 'routes/sitemap';
+import { useLocation } from 'react-router-dom';
+const ListItem = ({ subheader, icon, path }: MenuItem) => {
+  const location = useLocation();
+  const active = path === sitemap.find((item) => item.path === location.pathname)?.path;
+  console.log(path);
   return (
     <ListItemButton
       component={Link}
-      href={path}
-      onClick={handleClick}
+      to={`${path}`}
       sx={{ mb: 2.5, bgcolor: active ? 'info.main' : null }}
     >
       <ListItemIcon>

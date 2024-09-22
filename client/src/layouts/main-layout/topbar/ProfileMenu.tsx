@@ -8,6 +8,7 @@ import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import ListItemIcon from "@mui/material/ListItemIcon";
 import IconifyIcon from "components/base/IconifyIcon";
+import { Avatar } from "@mui/material";
 
 interface MenuItems {
 	id: number;
@@ -69,14 +70,14 @@ const ProfileMenu = () => {
 				aria-haspopup="true"
 				disableRipple
 			>
-				{/* <Avatar
-					src={Avatar3}
+				<Avatar
+					src={Avatar}
 					sx={{
 						height: 48,
 						width: 48,
 						bgcolor: "primary.main",
 					}}
-				/> */}
+				/>
 			</ButtonBase>
 
 			<Menu
@@ -103,7 +104,7 @@ const ProfileMenu = () => {
 						{/* <Avatar src={Avatar3} sx={{ mr: 1, height: 42, width: 42 }} /> */}
 						<Stack direction="column">
 							<Typography variant="body2" color="text.primary" fontWeight={600}>
-								Alex Stanton
+								Zeddoun Lokmane
 							</Typography>
 							<Typography
 								variant="caption"

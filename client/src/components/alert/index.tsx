@@ -18,7 +18,7 @@ const AppAlert = () => {
 						key={index}
 						sx={{
 							position: "absolute",
-							top: 10,
+							top: 20,
 							right: 20,
 						}}
 						onClose={() => {

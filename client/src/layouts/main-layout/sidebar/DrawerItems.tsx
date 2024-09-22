@@ -8,9 +8,8 @@ import Typography from '@mui/material/Typography';
 import CollapseListItem from './list-items/CollapseListItem';
 import ListItem from './list-items/ListItem';
 import Image from 'components/base/Image';
-import LogoImg from 'assets/images/Logo.png';
-import FooterImg from 'assets/images/helpCenter.png';
-
+import LogoImg from 'assets/Logo.png';
+import FooterImg from 'assets/helpCenter.png';
 const DrawerItems = () => {
   return (
     <>
@@ -26,7 +25,7 @@ const DrawerItems = () => {
         <ButtonBase component={Link} href="/" disableRipple>
           <Image src={LogoImg} alt="logo" height={40} width={40} sx={{ mr: 1.25 }} />
           <Typography variant="h3" color="text.primary" letterSpacing={1}>
-            DNX
+            OMAT
           </Typography>
         </ButtonBase>
       </Stack>

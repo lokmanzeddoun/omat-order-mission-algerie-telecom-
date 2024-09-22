@@ -5,6 +5,8 @@ import Paper from "@mui/material/Paper";
 import ButtonBase from "@mui/material/ButtonBase";
 import Typography from "@mui/material/Typography";
 import AppAlert from "components/alert";
+import LogoImg from "assets/Logo.png";
+import Image from "components/base/Image";
 const AuthLayout = ({ children }: PropsWithChildren) => {
 	return (
 		<Stack
@@ -17,15 +19,15 @@ const AuthLayout = ({ children }: PropsWithChildren) => {
 			minHeight="100vh"
 			position="relative"
 		>
-			<AppAlert  />
+			<AppAlert />
 			<ButtonBase
 				component={Link}
 				href="/"
 				disableRipple
 				sx={{ position: "absolute", top: 28, left: 24 }}
 			>
-				{/* <Image src={LogoImg} alt="logo" height={80} width={80} sx={{ mr: 1 }} /> */}
-				<Typography variant="h4" color="text.primary" letterSpacing={1}>
+				<Image src={LogoImg} alt="logo" height={60} width={60} sx={{ mr: 1 }} />
+				<Typography variant="h3" color="text.primary" letterSpacing={1}>
 					OMAT
 				</Typography>
 			</ButtonBase>
