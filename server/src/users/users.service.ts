@@ -7,7 +7,11 @@ import {
 import { Category, Prisma, Role } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { createUserDto } from './dtos/create-user.dto';
+import * as xlsx from 'xlsx';
+import { WorkBook, WorkSheet } from 'xlsx';
 import * as bcrypt from 'bcryptjs';
+import { ImportExcel } from './dtos/import-Excel.dto';
+
 @Injectable()
 export class UsersService {
   constructor(private readonly databaseService: DatabaseService) {}
@@ -50,7 +54,32 @@ export class UsersService {
   }
 
   findAll() {
-    return this.databaseService.user.findMany();
+    return this.databaseService.user.findMany({
+      where: {
+        soft_delete: false,
+      },
+      orderBy: [
+        {
+          updatedAt: 'desc',
+        },
+      ],
+      select: {
+        matricule: true,
+        email: true,
+        nom: true,
+        prenom: true,
+        role: true,
+        category: true,
+        userSince: true,
+        grade: true,
+        status: true,
+        structure: {
+          select: {
+            name: true,
+          },
+        },
+      },
+    });
   }
 
   findOne(matricule: number) {
@@ -79,5 +108,53 @@ export class UsersService {
         soft_delete: true,
       },
     });
+  }
+  async uploadUsers(file: ImportExcel) {
+    try {
+      const wb: WorkBook = xlsx.read(file.buffer, { type: 'buffer' });
+      const sheet: WorkSheet = wb.Sheets[wb.SheetNames[0]];
+      const range = xlsx.utils.decode_range(sheet['!ref']);
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        if (R === 0 || !sheet[xlsx.utils.encode_cell({ c: 0, r: R })]) {
+          continue;
+        }
+        let col = 0;
+        const userData = {
+          matricule: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // ID or unique identifier
+          nom: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // First Name
+          prenom: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Last Name
+          email: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Email
+          password: await bcrypt.hash(
+            sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v,
+            10,
+          ), // Password (hash if needed)
+          role: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Role
+          category: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Category
+          grade: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Grade
+          serviceId:
+            `${sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v}` || null, // Foreign key (convert to number)
+        };
+        // Check if user already exists by matricule
+        const existingUser = await this.databaseService.user.findUnique({
+          where: { matricule: userData.matricule },
+        });
+
+        if (existingUser) {
+          // Update the user if it exists
+          await this.databaseService.user.update({
+            where: { matricule: userData.matricule },
+            data: userData,
+          });
+        } else {
+          // Create a new user
+          await this.databaseService.user.create({
+            data: userData,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error in  Excel', error.stack);
+      throw error;
+    }
   }
 }

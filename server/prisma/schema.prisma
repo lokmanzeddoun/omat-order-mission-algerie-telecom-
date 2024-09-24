@@ -8,7 +8,7 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 model User {
-  matricule Int @id @default(autoincrement()) 
+  matricule Int @id 
   nom String 
   prenom String
   email String @unique

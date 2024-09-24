@@ -4,13 +4,16 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { PrismaClientExceptionFilter } from 'nestjs-prisma';
+import { Logger } from 'nestjs-pino';
+
 import type {
   CorsConfig,
   NestConfig,
   SwaggerConfig,
 } from './common/configs/config.interface';
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  app.useLogger(app.get(Logger));
 
   // Validation
   app.useGlobalPipes(new ValidationPipe());
@@ -40,9 +43,9 @@ async function bootstrap() {
   }
 
   // Cors
-  if (corsConfig.enabled) {
     app.enableCors();
-  }
-  await app.listen(3000);
+  // if (corsConfig.enabled) {
+  // }
+  await app.listen(nestConfig.port);
 }
 bootstrap();

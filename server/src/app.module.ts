@@ -9,8 +9,19 @@ import { Logger, Module } from '@nestjs/common';
 import { StructuresModule } from './structures/structures.module';
 import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
+import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 @Module({
   imports: [
+    PinoLoggerModule.forRoot({
+      pinoHttp: {
+        transport: {
+          target: 'pino-pretty',
+          options: {
+            singleLine: true,
+          },
+        },
+      },
+    }),
     ConfigModule.forRoot({ isGlobal: true, load: [config] }),
     PrismaModule.forRoot({
       isGlobal: true,
