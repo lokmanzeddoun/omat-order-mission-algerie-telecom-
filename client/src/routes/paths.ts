@@ -11,9 +11,10 @@ export default {
   users: `/${rootPaths.dashboard}/users`,
   structures: `/${rootPaths.dashboard}/structures`,
   home: `/${rootPaths.dashboard}/home`,
+  me: `/${rootPaths.dashboard}/me`,
   messages: `/${rootPaths.pageRoot}/messages`,
   settings: `/${rootPaths.pageRoot}/settings`,
   signin: `/${rootPaths.authRoot}/signin`,
   forgotPassword: `/${rootPaths.authRoot}/forgot-password`,
-  404: `/${rootPaths.errorRoot}/404`,
+  notFound: '/not-found',
 };

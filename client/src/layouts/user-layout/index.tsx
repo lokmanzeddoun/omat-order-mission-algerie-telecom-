@@ -1,15 +1,13 @@
 import { useState, PropsWithChildren } from 'react';
 import Stack from '@mui/material/Stack';
-import Sidebar from 'layouts/main-layout/sidebar';
 import Topbar from 'layouts/user-layout/topbar';
 
-const MainLayout = ({ children }: PropsWithChildren) => {
+const UserLayout = ({ children }: PropsWithChildren) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   return (
     <Stack width={1} minHeight="100vh">
-      <Sidebar mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} setIsClosing={setIsClosing} />
       <Stack
         component="main"
         direction="column"
@@ -23,4 +21,4 @@ const MainLayout = ({ children }: PropsWithChildren) => {
   );
 };
 
-export default MainLayout;
+export default UserLayout;

@@ -20,7 +20,7 @@ const sitemap: MenuItem[] = [
   {
     id: 'dashboard',
     subheader: 'Accueil',
-    path: '/dashboard/home',
+    path: '/dashboard',
     icon: 'hugeicons:grid-view',
   },
   {
@@ -32,13 +32,13 @@ const sitemap: MenuItem[] = [
   {
     id: 'users',
     subheader: 'Utilisateur',
-    path: '/dashboard/users',
+    path: '/dashboard/admins/users',
     icon: 'mynaui:user-hexagon',
   },
   {
     id: 'structures',
     subheader: 'Services',
-    path: '/dashboard/structures',
+    path: '/dashboard/admins/structures',
     icon: 'lets-icons:structure',
   },
   {

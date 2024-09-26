@@ -27,7 +27,7 @@ const Signin = () => {
   useEffect(() => {
     if (isAuthenticated) {
       // Redirect to dashboard or any other route if the user is authenticated
-      navigate('/dashboard/home'); // You can change '/dashboard' to your desired route
+      navigate('/dashboard'); // You can change '/dashboard' to your desired route
     } else {
       setIsLoading(false); // Finish loading if not authenticated
     }

@@ -21,7 +21,7 @@ const navigate = useNavigate(); // For navigation
   const handleShowMoreClick = () => {
     preloadUsers();
     setTimeout(() => {
-      navigate('/dashboard/users');
+      navigate('/dashboard/admins/users');
     }, 100);
   };
   return (

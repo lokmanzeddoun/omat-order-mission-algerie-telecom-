@@ -13,6 +13,21 @@ import Users from 'pages/users';
 import Dashboard from 'pages/Dashboard';
 import ProtectedRoute from 'ProtectedRoute';
 import Structures from 'pages/structures';
+import NotFoundPage from 'pages/not-found';
+import UserLayout from 'layouts/user-layout';
+import UserDashboard from 'pages/UserDashboard';
+import RedirectBasedOnRole from 'RedirectBasedRole';
+import UserProfile from 'pages/UserProfile';
+import { useSelector } from 'react-redux';
+import { RootState } from 'store/rootReducer';
+
+const UserProfileWrapper = () => {
+  const user = useSelector((state: RootState) => state.auth.user);
+
+  // Pass the user as a prop to UserProfile
+  return <UserProfile user={user} />;
+};
+
 const router = createBrowserRouter(
   [
     {
@@ -42,6 +57,14 @@ const router = createBrowserRouter(
           path: rootPaths.dashboard,
           element: (
             <ProtectedRoute>
+              <RedirectBasedOnRole />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          path: `${rootPaths.dashboard}/admins`, // This is the parent route for admins
+          element: (
+            <ProtectedRoute allowedRoles={['ADMIN']}>
               <MainLayout>
                 <Suspense fallback={<PageLoader />}>
                   <Outlet />
@@ -51,18 +74,44 @@ const router = createBrowserRouter(
           ),
           children: [
             {
-              path: paths.home,
-              element: <Dashboard />,
+              path: '', // Represents the home route under admins
+              element: <Dashboard />, // Main dashboard for admins
             },
             {
-              path: paths.users,
+              path: 'users', // Relative path, starting with the parent's path
               element: <Users />,
             },
             {
-              path: paths.structures,
+              path: 'structures', // Relative path, starting with the parent's path
               element: <Structures />,
             },
           ],
+        },
+        {
+          path: `${rootPaths.dashboard}/users`, // This is the parent route for regular users
+          element: (
+            <ProtectedRoute allowedRoles={['USER']}>
+              <UserLayout>
+                <Suspense fallback={<PageLoader />}>
+                  <Outlet />
+                </Suspense>
+              </UserLayout>
+            </ProtectedRoute>
+          ),
+          children: [
+            {
+              path: '', // Represents the home route under users
+              element: <UserDashboard />, // Main dashboard for users
+            },
+          ],
+        },
+        {
+          path: paths.notFound,
+          element: <NotFoundPage />,
+        },
+        {
+          path: paths.me,
+          element: <UserProfileWrapper />,
         },
       ],
     },

@@ -13,7 +13,7 @@ import ActionMenu from "./ActionMenu";
 const columns: GridColDef<(typeof rows)[number]>[] = [
 	{
 		field: "task",
-		headerName: "Task",
+		headerName: "ordre",
 		editable: false,
 		align: "left",
 		flex: 2,
