@@ -17,22 +17,17 @@ interface Action {
 const actions: Action[] = [
   {
     id: 1,
-    icon: 'hugeicons:file-sync',
-    title: 'Sync',
+    icon: 'hugeicons:pencil-edit-02',
+    title: 'Editer',
   },
   {
     id: 2,
-    icon: 'hugeicons:pencil-edit-02',
-    title: 'Edit',
-  },
-  {
-    id: 3,
     icon: 'hugeicons:delete-02',
-    title: 'Remove',
+    title: 'Supprimer',
   },
 ];
 
-const ActionMenu = () => {
+const ActionMenu = ({ user, onEdit, onDelete }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -44,9 +39,9 @@ const ActionMenu = () => {
     setAnchorEl(null);
   };
 
-  const handleActionItemClick = () => {
-    handleActionMenuClose();
-  };
+  // const handleActionItemClick = () => {
+  //   handleActionMenuClose();
+  // };
 
   return (
     <Box pr={1.5}>
@@ -74,15 +69,15 @@ const ActionMenu = () => {
       >
         {actions.map((actionItem) => {
           return (
-            <MenuItem key={actionItem.id} onClick={handleActionItemClick}>
+            <MenuItem key={actionItem.id} onClick={actionItem.id === 1 ? onEdit : onDelete}>
               <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize' }}>
                 <IconifyIcon
                   icon={actionItem.icon}
-                  color={actionItem.id === 3 ? 'error.main' : 'text.primary'}
+                  color={actionItem.id === 2 ? 'error.main' : 'text.primary'}
                 />
               </ListItemIcon>
               <ListItemText>
-                <Typography color={actionItem.id === 3 ? 'error.main' : 'text.primary'}>
+                <Typography color={actionItem.id === 2 ? 'error.main' : 'text.primary'}>
                   {actionItem.title}
                 </Typography>
               </ListItemText>

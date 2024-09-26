@@ -11,6 +11,8 @@ const App = lazy(() => import('App'));
 const Signin = lazy(() => import('pages/authentication/Signin'));
 import Users from 'pages/users';
 import Dashboard from 'pages/Dashboard';
+import ProtectedRoute from 'ProtectedRoute';
+import Structures from 'pages/structures';
 const router = createBrowserRouter(
   [
     {
@@ -39,11 +41,13 @@ const router = createBrowserRouter(
         {
           path: rootPaths.dashboard,
           element: (
-            <MainLayout>
-              <Suspense fallback={<PageLoader />}>
-                <Outlet />
-              </Suspense>
-            </MainLayout>
+            <ProtectedRoute>
+              <MainLayout>
+                <Suspense fallback={<PageLoader />}>
+                  <Outlet />
+                </Suspense>
+              </MainLayout>
+            </ProtectedRoute>
           ),
           children: [
             {
@@ -53,6 +57,10 @@ const router = createBrowserRouter(
             {
               path: paths.users,
               element: <Users />,
+            },
+            {
+              path: paths.structures,
+              element: <Structures />,
             },
           ],
         },

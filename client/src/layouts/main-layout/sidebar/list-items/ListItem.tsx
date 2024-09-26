@@ -9,7 +9,6 @@ import { useLocation } from 'react-router-dom';
 const ListItem = ({ subheader, icon, path }: MenuItem) => {
   const location = useLocation();
   const active = path === sitemap.find((item) => item.path === location.pathname)?.path;
-  console.log(path);
   return (
     <ListItemButton
       component={Link}

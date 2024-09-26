@@ -23,7 +23,7 @@ const Signin = () => {
   const [isLoading, setIsLoading] = useState(true); // Track loading state
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
   useEffect(() => {
     if (isAuthenticated) {
       // Redirect to dashboard or any other route if the user is authenticated

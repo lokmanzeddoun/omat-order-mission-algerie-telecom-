@@ -50,7 +50,6 @@ const navigate = useNavigate(); // For navigation
                   height: 55,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  bgcolor: 'grey.100',
                   borderRadius: '50%',
                 }}
               >

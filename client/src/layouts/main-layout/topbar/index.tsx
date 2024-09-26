@@ -9,8 +9,9 @@ import InputAdornment from '@mui/material/InputAdornment';
 import IconifyIcon from 'components/base/IconifyIcon';
 import Image from 'components/base/Image';
 import LogoImg from 'assets/Logo.png';
-import LanguageSelect from './LanguageSelect';
 import ProfileMenu from './ProfileMenu';
+import AppAlert from 'components/alert';
+
 
 interface TopbarProps {
   isClosing: boolean;
@@ -66,7 +67,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
 
         <TextField
           variant="filled"
-          placeholder="Search Task"
+          placeholder="Recherche Un Ordre"
           sx={{ width: 350, display: { xs: 'none', md: 'flex' } }}
           InputProps={{
             endAdornment: (
@@ -77,9 +78,10 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
           }}
         />
       </Stack>
+      <AppAlert />
 
       <Stack spacing={{ xs: 1, sm: 2 }} alignItems="center">
-        <LanguageSelect />
+        {/* <LanguageSelect /> */}
         <IconButton size="large">
           <Badge color="error" variant="dot">
             <IconifyIcon icon="solar:bell-outline" />

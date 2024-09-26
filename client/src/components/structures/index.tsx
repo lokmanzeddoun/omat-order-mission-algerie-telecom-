@@ -1,131 +1,46 @@
-import { Box, Button, Card, Chip, Stack, Tab, Tabs, Typography } from '@mui/material';
-import {
-  DataGrid,
-  GridColDef,
-  GridPaginationModel,
-  GridRowsProp,
-  GridToolbar,
-} from '@mui/x-data-grid';
-import CustomPagination from './customPagination';
-import NoData from './NoData';
-import { dateFormatFromUTC } from 'helpers/utils';
-import { SyntheticEvent, useEffect, useState } from 'react';
+import { Box, Button, Card, Stack, Typography } from '@mui/material';
+import { DataGrid, GridColDef, GridPaginationModel, GridToolbar } from '@mui/x-data-grid';
+import CustomPagination from 'components/users/customPagination';
+import NoData from 'components/users/NoData';
+import { useEffect, useState } from 'react';
 import ActionMenu from 'components/admin/order-overview/ActionMenu';
-import CreateUserModal from './modals/CreateUserModal';
-import EditUserModal from './modals/EditUserModal';
-import ConfirmDeletionModal from './modals/DeleteUser';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
-import { addUser, deleteUser, getAllUsers, updateUser, uploadUsers } from './users.thunk';
-import { Role } from 'constants/role';
-import { Category } from 'constants/category';
+import {
+  addStructure,
+  deleteStructure,
+  getAllStructures,
+  updateStructure,
+  uploadStructure,
+} from './structure.thunk';
+import CreateStructureModal from './modals/CreateStructureModal';
+import EditStructureModal from './modals/EditStructureModal';
+import ConfirmDeletionModal from './modals/DeleteStructure';
+
 export interface RowData {
-  id: number;
-  matricule: number;
-  nom: string;
-  prenom: string;
-  email: string;
-  role: Role;
-  grade: string;
-  category: Category;
-  serviceId: string | null;
-  status?: string;
+  code: string;
+  name: string;
 }
 
 const initialColumns: GridColDef[] = [
   {
-    field: 'matricule',
-    headerName: 'Matricule',
+    field: 'code',
+    headerName: 'code',
     flex: 1,
     minWidth: 150,
     hideable: false,
     renderCell: (params) => <>#{params.value}</>,
   },
   {
-    field: 'nom',
-    headerName: 'Nom',
+    field: 'name',
+    headerName: 'name',
     flex: 1,
     minWidth: 100,
     hideable: false,
     renderCell: (params) => <>{params.value}</>,
-  },
-  {
-    field: 'prenom',
-    headerName: 'Prenom',
-    minWidth: 100,
-    flex: 1,
-    hideable: false,
-    renderCell: (params) => <>{params.value}</>,
-  },
-  {
-    field: 'email',
-    headerName: 'Email',
-    flex: 1,
-    minWidth: 250,
-    hideable: false,
-    renderCell: (params) => <>{params.value}</>,
-  },
-  {
-    field: 'structure.name',
-    headerName: 'Service',
-    flex: 1,
-    minWidth: 200,
-    hideable: false,
-    renderCell: (params) => <>{params.row?.structure?.name}</>,
-  },
-  {
-    field: 'grade',
-    headerName: 'Grade',
-    width: 100,
-    hideable: false,
-    renderCell: (params) => <>{params.value}</>,
-  },
-  {
-    field: 'category',
-    headerName: 'Category',
-    width: 100,
-    hideable: false,
-    renderCell: (params) => <>{params.value}</>,
-  },
-  {
-    field: 'role',
-    headerName: 'Role',
-    width: 100,
-    hideable: false,
-    renderCell: (params) => <>{params.value}</>,
-  },
-  {
-    field: 'userSince',
-    headerName: 'utilisateurDepuis',
-    minWidth: 130,
-    flex: 1,
-    hideable: false,
-    renderCell: (params) => <>{dateFormatFromUTC(params.value)}</>,
-  },
-  {
-    field: 'status',
-    headerName: 'Status',
-    headerAlign: 'center',
-    editable: false,
-    flex: 1,
-    minWidth: 140,
-    renderCell: (params) => {
-      const color =
-        params.value === 'ACTIVE' ? 'success' : params.value === 'INACTIVE' ? 'error' : 'info';
-      return (
-        <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
-          <Chip label={params.value} size="small" color={color} />
-        </Stack>
-      );
-    },
   },
 ];
-
-const a11yProps = (index: number) => ({
-  id: `transaction-tab-${index}`,
-  'aria-controls': `transaction-tabpanel-${index}`,
-});
 
 const rowHeight = 60; // default row height
 
@@ -133,88 +48,65 @@ const InvoiceOverviewTable: React.FC = () => {
   // get users State
   const dispatch = useDispatch<AppDispatch>();
 
-  const { users } = useSelector((state: RootState) => state.users);
+  const { structures } = useSelector((state: RootState) => state.structures);
+
+  const [selectedStructure, setselectedStructure] = useState<RowData | null>(null);
 
   const [open, setOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<RowData | null>(null);
-  const handleEdit = (user: any) => {
-    setSelectedUser(user);
-    setEditModalOpen(true);
-  };
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      const file = event.target.files[0];
 
-      await dispatch(uploadUsers(file));
-      await dispatch(getAllUsers());
-    }
-  };
-
-  // Function to handle opening of the delete modal
-  const handleDelete = async (user: any) => {
-    setSelectedUser(user);
-    setDeleteModalOpen(true);
-  };
-  const ConfirmationDelete = async () => {
-    await dispatch(deleteUser(selectedUser));
-    await dispatch(getAllUsers());
-    setDeleteModalOpen(false);
-  };
-  const EditSumbission = async (data: RowData) => {
-    console.log(data)
-    const { id, ...newData } = data;
-    console.log(newData)
-    await dispatch(updateUser(newData));
-    await dispatch(getAllUsers());
-    setDeleteModalOpen(false);
-  };
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
-  const handleUserSubmit = async (data: RowData) => {
-    const { id, ...newData } = data;
-    await dispatch(addUser(newData));
-    await dispatch(getAllUsers());
+
+  const handleEdit = (structure: any) => {
+    setselectedStructure(structure);
+    setEditModalOpen(true);
+  };
+  const handleStructureSubmit = async (data: RowData) => {
+    await dispatch(addStructure(data));
+    await dispatch(getAllStructures());
     setOpen(false);
     // Handle the submission (e.g., send data to a backend)
   };
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<GridRowsProp<RowData>>([]);
-  const [value, setValue] = useState(0);
 
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 10,
   });
 
-  const handleChange = (event: SyntheticEvent, newValue: number) => {
-    setValue(newValue);
-    filterData(newValue);
-  };
-
   const handlePaginationModelChange = (model: GridPaginationModel) => {
     setPaginationModel(model);
   };
 
-  const filterData = (tabIndex: number) => {
-    switch (tabIndex) {
-      case 1:
-        setItems(users.filter((row) => row.status === 'ACTIVE'));
-        break;
-      case 2:
-        setItems(users.filter((row) => row.role === 'ADMIN'));
-        break;
-      default:
-        setItems(users);
-        break;
+  // Function to handle opening of the delete modal
+  const handleDelete = async (structure: any) => {
+    setselectedStructure(structure);
+    setDeleteModalOpen(true);
+  };
+  const ConfirmationDelete = async () => {
+    await dispatch(deleteStructure(selectedStructure));
+    await dispatch(getAllStructures());
+    setDeleteModalOpen(false);
+  };
+  const EditSumbission = async (data: RowData) => {
+    await dispatch(updateStructure(data));
+    setDeleteModalOpen(false);
+  };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files.length > 0) {
+      const file = event.target.files[0];
+
+      await dispatch(uploadStructure(file));
+      await dispatch(getAllStructures());
     }
   };
 
   useEffect(() => {
     setLoading(true);
-    dispatch(getAllUsers());
-    filterData(value);
+    dispatch(getAllStructures());
     setLoading(false);
   }, []);
 
@@ -251,7 +143,7 @@ const InvoiceOverviewTable: React.FC = () => {
             fontWeight: 600,
           }}
         >
-          Les Utilisateur courant
+          Les Services
         </Typography>
         <Box sx={{ mr: 3 }}>
           <Button
@@ -269,7 +161,7 @@ const InvoiceOverviewTable: React.FC = () => {
             }}
             onClick={handleOpen}
           >
-            Ajouter Utilisateur
+            Ajouter Service
           </Button>
           <Button
             variant="outlined"
@@ -293,13 +185,6 @@ const InvoiceOverviewTable: React.FC = () => {
           </Button>
         </Box>
       </Box>
-      <Box sx={{ borderBottom: 1, borderColor: 'secondary.lighter', mb: 3.5, mr: 2 }}>
-        <Tabs value={value} onChange={handleChange} aria-label="transaction tabs">
-          <Tab label="All Users" {...a11yProps(0)} />
-          <Tab label="Active Users" {...a11yProps(1)} />
-          <Tab label="Admins" {...a11yProps(2)} />
-        </Tabs>
-      </Box>
       <Card
         sx={{
           flexGrow: { md: 1 },
@@ -318,13 +203,13 @@ const InvoiceOverviewTable: React.FC = () => {
         }}
       >
         <DataGrid
-          getRowId={(row) => row.matricule}
+          getRowId={(row) => row.code}
           rowHeight={rowHeight}
-          rows={items.slice(
+          rows={structures.slice(
             paginationModel.page * paginationModel.pageSize,
             (paginationModel.page + 1) * paginationModel.pageSize,
           )}
-          rowCount={items.length}
+          rowCount={structures.length}
           columns={columns}
           paginationMode="server"
           paginationModel={paginationModel}
@@ -341,8 +226,8 @@ const InvoiceOverviewTable: React.FC = () => {
           disableDensitySelector
           disableColumnSelector
           onRowSelectionModelChange={(ids) => {
-            const selectedRows = items.filter((row) => ids.includes(row.id));
-            setSelectedUser(selectedRows[0]);
+            const selectedRows = structures.filter((row) => ids.includes(row.code));
+            setselectedStructure(selectedRows[0]);
           }}
           sx={{
             px: { xs: 0, md: 3 },
@@ -365,19 +250,19 @@ const InvoiceOverviewTable: React.FC = () => {
           }}
         />
       </Card>
-      <CreateUserModal open={open} onClose={handleClose} onSubmit={handleUserSubmit} />
-      {selectedUser ? (
+      <CreateStructureModal open={open} onClose={handleClose} onSubmit={handleStructureSubmit} />
+      {selectedStructure ? (
         <>
-          <EditUserModal
+          <EditStructureModal
             open={isEditModalOpen}
             onClose={() => setEditModalOpen(false)}
-            userData={selectedUser}
+            userData={selectedStructure}
             onSubmit={EditSumbission}
           />
           <ConfirmDeletionModal
             open={isDeleteModalOpen}
             onClose={() => setDeleteModalOpen(false)}
-            itemName={selectedUser.nom}
+            itemName={selectedStructure.name}
             onConfirm={ConfirmationDelete}
           />
         </>
@@ -386,7 +271,7 @@ const InvoiceOverviewTable: React.FC = () => {
       <Box sx={{ mt: 2, display: 'flex', justifyContent: { xs: 'center', md: 'flex-end' } }}>
         <CustomPagination
           page={paginationModel.page + 1}
-          pageCount={Math.ceil(items.length / paginationModel.pageSize)}
+          pageCount={Math.ceil(structures.length / paginationModel.pageSize)}
           onPageChange={(event, value) =>
             setPaginationModel((prev) => ({ ...prev, page: value - 1 }))
           }

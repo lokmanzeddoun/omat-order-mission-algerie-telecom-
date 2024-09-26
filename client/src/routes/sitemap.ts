@@ -31,15 +31,27 @@ const sitemap: MenuItem[] = [
   },
   {
     id: 'users',
-    subheader: 'utilisateur',
+    subheader: 'Utilisateur',
     path: '/dashboard/users',
     icon: 'mynaui:user-hexagon',
   },
   {
-    id: 'settings',
-    subheader: 'Parametres',
-    path: '#!',
-    icon: 'hugeicons:settings-01',
+    id: 'structures',
+    subheader: 'Services',
+    path: '/dashboard/structures',
+    icon: 'lets-icons:structure',
+  },
+  {
+    id: 'archive',
+    subheader: 'Archive',
+    path: '/dashboard/archive',
+    icon: 'material-symbols:archive-outline',
+  },
+  {
+    id: 'support',
+    subheader: 'support',
+    path: '/dashboard/support',
+    icon: 'fluent:person-support-16-regular',
   },
 ];
 

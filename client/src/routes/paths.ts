@@ -9,6 +9,7 @@ export const rootPaths = {
 export default {
   orders: `/${rootPaths.dashboard}/orders`,
   users: `/${rootPaths.dashboard}/users`,
+  structures: `/${rootPaths.dashboard}/structures`,
   home: `/${rootPaths.dashboard}/home`,
   messages: `/${rootPaths.pageRoot}/messages`,
   settings: `/${rootPaths.pageRoot}/settings`,
