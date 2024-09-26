@@ -6,12 +6,18 @@ import {
   Patch,
   Param,
   Delete,
+  UseInterceptors,
+  UploadedFile,
+  HttpException,
 } from '@nestjs/common';
 import { StructuresService } from './structures.service';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Structure } from './entities/structure.entity';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { SUPPORTED_FILES } from 'src/utils/upload';
+import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
 @ApiTags('Structures')
 @Controller('structures')
 export class StructuresController {
@@ -49,5 +55,22 @@ export class StructuresController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.structuresService.remove(id);
+  }
+
+  @Post('upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new HttpException(
+        `Please provide correct file name with extension ${JSON.stringify(SUPPORTED_FILES)}`,
+        400,
+      );
+    }
+    const importStructure: ImportExcel = {
+      originalname: file.originalname, // Add necessary fields to match ArquivoImportacao DTO
+      buffer: file.buffer, // Store the file buffer to process the Excel file
+    };
+    // file is the uploaded file
+    this.structuresService.uploadStructure(importStructure);
   }
 }

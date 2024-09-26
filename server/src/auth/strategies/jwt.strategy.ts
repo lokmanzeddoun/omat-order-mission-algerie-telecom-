@@ -1,10 +1,10 @@
-import { Injectable, UnauthorizedException } from "@nestjs/common";
-import { PassportStrategy } from "@nestjs/passport";
-import { ConfigService } from "@nestjs/config";
-import { ExtractJwt, Strategy } from "passport-jwt";
-import { PrismaService } from "nestjs-prisma";
-import { JwtPayload } from "../interfaces/jwt-payload.interface";
-import { User } from "src/users/entities/user.entity";
+import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ConfigService } from '@nestjs/config';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { PrismaService } from 'nestjs-prisma';
+import { JwtPayload } from '../interfaces/jwt-payload.interface';
+import { User } from 'src/users/entities/user.entity';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -13,7 +13,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly configService: ConfigService,
   ) {
     super({
-      secretOrKey: configService.get("JWT_SECRET"),
+      secretOrKey: configService.get('JWT_SECRET'),
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
     });
   }
@@ -27,18 +27,19 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         select: {
           matricule: true,
           nom: true,
-          email:true,
+          email: true,
           prenom: true,
           grade: true,
           role: true,
           createdAt: true,
           category: true,
+          serviceId: true,
         },
       });
       return user;
     } catch (err) {
       console.error(err);
-      throw new UnauthorizedException("Invalid token");
+      throw new UnauthorizedException('Invalid token');
     }
   }
 }
