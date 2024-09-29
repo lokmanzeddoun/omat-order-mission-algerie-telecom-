@@ -12,6 +12,12 @@ import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
 import { IUser } from './users.reducers';
 
+interface ChangePasswordDto {
+  currentPassword: string;
+  password: string;
+  passwordConfirm: string;
+}
+
 export const getAllUsers = () => async (dispatch: AppDispatch) => {
   // loading the users fetched
   dispatch(fetchUsersStart());
@@ -153,3 +159,34 @@ export const updateUser = (user: IUser) => async (dispatch: AppDispatch) => {
     console.error('Error:', errorMessage);
   }
 };
+
+export const changePassword =
+  (token: string | null, body: ChangePasswordDto) => async (dispatch: AppDispatch) => {
+    try {
+      const res = await axios.post(`${API_URL}/users/changePassword`, body, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.data) {
+        await dispatch(setAlert({ msg: 'Password Updated ', type: AlertTypes.SUCCESS }));
+        dispatch(editUser(res.data));
+      } else {
+        dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      }
+    } catch (error) {
+      let errorMessage = 'An error occurred';
+
+      if (axios.isAxiosError(error)) {
+        // For Axios errors, you can extract more specific information
+        errorMessage = error.response?.data?.message || error.message;
+      } else if (error instanceof Error) {
+        // Handle other errors
+        errorMessage = error.message;
+      }
+
+      dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+      console.error('Error:', errorMessage);
+    }
+  };

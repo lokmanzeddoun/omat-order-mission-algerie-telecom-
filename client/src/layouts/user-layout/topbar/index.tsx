@@ -11,7 +11,13 @@ import Image from 'components/base/Image';
 import LogoImg from 'assets/Logo.png';
 import ProfileMenu from './ProfileMenu';
 import AppAlert from 'components/alert';
-
+import { Button } from '@mui/material';
+import MissionModal from 'components/orders/CreateOrder';
+import { useState } from 'react';
+import { addOrder } from 'components/orders/orderthunk';
+import { AppDispatch } from 'store';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from 'store/rootReducer';
 
 interface TopbarProps {
   isClosing: boolean;
@@ -20,6 +26,18 @@ interface TopbarProps {
 }
 
 const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { token } = useSelector((state: RootState) => state.auth);
+
+  const [open, setOpen] = useState(false);
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+  const handleUserSubmit = async (data: any) => {
+    await dispatch(addOrder(data, token));
+    // await dispatch(getAllUsers());
+    setOpen(false);
+    // Handle the submission (e.g., send data to a backend)
+  };
   const handleDrawerToggle = () => {
     if (!isClosing) {
       setMobileOpen(!mobileOpen);
@@ -64,8 +82,8 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
             <IconifyIcon icon="mynaui:search" />
           </IconButton>
         </Toolbar>
-
-        <TextField
+        <MissionModal open={open} onClose={handleClose} onSubmit={handleUserSubmit} />
+        {/* <TextField
           variant="filled"
           placeholder="Recherche Un Ordre"
           sx={{ width: 350, display: { xs: 'none', md: 'flex' } }}
@@ -76,12 +94,15 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
               </InputAdornment>
             ),
           }}
-        />
+        /> */}
       </Stack>
       <AppAlert />
 
       <Stack spacing={{ xs: 1, sm: 2 }} alignItems="center">
         {/* <LanguageSelect /> */}
+        <Button variant="contained" color="primary" onClick={handleOpen}>
+          Ajouter Mission
+        </Button>
         <IconButton size="large">
           <Badge color="error" variant="dot">
             <IconifyIcon icon="solar:bell-outline" />

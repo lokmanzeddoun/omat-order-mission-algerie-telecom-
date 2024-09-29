@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { Suspense, lazy } from 'react';
-import { Outlet, createBrowserRouter } from 'react-router-dom';
+import { Navigate, Outlet, createBrowserRouter } from 'react-router-dom';
 import AuthLayout from 'layouts/auth-layout';
 import Splash from 'components/loader/Splash';
 import PageLoader from 'components/loader/PageLoader';
@@ -17,16 +17,9 @@ import NotFoundPage from 'pages/not-found';
 import UserLayout from 'layouts/user-layout';
 import UserDashboard from 'pages/UserDashboard';
 import RedirectBasedOnRole from 'RedirectBasedRole';
-import UserProfile from 'pages/UserProfile';
-import { useSelector } from 'react-redux';
-import { RootState } from 'store/rootReducer';
-
-const UserProfileWrapper = () => {
-  const user = useSelector((state: RootState) => state.auth.user);
-
-  // Pass the user as a prop to UserProfile
-  return <UserProfile user={user} />;
-};
+import MyProfile from 'pages/userProfile';
+import OrderView from 'components/orders/OrderView';
+import OrderDashboard from 'pages/ordres';
 
 const router = createBrowserRouter(
   [
@@ -74,16 +67,16 @@ const router = createBrowserRouter(
           ),
           children: [
             {
-              path: '', // Represents the home route under admins
-              element: <Dashboard />, // Main dashboard for admins
-            },
-            {
               path: 'users', // Relative path, starting with the parent's path
               element: <Users />,
             },
             {
               path: 'structures', // Relative path, starting with the parent's path
               element: <Structures />,
+            },
+            {
+              path: '', // Relative path, starting with the parent's path
+              element: <OrderDashboard />,
             },
           ],
         },
@@ -106,12 +99,20 @@ const router = createBrowserRouter(
           ],
         },
         {
+          path: paths.me,
+          element: (
+            <ProtectedRoute>
+              <MyProfile />
+            </ProtectedRoute>
+          ),
+        },
+        {
           path: paths.notFound,
           element: <NotFoundPage />,
         },
         {
-          path: paths.me,
-          element: <UserProfileWrapper />,
+          path: '*',
+          element: <Navigate to={paths.notFound} replace />,
         },
       ],
     },

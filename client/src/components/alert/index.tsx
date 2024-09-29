@@ -17,7 +17,7 @@ const AppAlert = () => {
             severity={alert.type}
             key={index}
             sx={{
-              position: 'absolute',
+              position: 'fixed',
               top: 20,
               right: 20,
             }}

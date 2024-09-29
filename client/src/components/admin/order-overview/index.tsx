@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconifyIcon from 'components/base/IconifyIcon';
 import TaskOverviewTable from './TaskOverviewTable';
+import OrderView from 'components/orders/OrderView';
 
 const TaskOverview = () => {
   const [searchText, setSearchText] = useState('');
@@ -38,7 +39,7 @@ const TaskOverview = () => {
       </Stack>
 
       <Paper sx={{ mt: 1.5, p: 0, pb: 0.75, minHeight: 411, width: 1 }}>
-        <TaskOverviewTable searchText={searchText} />
+        <OrderView searchText={searchText} />
       </Paper>
     </Stack>
   );

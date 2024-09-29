@@ -3,29 +3,29 @@ interface ReqLogin {
   email: string;
 }
 interface ResLoginApi extends Res {
-  data: {
+  user: {
     matricule: number;
     email: string;
     nom: string;
     prenom: string;
     category: Category;
     role: Role;
+    createdAt: Date;
   };
+  token: string | null;
 }
 
 interface IUser {
   matricule: number;
   nom: string;
   prenom: string;
-  grade: string;
+  grade?: string;
   email: string;
   password?: string;
   role: Role;
   category: Category;
-  accessToken?: string;
   serviceId?: string | null;
 }
-
 
 interface DispatchAuth {
   type: string;

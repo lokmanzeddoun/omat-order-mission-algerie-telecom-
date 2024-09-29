@@ -16,7 +16,7 @@ export const loadUser = () => async (dispatch: AppDispatch) => {
   }
   try {
     const res = await axios.get(`${API_URL}/users/${matricule}`);
-    if (res) {
+    if (res.data) {
       return dispatch(userLoaded(res.data));
     }
     dispatch(authFailed());
@@ -38,17 +38,15 @@ export const login = (payload: ReqLogin) => async (dispatch: any) => {
     const res = await axios.post(`${API_URL}/auth/login`, payload);
     const data = res.data;
     if (res.status === 200 && data) {
-      dispatch(loginSuccess(data.user));
+      dispatch(loginSuccess(data));
       dispatch(
         setAlert({
           msg: 'You are logged in!',
           type: AlertTypes.SUCCESS,
         }),
       );
-      dispatch(loadUser());
       return;
     }
-    dispatch();
     setAlert({
       msg: 'Authentication Error',
       type: AlertTypes.ERROR,

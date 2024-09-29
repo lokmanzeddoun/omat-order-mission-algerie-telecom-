@@ -18,15 +18,9 @@ export interface MenuItem {
 
 const sitemap: MenuItem[] = [
   {
-    id: 'dashboard',
-    subheader: 'Accueil',
-    path: '/dashboard',
-    icon: 'hugeicons:grid-view',
-  },
-  {
     id: 'order',
     subheader: 'Ordres',
-    path: '#!',
+    path: '/dashboard/admins',
     icon: 'hugeicons:book-open-01',
   },
   {

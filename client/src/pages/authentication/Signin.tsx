@@ -20,7 +20,7 @@ import Splash from 'components/loader/Splash';
 // }
 
 const Signin = () => {
-  const [isLoading, setIsLoading] = useState(true); // Track loading state
+  const [isLoading, setIsLoading] = useState(false); // Track loading state
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const { isAuthenticated } = useSelector((state: RootState) => state.auth);

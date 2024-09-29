@@ -46,7 +46,6 @@ const StructureModal: React.FC<StructureModalProps> = ({
   };
 
   const handleSubmit = () => {
-    console.log(formData);
     onSubmit(formData);
     setFormData(initialFormData); // Reset form after submission
     onClose();

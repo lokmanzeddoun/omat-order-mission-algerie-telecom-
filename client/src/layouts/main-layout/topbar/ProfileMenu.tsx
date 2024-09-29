@@ -93,7 +93,6 @@ const ProfileMenu = () => {
       >
         <Box p={1}>
           <MenuItem onClick={handleProfileMenuClose} sx={{ '&:hover': { bgcolor: 'info.light' } }}>
-            {/* <Avatar src={Avatar3} sx={{ mr: 1, height: 42, width: 42 }} /> */}
             <Stack direction="column">
               <Typography variant="body2" color="text.primary" fontWeight={600}>
                 {user.nom}

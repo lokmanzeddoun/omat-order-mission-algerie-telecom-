@@ -13,6 +13,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }: ProtectedRouteProps) =>
   // Check if the user is authenticated
   if (!token || !isAuthenticated) {
     localStorage.removeItem('user'); // Remove user info from localStorage if not authenticated
+    localStorage.removeItem('token'); // Remove user info from localStorage if not authenticated
     return <Navigate to="/" replace />;
   }
 

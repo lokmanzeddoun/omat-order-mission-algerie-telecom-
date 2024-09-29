@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { RowData } from '..';
 import IconifyIcon from 'components/base/IconifyIcon';
+import Splash from 'components/loader/Splash';
 interface UserModalProps {
   open: boolean;
   onClose: () => void;
@@ -26,8 +27,12 @@ const roles = ['USER', 'ADMIN', 'SUPER_ADMIN'];
 const categories = ['CADRE', 'CADRE_SUPERIEUR', 'EXECUTION_MAITRISE'];
 import { Role } from 'constants/role';
 import { Category } from 'constants/category';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
+import { AppDispatch } from 'store';
+import { fetchStructuresStart } from 'components/structures/structure.reducer';
+import { getAllStructures } from 'components/structures/structure.thunk';
+import { getAllUsers } from '../users.thunk';
 const UserModal: React.FC<UserModalProps> = ({
   open,
   onClose,
@@ -47,13 +52,15 @@ const UserModal: React.FC<UserModalProps> = ({
     serviceId: null,
   };
   const [formData, setFormData] = useState<RowData>(initialFormData);
-  const { structures } = useSelector((state: RootState) => state.structures);
+  const { structures, loading } = useSelector((state: RootState) => state.structures);
+  const dispatch = useDispatch<AppDispatch>();
 
   useEffect(() => {
+    dispatch(getAllStructures());
     if (isEdit && initialData) {
       setFormData(initialData);
     }
-  }, [isEdit, initialData]);
+  }, [isEdit, initialData, dispatch]);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
@@ -84,9 +91,20 @@ const UserModal: React.FC<UserModalProps> = ({
     }
 
     setFormData(initialFormData); // Reset form after submission
+    dispatch(getAllUsers());
     onClose();
     // // Form validation can be added here if needed
   };
+  if (loading) {
+    return (
+      <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+        <DialogTitle>{isEdit ? 'Editer Utilisateur' : 'Ajouter Nouvel Utilisateur'}</DialogTitle>
+        <DialogContent>
+          <Splash /> {/* Loading spinner */}
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -109,7 +127,7 @@ const UserModal: React.FC<UserModalProps> = ({
                 </InputAdornment>
               ),
             }}
-            value={formData.matricule}
+            value={formData.matricule ? formData.matricule : ''}
             onChange={handleChange}
           />
           <TextField
@@ -234,7 +252,7 @@ const UserModal: React.FC<UserModalProps> = ({
                 ...formData,
                 serviceId: newValue?.code || '', // Assuming `code` represents the `serviceId`
               });
-              console.log(formData)
+              console.log(formData);
             }}
             renderInput={(params) => (
               <TextField

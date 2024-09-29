@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Container,
   TextField,
@@ -12,10 +12,19 @@ import {
 import Avatar7 from 'assets/avatar7.png';
 import { Role } from 'constants/role';
 import { Category } from 'constants/category';
+import { useDispatch, useSelector } from 'react-redux';
+import { loadUser } from 'components/auth/auth.thunk';
+import { AppDispatch } from 'store';
+import { RootState } from 'store/rootReducer';
 
-const UserProfile: React.FC<{ user: IUser }> = ({ user }) => {
+const UserProfile: React.FC = () => {
+  const user = useSelector((state: RootState) => state.auth.user);
+  const dispatch = useDispatch<AppDispatch>();
+  useEffect(() => {
+    dispatch(loadUser());
+  }, []);
   const [formData, setFormData] = useState<IUser>(user);
-  const [isEditing, setIsEditing] = useState<boolean>(false); // State to toggle edit mode
+  const [isEditing, setIsEditing] = useState<boolean>(true); // State to toggle edit mode
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -29,7 +38,6 @@ const UserProfile: React.FC<{ user: IUser }> = ({ user }) => {
     e.preventDefault();
     // Here you can handle form submission, e.g., send data to an API
     console.log('Updated User Profile:', formData);
-    setIsEditing(false); // Exit editing mode after submission
   };
 
   return (

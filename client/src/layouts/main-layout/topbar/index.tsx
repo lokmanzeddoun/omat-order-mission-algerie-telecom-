@@ -11,7 +11,8 @@ import Image from 'components/base/Image';
 import LogoImg from 'assets/Logo.png';
 import ProfileMenu from './ProfileMenu';
 import AppAlert from 'components/alert';
-
+import { Button } from '@mui/material';
+// import { Button } from '@mui/material';
 
 interface TopbarProps {
   isClosing: boolean;
@@ -37,6 +38,25 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       top={0}
       zIndex={1200}
     >
+      <Button
+        variant="outlined"
+        component="label"
+        tabIndex={-1}
+        sx={{
+          textTransform: 'none',
+          fontWeight: 600,
+          color: 'white',
+          borderColor: 'primary.main',
+          bgcolor: 'secondary.main',
+          '&:hover': {
+            color: 'primary.main',
+            borderColor: 'secondary.light',
+            bgcolor: 'primary.light',
+          },
+        }}
+      >
+        Ajouter Un Mission
+      </Button>
       <Stack spacing={{ xs: 1, sm: 2 }} alignItems="center">
         <ButtonBase
           component={Link}
@@ -46,7 +66,6 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
         >
           <Image src={LogoImg} alt="logo" height={54} width={54} />
         </ButtonBase>
-
         <Toolbar sx={{ display: { xm: 'block', lg: 'none' } }}>
           <IconButton
             size="large"

@@ -10,7 +10,6 @@ const userType: IUser = {
   password: '',
   role: Role.guest,
   category: Category.other,
-  accessToken: '',
 };
 export interface AuthState {
   loading: boolean;
@@ -30,25 +29,26 @@ const authSlice = createSlice({
   initialState,
   reducers: {
     userLoaded: (state, action: PayloadAction<IUser>) => {
-      state.isAuthenticated = true;
-      state.loading = false;
-      state.token = `${action.payload.matricule}`;
       state.user = action.payload;
     },
-    loginSuccess: (state, action: PayloadAction<IUser>) => {
-      localStorage.setItem('user', JSON.stringify(action.payload));
+    loginSuccess: (state, action: PayloadAction<ResLoginApi>) => {
+      localStorage.setItem('user', JSON.stringify(action.payload.user));
+      localStorage.setItem('token', JSON.stringify(action.payload.token));
       state.isAuthenticated = true;
       state.loading = false;
-      state.user = action.payload;
+      state.user = action.payload.user;
+      state.token = action.payload.token;
     },
     authFailed: (state) => {
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
       state.token = null;
       state.isAuthenticated = false;
       state.loading = false;
     },
     logoutSuccess: (state) => {
       localStorage.removeItem('user');
+      localStorage.removeItem('token');
       state.token = null;
       state.isAuthenticated = false;
       state.loading = false;

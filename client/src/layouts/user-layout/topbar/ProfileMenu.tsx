@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Menu from '@mui/material/Menu';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -12,8 +12,7 @@ import { Avatar } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
 import { AppDispatch } from 'store';
-import { logout } from 'components/auth/auth.thunk';
-import image from 'assets/avatar7.png';
+import {  logout } from 'components/auth/auth.thunk';
 import { useNavigate } from 'react-router-dom';
 interface MenuItems {
   id: number;
@@ -28,11 +27,6 @@ const menuItems: MenuItems[] = [
     icon: 'hugeicons:user-circle-02',
   },
   {
-    id: 2,
-    title: 'Parametres',
-    icon: 'hugeicons:account-setting-02',
-  },
-  {
     id: 6,
     title: 'Logout',
     icon: 'hugeicons:logout-03',
@@ -42,6 +36,8 @@ const menuItems: MenuItems[] = [
 const ProfileMenu = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
+  console.log(user);
+
   const dispatch = useDispatch<AppDispatch>();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -71,7 +67,7 @@ const ProfileMenu = () => {
         disableRipple
       >
         <Avatar
-          src={image}
+          src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286"
           sx={{
             height: 48,
             width: 48,
@@ -97,7 +93,7 @@ const ProfileMenu = () => {
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         <Box p={1}>
-          <MenuItem onClick={handleProfileSubmit} sx={{ '&:hover': { bgcolor: 'info.light' } }}>
+          <MenuItem onClick={handleProfileMenuClose} sx={{ '&:hover': { bgcolor: 'info.light' } }}>
             {/* <Avatar src={Avatar3} sx={{ mr: 1, height: 42, width: 42 }} /> */}
             <Stack direction="column">
               <Typography variant="body2" color="text.primary" fontWeight={600}>
@@ -117,7 +113,7 @@ const ProfileMenu = () => {
             return (
               <MenuItem
                 key={item.id}
-                onClick={item.title === 'Logout' ? handleLogout : handleProfileMenuClose}
+                onClick={item.title === 'Logout' ? handleLogout : handleProfileSubmit}
                 sx={{ py: 1 }}
               >
                 <ListItemIcon

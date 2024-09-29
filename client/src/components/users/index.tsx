@@ -163,9 +163,9 @@ const InvoiceOverviewTable: React.FC = () => {
     setDeleteModalOpen(false);
   };
   const EditSumbission = async (data: RowData) => {
-    console.log(data)
+    console.log(data);
     const { id, ...newData } = data;
-    console.log(newData)
+    console.log(newData);
     await dispatch(updateUser(newData));
     await dispatch(getAllUsers());
     setDeleteModalOpen(false);
@@ -212,8 +212,11 @@ const InvoiceOverviewTable: React.FC = () => {
   };
 
   useEffect(() => {
+    const fetchData = async () => {
+      await dispatch(getAllUsers());
+    };
     setLoading(true);
-    dispatch(getAllUsers());
+    fetchData();
     filterData(value);
     setLoading(false);
   }, []);
