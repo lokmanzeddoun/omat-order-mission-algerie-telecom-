@@ -11,6 +11,7 @@ import * as xlsx from 'xlsx';
 import { WorkBook, WorkSheet } from 'xlsx';
 import * as bcrypt from 'bcryptjs';
 import { ImportExcel } from './dtos/import-Excel.dto';
+import { ChangePasswordDto } from './dtos/changePassword.dto';
 
 @Injectable()
 export class UsersService {
@@ -33,7 +34,7 @@ export class UsersService {
     if (createUserDto.category && !Category[createUserDto.category])
       throw new BadRequestException('Invalid category');
     // hash the password
-    const password = Math.random().toString(36).slice(-8);
+    const password = `${createUserDto.nom.toLowerCase()}_${createUserDto.prenom.toLowerCase()}13`;
     console.log(password);
     //Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -156,5 +157,30 @@ export class UsersService {
       console.error('Error in  Excel', error.stack);
       throw error;
     }
+  }
+
+  async ChangePassword(changePassword: ChangePasswordDto, matricule: number) {
+    const user = await this.databaseService.user.findUnique({
+      where: { matricule },
+    });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const passwordMatch = await bcrypt.compare(
+      changePassword.currentPassword,
+      user.password,
+    );
+
+    if (!passwordMatch) {
+      throw new BadRequestException('Invalid Password');
+    }
+
+    const hashedPassword = await bcrypt.hash(changePassword.password, 10);
+    return this.databaseService.user.update({
+      where: { matricule },
+      data: { password: hashedPassword },
+    });
   }
 }

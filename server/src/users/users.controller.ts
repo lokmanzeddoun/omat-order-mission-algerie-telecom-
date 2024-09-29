@@ -18,6 +18,9 @@ import { User } from './entities/user.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { multerOptions, SUPPORTED_FILES } from 'src/utils/upload';
 import { ImportExcel } from './dtos/import-Excel.dto';
+import { Auth } from 'src/auth/guards/auth-role.guard';
+import { ChangePasswordDto } from './dtos/changePassword.dto';
+import { GetUser } from 'src/auth/decorators/getUser.decorator';
 
 @ApiTags('User')
 @Controller('users')
@@ -75,5 +78,13 @@ export class UsersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
+  }
+  @Auth()
+  @Post('/changePassword')
+  changePassword(
+    @Body() changePasswod: ChangePasswordDto,
+    @GetUser() user: User,
+  ) {
+    return this.usersService.ChangePassword(changePasswod, user.matricule);
   }
 }

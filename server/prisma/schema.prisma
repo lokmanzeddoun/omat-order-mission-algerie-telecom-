@@ -23,8 +23,7 @@ model User {
   structure Structure? @relation(fields: [serviceId], references: [code])
   serviceId String? 
   soft_delete Boolean? @default(false)
-  missions1 Mission[] @relation("user1")
-  missions2 Mission[] @relation("user2")
+  missions Mission[]
 }
 
 model Structure {
@@ -35,22 +34,18 @@ model Structure {
 }
 model Mission {
   n_mission Int @default(autoincrement()) @id
-  date_sortie DateTime
-  heure_sortie DateTime @db.Timestamptz
-  date_retour DateTime
-  heure_retour DateTime @db.Timestamptz
-  motif String
-  transport String
-  Destination String
-  montant Float
+  date_sortie DateTime?
+  heure_sortie String?
+  date_retour DateTime?
+  heure_retour String?
+  motif String?
+  transport TransportType?
+  Destination String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  user1 User @relation("user1",fields: [userId],references: [matricule])
-  user2 User @relation("user2",fields: [responsableId],references: [matricule])
+  user User @relation(fields: [userId],references: [matricule])
   soft_delete Boolean @default(false)
   userId Int
-  quality String?
-  responsableId Int
 }
 
 
@@ -70,9 +65,9 @@ enum Category {
   EXECUTION_MAITRISE
 }
 
-enum UniteType {
-  SERVICE 
-  DIRECTION
-  SOUS_DIRECTION
-  DEPARTEMENT
+enum TransportType {
+  SERVICE_CAR 
+  PERSONAL_CAR
+  TRANSPORT_ENTREPRISE
+  TRANSPORT_EMPLOYEE
 }

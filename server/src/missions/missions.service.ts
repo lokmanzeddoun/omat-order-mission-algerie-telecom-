@@ -1,21 +1,19 @@
 import {
   BadRequestException,
   Injectable,
-  Res,
   StreamableFile,
 } from '@nestjs/common';
-import { CreateMissionDto } from './dto/create-mission.dto';
-import { UpdateMissionDto } from './dto/update-mission.dto';
+// import { CreateMissionDto } from './dto/create-mission.dto';
+// import { UpdateMissionDto } from './dto/update-mission.dto';
 import { DatabaseService } from 'src/database/database.service';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
-// import { load } from '@pspdfkit/nodejs';
+// import { load } from '@ /nodejs';
 import moment from 'moment';
 import * as fs from 'fs';
 import { Prisma, User } from '@prisma/client';
 import { Readable } from 'stream';
 const inputFilePath = 'src/missions/TemplateOrdreDeMission.docx';
-const outputFilePath = './output.pdf';
 import libre from 'libreoffice-convert';
 import { promisify } from 'util';
 import { Response as ExpressResponse } from 'express'; // Import Express response type
@@ -29,15 +27,17 @@ export class MissionsService {
     // save the service in database :
     const res = await this.databaseService.mission.create({
       data: {
-        // userId: user.matricule,
-        user1: {
+        user: {
           connect: { matricule: user.matricule }, // Connect existing user for user1
         },
-        user2: {
-          connect: { matricule: user.matricule }, // Connect existing user for user2
-        },
         ...createMissionDto,
-        // responsableId: user.matricule,
+        date_sortie: createMissionDto.date_sortie
+          ? createMissionDto.date_sortie
+          : null,
+        date_retour: createMissionDto.date_retour
+          ? createMissionDto.date_retour
+          : null,
+        transport: createMissionDto.transport || null, // Set transport to null if empty
       },
     });
     const service = await this.databaseService.structure.findUnique({
@@ -58,16 +58,13 @@ export class MissionsService {
       ref: user.grade,
       service: service.name,
       matricule: user.matricule,
-      destination: res.Destination,
-      date_depart: res.date_sortie,
-      date_retour: res.date_sortie,
-      h_r: moment().format('mm'),
-      h_d: moment().format('hh'),
-      m_r: moment().format('mm'),
-      m_d: moment().format('hh'),
-      responsable: res.responsableId,
-      qualite: res.quality,
-      wilaya: 'Tlemcen',
+      destination: res.Destination || '',
+      date_depart: res.date_sortie || '',
+      date_retour: res.date_retour || '',
+      h_r: res.date_retour ? moment(res.date_retour).format('hh') : '',
+      h_d: res.date_sortie ? moment(res.date_sortie).format('hh') : '',
+      m_r: res.date_retour ? moment(res.date_retour).format('mm') : '',
+      m_d: res.date_sortie ? moment(res.date_sortie).format('mm') : '',
     };
     // Set the template variables
     doc.setData(replacements);
@@ -113,15 +110,23 @@ export class MissionsService {
       },
     });
   }
-
-  update(id: number, updateMissionDto: UpdateMissionDto) {
-    return this.databaseService.mission.update({
-      where: {
-        n_mission: id,
-      },
-      data: updateMissionDto,
-    });
+  findByUser(user: User) {
+    // TODO fetch MIssion based on userId
+    // return this.databaseService.mission.findUnique({
+    //   where: {
+    //     userId: user.matricule,
+    //   },
+    // });
   }
+
+  // update(id: number, updateMissionDto: UpdateMissionDto) {
+  //   return this.databaseService.mission.update({
+  //     where: {
+  //       n_mission: id,
+  //     },
+  //     data: updateMissionDto,
+  //   });
+  // }
 
   remove(id: number) {
     return this.databaseService.mission.update({
@@ -133,7 +138,7 @@ export class MissionsService {
       },
     });
   }
-  async downloadOrdre(id: number, user: User,res: ExpressResponse) {
+  async downloadOrdre(id: number, user: User, res: ExpressResponse) {
     const mission = await this.databaseService.mission.findUnique({
       where: {
         n_mission: id,
@@ -163,13 +168,11 @@ export class MissionsService {
       matricule: user.matricule,
       destination: mission.Destination,
       date_depart: mission.date_sortie,
-      date_retour: mission.date_sortie,
-      h_r: moment().format('mm'),
-      h_d: moment().format('hh'),
-      m_r: moment().format('mm'),
-      m_d: moment().format('hh'),
-      responsable: mission.responsableId,
-      qualite: mission.quality,
+      date_retour: mission.date_retour,
+      h_r: moment(mission.date_retour).format('mm') || '',
+      h_d: moment(mission.date_sortie).format('hh') || '',
+      m_r: moment(mission.date_retour).format('mm') || '',
+      m_d: moment(mission.date_sortie).format('hh') || '',
       wilaya: 'Tlemcen',
     };
     // Set the template variables

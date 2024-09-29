@@ -24,7 +24,9 @@ export class AuthService {
           password: true,
           category: true,
           role: true,
+          email: true,
           createdAt: true,
+          status: true,
         },
       });
     } catch (error) {
@@ -36,6 +38,13 @@ export class AuthService {
 
     if (!passwordMatch) {
       throw new BadRequestException('Wrong credentials');
+    }
+    // Set The Status To Active
+    if (user.status === 'INACTIVE') {
+      user = await this.prisma.user.update({
+        where: { matricule: user.matricule },
+        data: { status: 'ACTIVE' },
+      });
     }
 
     delete user.password;

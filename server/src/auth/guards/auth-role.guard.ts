@@ -5,5 +5,8 @@ import { RolesGuard } from 'src/roles/roles.guard';
 import { Role } from '@prisma/client';
 
 export function Auth(...roles: Role[]) {
-  return applyDecorators(Roles(...roles), UseGuards(AuthGuard(), RolesGuard));
+  return applyDecorators(
+    Roles(...roles),
+    UseGuards(AuthGuard('jwt'), RolesGuard),
+  );
 }

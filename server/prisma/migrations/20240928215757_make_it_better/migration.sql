@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "Mission" ALTER COLUMN "date_sortie" DROP NOT NULL,
+ALTER COLUMN "heure_sortie" DROP NOT NULL,
+ALTER COLUMN "date_retour" DROP NOT NULL,
+ALTER COLUMN "heure_retour" DROP NOT NULL,
+ALTER COLUMN "motif" DROP NOT NULL,
+ALTER COLUMN "Destination" DROP NOT NULL,
+ALTER COLUMN "transport" DROP NOT NULL;

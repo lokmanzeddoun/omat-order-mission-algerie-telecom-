@@ -24,7 +24,6 @@ export class MissionsController {
     @Body() createMissionDto: Prisma.MissionCreateInput,
     @GetUser() user: User,
   ) {
-    console.log('helelo');
     return this.missionsService.create(createMissionDto, user);
   }
 
@@ -37,10 +36,15 @@ export class MissionsController {
   findOne(@Param('id') id: string) {
     return this.missionsService.findOne(+id);
   }
+  @Get('user')
+  @Auth()
+  findByUser(@GetUser() user: User) {
+    return this.missionsService.findByUser(user);
+  }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateMissionDto: UpdateMissionDto) {
-    return this.missionsService.update(+id, updateMissionDto);
+    // return this.missionsService.update(+id, updateMissionDto);
   }
 
   @Delete(':id')
