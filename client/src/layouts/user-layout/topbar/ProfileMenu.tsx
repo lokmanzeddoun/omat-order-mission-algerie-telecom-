@@ -36,7 +36,6 @@ const menuItems: MenuItems[] = [
 const ProfileMenu = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
-  console.log(user);
 
   const dispatch = useDispatch<AppDispatch>();
 

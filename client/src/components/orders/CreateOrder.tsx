@@ -10,11 +10,16 @@ import {
   InputAdornment,
   MenuItem,
 } from '@mui/material';
+import { Direction } from 'constants/direction';
 import IconifyIcon from 'components/base/IconifyIcon';
 import { TransportType } from 'constants/transport';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
+import { setAlert } from 'components/alert/alert.reducer';
+import { AlertTypes } from 'constants/alert';
+import { AppDispatch } from 'store';
 
+const directions = ['NORD', 'SUD'];
 interface MissionModalProps {
   open: boolean;
   onClose: () => void;
@@ -44,8 +49,9 @@ interface MissionData {
   date_retour: string; // Date of return
   heure_retour: string; // Time of return
   motif: string; // Reason for the mission
-  transport: TransportType; // Mode of transportation (e.g., car, flight, train)
+  transport: TransportType | string; // Mode of transportation (e.g., car, flight, train)
   Destination: string; // Destination location
+  direction: Direction; // Destination location
 }
 
 const MissionModal: React.FC<MissionModalProps> = ({
@@ -55,14 +61,16 @@ const MissionModal: React.FC<MissionModalProps> = ({
   isEdit = false,
   initialData,
 }) => {
+  const dispatch = useDispatch<AppDispatch>();
   const initialFormData: MissionData = initialData || {
     date_sortie: '',
     heure_sortie: '',
     date_retour: '',
     heure_retour: '',
     motif: '',
-    transport: TransportType.personal,
+    transport: '',
     Destination: '',
+    direction: Direction.nord,
   };
 
   const [formData, setFormData] = useState<MissionData>(initialFormData);
@@ -75,17 +83,27 @@ const MissionModal: React.FC<MissionModalProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+
+    // Map transport value or keep the input value
+    // const mappedValue = name === 'transport' ? transportMapping[value] || value : value;
     console.log(value);
-    const mappedValue = transportMapping[value] || value; // Default to value if not found in mapping
     setFormData({
       ...formData,
-      [name]: mappedValue, // Update the field based on the input
+      [name]: value, // Only update the specific field being changed
     });
   };
 
   const handleSubmit = () => {
-    console.log(formData);
-    onSubmit(formData); // Send the entire formData for both create and edit
+    const date1 = new Date(formData.date_retour);
+    const date2 = new Date(formData.date_sortie);
+    if (Math.abs(date2.getTime() - date1.getTime()) < 0) {
+      dispatch(
+        setAlert({ msg: 'Date De Retour est grand quand Date Depart', type: AlertTypes.ERROR }),
+      );
+    }
+    const mappedValue = transportMapping[formData.transport as keyof typeof transportMapping];
+    const newFormData = { ...formData, transport: mappedValue };
+    onSubmit(newFormData); // Send the entire formData for both create and edit
     onClose(); // Close the modal
     setFormData(initialFormData); // Reset form after submission
   };
@@ -121,6 +139,7 @@ const MissionModal: React.FC<MissionModalProps> = ({
 
           {/* Date de Retour */}
           <TextField
+            id="date"
             name="date_retour"
             label="Date Retour"
             type="date"
@@ -167,7 +186,7 @@ const MissionModal: React.FC<MissionModalProps> = ({
             fullWidth
             disabled={isEdit} // Disable if editing
             select
-            value={formData.transport || ''} // Default value to empty string for placeholder
+            value={formData.transport} // Default value to empty string for placeholder
             onChange={handleChange}
             sx={{
               '& .MuiSelect-select span::before': {
@@ -192,6 +211,30 @@ const MissionModal: React.FC<MissionModalProps> = ({
             value={formData.Destination}
             onChange={handleChange}
           />
+          <TextField
+            name="direction"
+            variant="filled"
+            disabled={isEdit} // Disable if editing
+            fullWidth
+            margin="none"
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconifyIcon icon="ri:direction-line" />
+                </InputAdornment>
+              ),
+            }}
+            select
+            value={formData.direction}
+            onChange={handleChange}
+            sx={{ width: 230 }}
+          >
+            {directions.map((direction) => (
+              <MenuItem key={direction} value={direction}>
+                {direction}
+              </MenuItem>
+            ))}
+          </TextField>
         </Stack>
       </DialogContent>
       <DialogActions>
