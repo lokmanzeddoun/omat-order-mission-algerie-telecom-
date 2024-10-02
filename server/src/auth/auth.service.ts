@@ -25,6 +25,7 @@ export class AuthService {
           category: true,
           role: true,
           email: true,
+          grade: true,
           createdAt: true,
           status: true,
         },
@@ -57,7 +58,7 @@ export class AuthService {
       }),
     };
   }
-  async refreshToken(user) {
+  async refreshToken(user: User) {
     return {
       user: user,
       token: this.getJwtToken({ matricule: user.matricule, role: user.role }),

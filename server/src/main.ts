@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
-import { PrismaClientExceptionFilter } from 'nestjs-prisma';
 import { Logger } from 'nestjs-pino';
+import { PrismaClientExceptionFilter } from './prisma-client-exception/prisma-client-exception.filter';
 
 import type {
   CorsConfig,
@@ -43,7 +43,7 @@ async function bootstrap() {
   }
 
   // Cors
-    app.enableCors();
+  app.enableCors();
   // if (corsConfig.enabled) {
   // }
   await app.listen(nestConfig.port);

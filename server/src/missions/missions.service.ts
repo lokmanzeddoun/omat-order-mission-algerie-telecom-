@@ -3,8 +3,6 @@ import {
   Injectable,
   StreamableFile,
 } from '@nestjs/common';
-// import { CreateMissionDto } from './dto/create-mission.dto';
-// import { UpdateMissionDto } from './dto/update-mission.dto';
 import { DatabaseService } from 'src/database/database.service';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
@@ -24,20 +22,20 @@ const convertAsync = promisify(libre.convert);
 export class MissionsService {
   constructor(private readonly databaseService: DatabaseService) {}
   async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
-    // save the service in database :
     const res = await this.databaseService.mission.create({
       data: {
-        user: {
-          connect: { matricule: user.matricule }, // Connect existing user for user1
-        },
         ...createMissionDto,
+        // userId: userData.matricule,
         date_sortie: createMissionDto.date_sortie
-          ? createMissionDto.date_sortie
+          ? moment(createMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
           : null,
         date_retour: createMissionDto.date_retour
-          ? createMissionDto.date_retour
+          ? moment(createMissionDto.date_retour, 'YYYY-MM-DD').toDate()
           : null,
         transport: createMissionDto.transport || null, // Set transport to null if empty
+        user: {
+          connect: { matricule: user.matricule },
+        },
       },
     });
     const service = await this.databaseService.structure.findUnique({
@@ -58,13 +56,17 @@ export class MissionsService {
       ref: user.grade,
       service: service.name,
       matricule: user.matricule,
-      destination: res.Destination || '',
-      date_depart: res.date_sortie || '',
-      date_retour: res.date_retour || '',
-      h_r: res.date_retour ? moment(res.date_retour).format('hh') : '',
-      h_d: res.date_sortie ? moment(res.date_sortie).format('hh') : '',
-      m_r: res.date_retour ? moment(res.date_retour).format('mm') : '',
-      m_d: res.date_sortie ? moment(res.date_sortie).format('mm') : '',
+      destination: res.destination || '',
+      date_depart: res.date_sortie
+        ? moment(res.date_sortie).format('DD/MM/YYYY')
+        : '',
+      date_retour: res.date_retour
+        ? moment(res.date_retour).format('DD/MM/YYYY')
+        : '',
+      h_r: res.heure_retour ? res.heure_retour.split(':')[0] : '',
+      h_d: res.heure_sortie ? res.heure_sortie.split(':')[0] : '',
+      m_r: res.heure_retour ? res.heure_retour.split(':')[1] : '',
+      m_d: res.heure_sortie ? res.heure_sortie.split(':')[1] : '',
     };
     // Set the template variables
     doc.setData(replacements);
@@ -100,6 +102,35 @@ export class MissionsService {
       where: {
         soft_delete: false,
       },
+      orderBy: [
+        {
+          updatedAt: 'desc',
+        },
+      ],
+      select: {
+        n_mission: true,
+        date_sortie: true,
+        heure_sortie: true,
+        date_retour: true,
+        heure_retour: true,
+        motif: true,
+        transport: true,
+        destination: true,
+        createdAt: true,
+        updatedAt: true,
+        soft_delete: true,
+        userId: true,
+        direction: true,
+        status: true,
+        user: {
+          select: {
+            matricule: true, // Fetching specific fields from User
+            nom: true, // Select 'nom' from User
+            prenom: true, // Select 'prenom' from User
+            serviceId: true,
+          },
+        },
+      },
     });
   }
 
@@ -112,21 +143,64 @@ export class MissionsService {
   }
   findByUser(user: User) {
     // TODO fetch MIssion based on userId
-    // return this.databaseService.mission.findUnique({
-    //   where: {
-    //     userId: user.matricule,
-    //   },
-    // });
+    return this.databaseService.mission.findMany({
+      where: {
+        userId: user.matricule,
+        soft_delete: false,
+      },
+      orderBy: [
+        {
+          updatedAt: 'desc',
+        },
+      ],
+      select: {
+        n_mission: true,
+        date_sortie: true,
+        heure_sortie: true,
+        date_retour: true,
+        heure_retour: true,
+        motif: true,
+        transport: true,
+        destination: true,
+        createdAt: true,
+        updatedAt: true,
+        soft_delete: true,
+        userId: true,
+        direction: true,
+        status: true,
+        user: {
+          select: {
+            matricule: true, // Fetching specific fields from User
+            nom: true, // Select 'nom' from User
+            prenom: true, // Select 'prenom' from User
+          },
+        },
+      },
+    });
   }
 
-  // update(id: number, updateMissionDto: UpdateMissionDto) {
-  //   return this.databaseService.mission.update({
-  //     where: {
-  //       n_mission: id,
-  //     },
-  //     data: updateMissionDto,
-  //   });
-  // }
+  update(id: number, updateMissionDto: Prisma.MissionUpdateInput) {
+    return this.databaseService.mission.update({
+      where: {
+        n_mission: id,
+      },
+      data: {
+        ...updateMissionDto,
+        date_sortie:
+          typeof updateMissionDto.date_sortie === 'string'
+            ? moment(updateMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
+            : updateMissionDto.date_sortie instanceof Date
+              ? updateMissionDto.date_sortie
+              : null,
+        date_retour:
+          typeof updateMissionDto.date_retour === 'string'
+            ? moment(updateMissionDto.date_retour, 'YYYY-MM-DD').toDate()
+            : updateMissionDto.date_retour instanceof Date
+              ? updateMissionDto.date_retour
+              : null,
+      },
+    });
+  }
 
   remove(id: number) {
     return this.databaseService.mission.update({
@@ -166,13 +240,17 @@ export class MissionsService {
       ref: user.grade,
       service: service.name,
       matricule: user.matricule,
-      destination: mission.Destination,
-      date_depart: mission.date_sortie,
-      date_retour: mission.date_retour,
-      h_r: moment(mission.date_retour).format('mm') || '',
-      h_d: moment(mission.date_sortie).format('hh') || '',
-      m_r: moment(mission.date_retour).format('mm') || '',
-      m_d: moment(mission.date_sortie).format('hh') || '',
+      destination: mission.destination,
+      date_depart: mission.date_sortie
+        ? moment(mission.date_sortie).format('DD/MM/YYYY')
+        : '',
+      date_retour: mission.date_retour
+        ? moment(mission.date_retour).format('DD/MM/YYYY')
+        : '',
+      h_r: mission.heure_retour ? mission.heure_retour.split(':')[0] : '',
+      h_d: mission.heure_sortie ? mission.heure_sortie.split(':')[0] : '',
+      m_r: mission.heure_retour ? mission.heure_retour.split(':')[1] : '',
+      m_d: mission.heure_sortie ? mission.heure_sortie.split(':')[1] : '',
       wilaya: 'Tlemcen',
     };
     // Set the template variables

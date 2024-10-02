@@ -10,7 +10,6 @@ import {
 } from '@nestjs/common';
 import { MissionsService } from './missions.service';
 // import { CreateMissionDto } from './dto/create-mission.dto';
-import { UpdateMissionDto } from './dto/update-mission.dto';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { Prisma, User } from '@prisma/client';
@@ -24,17 +23,15 @@ export class MissionsController {
     @Body() createMissionDto: Prisma.MissionCreateInput,
     @GetUser() user: User,
   ) {
-    return this.missionsService.create(createMissionDto, user);
+    const userToUse = createMissionDto.user ? createMissionDto.user as User : user;
+
+    return this.missionsService.create(createMissionDto, userToUse);
   }
 
   @Get()
+  @Auth()
   findAll() {
     return this.missionsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.missionsService.findOne(+id);
   }
   @Get('user')
   @Auth()
@@ -42,9 +39,17 @@ export class MissionsController {
     return this.missionsService.findByUser(user);
   }
 
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.missionsService.findOne(+id);
+  }
+
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateMissionDto: UpdateMissionDto) {
-    // return this.missionsService.update(+id, updateMissionDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateMissionDto: Prisma.MissionUpdateInput,
+  ) {
+    return this.missionsService.update(+id, updateMissionDto);
   }
 
   @Delete(':id')

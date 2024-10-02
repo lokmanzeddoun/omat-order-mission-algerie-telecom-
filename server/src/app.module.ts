@@ -10,6 +10,7 @@ import { StructuresModule } from './structures/structures.module';
 import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
+import { DecompteModule } from './decompte/decompte.module';
 @Module({
   imports: [
     PinoLoggerModule.forRoot({
@@ -40,6 +41,7 @@ import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
     StructuresModule,
     AuthModule,
     MissionsModule,
+    DecompteModule,
   ],
   controllers: [AppController],
   providers: [AppService],

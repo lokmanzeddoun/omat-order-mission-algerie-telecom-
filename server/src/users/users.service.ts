@@ -39,7 +39,7 @@ export class UsersService {
     //Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
     try {
-      return this.databaseService.user.create({
+      return await this.databaseService.user.create({
         data: {
           ...createUserDto,
           password: hashedPassword,
@@ -47,10 +47,15 @@ export class UsersService {
         },
       });
     } catch (error) {
-      if (error.code === 'P2002') {
-        throw new BadRequestException('User already exists');
+      // Check if the error is from Prisma and specifically a unique constraint violation
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2002') {
+          // Here you can specify which field caused the conflict if needed
+          throw new BadRequestException('Utilisateur avec cette email exist');
+        }
       }
-      throw new InternalServerErrorException('Server error');
+      // For all other errors, throw a generic server error
+      throw new InternalServerErrorException('An unexpected error occurred.');
     }
   }
 
@@ -74,6 +79,7 @@ export class UsersService {
         userSince: true,
         grade: true,
         status: true,
+        serviceId: true,
         structure: {
           select: {
             name: true,
@@ -96,7 +102,7 @@ export class UsersService {
       where: {
         matricule,
       },
-      data: updateUserDto,
+      data: { ...updateUserDto, matricule: +updateUserDto.matricule },
     });
   }
 

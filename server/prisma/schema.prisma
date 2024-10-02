@@ -34,18 +34,35 @@ model Structure {
 }
 model Mission {
   n_mission Int @default(autoincrement()) @id
-  date_sortie DateTime
-  heure_sortie DateTime @db.Timestamptz
-  date_retour DateTime
-  heure_retour DateTime @db.Timestamptz
-  motif String
-  transport String
-  Destination String
+  date_sortie DateTime?
+  heure_sortie String?
+  date_retour DateTime?
+  heure_retour String?
+  motif String?
+  status MissionStatus? @default(INPROGRESS)
+  transport TransportType?
+  destination String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   user User @relation(fields: [userId],references: [matricule])
   soft_delete Boolean @default(false)
   userId Int
+  direction Direction @default(NORD)
+  decompte Decompte[]
+}
+
+model Decompte {
+  n_decompte Int @default(autoincrement()) @id
+  repas_pec Int @default(0)
+  repas_sans_pec Int @default(0)
+  hebergement_pec Int @default(0)
+  hebergement_sans_pec Int @default(0)
+  status DecompteStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  soft_delete Boolean @default(false)
+  mission Mission @relation(fields: [missionId],references: [n_mission])
+  missionId Int
 }
 
 
@@ -70,4 +87,18 @@ enum TransportType {
   PERSONAL_CAR
   TRANSPORT_ENTREPRISE
   TRANSPORT_EMPLOYEE
+}
+enum Direction {
+  NORD
+  SUD
+}
+enum MissionStatus {
+  PENDING
+  INPROGRESS
+  COMPLETED
+}
+enum DecompteStatus {
+  REGECTED
+  ACCEPTED
+  PENDING
 }

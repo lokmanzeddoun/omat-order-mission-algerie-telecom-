@@ -1,40 +1,32 @@
 import { IsString, IsInt, IsDate, IsOptional, IsNumber } from 'class-validator';
 import { Type } from 'class-transformer';
+import { TransportType, User } from '@prisma/client';
 
 export class CreateMissionDto {
   @IsDate()
   @Type(() => Date)
   date_sortie: Date;
 
-  @IsDate()
-  @Type(() => Date)
-  heure_sortie: Date;
+  @IsString()
+  heure_sortie: String;
 
   @IsDate()
   @Type(() => Date)
   date_retour: Date;
 
-  @IsDate()
-  @Type(() => Date)
-  heure_retour: Date;
+  @IsString()
+  heure_retour: String;
 
   @IsString()
   motif: string;
 
   @IsString()
-  transport: string;
+  transport: TransportType;
 
   @IsString()
   destination: string;
 
-  @IsNumber()
-  montant: number;
-
-
   @IsOptional()
-  @IsString()
-  quality?: string;
-  @IsOptional()
-  @IsInt()
-  responsableId: number;
+  @IsInt() // Assuming matricule is an integer
+  userMatricule: number; // Only the unique identifier, not the full User object
 }
