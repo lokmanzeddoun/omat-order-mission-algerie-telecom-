@@ -1,11 +1,17 @@
-import { IMission } from './orderReducer';
+import {
+  editMission,
+  fetchOrdersStart,
+  fetchUserOrderFailure,
+  fetchUserOrderSuccess,
+  IMission,
+  removeOrder,
+} from './orderReducer';
 import axios from 'axios';
 
 const API_URL = 'http://localhost:8000';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
-import { createOrder } from './orderReducer.ts';
 import { saveAs } from 'file-saver';
 
 export const addOrder =
@@ -40,7 +46,7 @@ export const addOrder =
         // document.body.removeChild(link); // Clean up the link
 
         dispatch(setAlert({ msg: 'Order Created Successfully', type: AlertTypes.SUCCESS }));
-        return dispatch(createOrder(order)); // Dispatch createOrder if necessary
+        return dispatch(fetchUserOrders(token)); // Dispatch createOrder if necessary
       } else {
         dispatch(setAlert({ msg: 'Unexpected error: no file returned', type: AlertTypes.ERROR }));
       }
@@ -59,3 +65,115 @@ export const addOrder =
       console.error('Error:', errorMessage);
     }
   };
+
+export const fetchUserOrders = (token: string | null) => async (dispatch: AppDispatch) => {
+  try {
+    dispatch(fetchOrdersStart()); // Start loading
+
+    const res = await axios.get(`${API_URL}/missions/user`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res && res.data) {
+      dispatch(fetchUserOrderSuccess(res.data)); // Dispatch success and pass the data
+      return;
+    }
+
+    dispatch(fetchUserOrderFailure('Problem in getting orders'));
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    dispatch(fetchUserOrderFailure(errorMessage)); // Dispatch failure and pass the error message
+    console.error('Error:', errorMessage);
+  }
+};
+
+export const updateMission = (order: IMission) => async (dispatch: AppDispatch) => {
+  //
+  try {
+    const res = await axios.patch(`${API_URL}/missions/${order.n_mission}`, order);
+    if (res) {
+      await dispatch(setAlert({ msg: 'Order Updated Successfully', type: AlertTypes.SUCCESS }));
+      dispatch(editMission(res.data));
+    } else {
+      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+    }
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      // For Axios errors, you can extract more specific information
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
+      // Handle other errors
+      errorMessage = error.message;
+    }
+
+    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+    console.error('Error:', errorMessage);
+  }
+};
+export const fetchAllOrders = (token: string | null) => async (dispatch: AppDispatch) => {
+  try {
+    dispatch(fetchOrdersStart()); // Start loading
+
+    const res = await axios.get(`${API_URL}/missions`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res && res.data) {
+      dispatch(fetchUserOrderSuccess(res.data)); // Dispatch success and pass the data
+      return;
+    }
+
+    dispatch(fetchUserOrderFailure('Problem in getting orders'));
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    dispatch(fetchUserOrderFailure(errorMessage)); // Dispatch failure and pass the error message
+    console.error('Error:', errorMessage);
+  }
+};
+
+export const deleteOrder = (n_mission: number | null) => async (dispatch: AppDispatch) => {
+  try {
+    const res = await axios.delete(`${API_URL}/missions/${n_mission}`);
+    if (res) {
+      await dispatch(setAlert({ msg: 'Order Deleted Successfully', type: AlertTypes.SUCCESS }));
+      dispatch(removeOrder(res.data));
+    } else {
+      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+    }
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      // For Axios errors, you can extract more specific information
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
+      // Handle other errors
+      errorMessage = error.message;
+    }
+
+    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+    console.error('Error:', errorMessage);
+  }
+};

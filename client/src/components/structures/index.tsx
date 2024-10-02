@@ -17,6 +17,7 @@ import {
 import CreateStructureModal from './modals/CreateStructureModal';
 import EditStructureModal from './modals/EditStructureModal';
 import ConfirmDeletionModal from './modals/DeleteStructure';
+import Splash from 'components/loader/Splash';
 
 export interface RowData {
   code: string;
@@ -48,7 +49,9 @@ const InvoiceOverviewTable: React.FC = () => {
   // get users State
   const dispatch = useDispatch<AppDispatch>();
 
-  const { structures } = useSelector((state: RootState) => state.structures);
+  const { structures, loading: structureLoading } = useSelector(
+    (state: RootState) => state.structures,
+  );
 
   const [selectedStructure, setselectedStructure] = useState<RowData | null>(null);
 
@@ -130,6 +133,9 @@ const InvoiceOverviewTable: React.FC = () => {
       ),
     },
   ];
+  if (structureLoading) {
+    return <Splash />;
+  }
   return (
     <Stack sx={{ overflow: 'auto', justifyContent: 'space-between', flexDirection: 'column' }}>
       <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>

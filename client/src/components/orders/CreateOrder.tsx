@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { FormEvent, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -13,46 +13,43 @@ import {
 import { Direction } from 'constants/direction';
 import IconifyIcon from 'components/base/IconifyIcon';
 import { TransportType } from 'constants/transport';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState } from 'store/rootReducer';
+import { useDispatch } from 'react-redux';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
+import moment from 'moment';
+import { IMission } from './orderReducer';
+import DirectionIcon from 'assets/icons/ri--direction-line.svg?react';
+import GoalIcon from 'assets/icons/octicon--goal-16.svg?react';
+import DestinationIcon from 'assets/icons/majesticons--map-simple-destination.svg?react';
 
 const directions = ['NORD', 'SUD'];
+
 interface MissionModalProps {
   open: boolean;
   onClose: () => void;
-  onSubmit: (data: MissionData) => void;
-  isEdit?: boolean;
-  initialData?: MissionData; // Initial data for edit mode
+  onSubmit: (data: IMission) => void;
+  isEdit?: boolean; // To identify if it's edit mode
+  initialData?: IMission; // Initial data for edit mode
+  readOnly?: boolean; // New prop to determine if fields should be read-only
 }
-// Your transport options
+
 const transports = [
   'Véhicule de service',
-  'Autre moyens de transport  dont les dépenses sont  prises en charge par l’entreprise',
+  'Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise',
   'Moyens de transport   dont les dépenses sont prises en charge par le travailleur',
   'Utilisation exceptionnel du véhicule Personnel, à la demande de la hiérarchie',
 ];
+
 const transportMapping = {
   'Véhicule de service': TransportType.service,
-  'Autre moyens de transport  dont les dépenses sont  prises en charge par l’entreprise':
+  'Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise':
     TransportType.entreprise,
   'Moyens de transport   dont les dépenses sont prises en charge par le travailleur':
     TransportType.employee,
   'Utilisation exceptionnel du véhicule Personnel, à la demande de la hiérarchie':
     TransportType.personal,
 };
-interface MissionData {
-  date_sortie: string; // Date of departure
-  heure_sortie: string; // Time of departure
-  date_retour: string; // Date of return
-  heure_retour: string; // Time of return
-  motif: string; // Reason for the mission
-  transport: TransportType | string; // Mode of transportation (e.g., car, flight, train)
-  Destination: string; // Destination location
-  direction: Direction; // Destination location
-}
 
 const MissionModal: React.FC<MissionModalProps> = ({
   open,
@@ -60,40 +57,44 @@ const MissionModal: React.FC<MissionModalProps> = ({
   onSubmit,
   isEdit = false,
   initialData,
+  readOnly = false, // Default to false
 }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const initialFormData: MissionData = initialData || {
+  const initialFormData: IMission = initialData || {
     date_sortie: '',
     heure_sortie: '',
     date_retour: '',
     heure_retour: '',
     motif: '',
     transport: '',
-    Destination: '',
+    destination: '',
     direction: Direction.nord,
   };
 
-  const [formData, setFormData] = useState<MissionData>(initialFormData);
+  const [formData, setFormData] = useState<IMission>(initialFormData);
 
   useEffect(() => {
     if (isEdit && initialData) {
-      setFormData(initialData);
+      setFormData({
+        ...initialData,
+        date_sortie: moment(initialData.date_sortie).format('YYYY-MM-DD'),
+        date_retour: moment(initialData.date_retour).format('YYYY-MM-DD'),
+      });
     }
   }, [isEdit, initialData]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
     // Map transport value or keep the input value
-    // const mappedValue = name === 'transport' ? transportMapping[value] || value : value;
-    console.log(value);
     setFormData({
       ...formData,
-      [name]: value, // Only update the specific field being changed
+      [name]: value,
     });
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     const date1 = new Date(formData.date_retour);
     const date2 = new Date(formData.date_sortie);
     if (Math.abs(date2.getTime() - date1.getTime()) < 0) {
@@ -103,16 +104,37 @@ const MissionModal: React.FC<MissionModalProps> = ({
     }
     const mappedValue = transportMapping[formData.transport as keyof typeof transportMapping];
     const newFormData = { ...formData, transport: mappedValue };
-    onSubmit(newFormData); // Send the entire formData for both create and edit
-    onClose(); // Close the modal
-    setFormData(initialFormData); // Reset form after submission
+
+    if (isEdit) {
+      const updatedData: Partial<IMission> = {};
+      Object.keys(newFormData).forEach((key) => {
+        if (newFormData[key] !== initialFormData[key as keyof IMission]) {
+          updatedData[key as keyof IMission] = newFormData[key as keyof IMission];
+        }
+      });
+      updatedData.n_mission = formData.n_mission;
+      if (Object.keys(updatedData).length > 0) {
+        onSubmit(updatedData as IMission);
+      }
+    } else {
+      onSubmit(newFormData);
+    }
+    onClose();
+    setFormData(initialFormData);
   };
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{isEdit ? 'Editer Mission' : 'Ajouter Nouvelle Mission'}</DialogTitle>
       <DialogContent>
-        <Stack component="form" mt={3} direction="column" gap={2}>
+        <Stack
+          component="form"
+          mt={3}
+          id="mission-form"
+          direction="column"
+          onSubmit={handleSubmit}
+          gap={2}
+        >
           {/* Date de Sortie */}
           <TextField
             name="date_sortie"
@@ -122,7 +144,8 @@ const MissionModal: React.FC<MissionModalProps> = ({
             variant="outlined"
             InputLabelProps={{ shrink: true }}
             value={formData.date_sortie}
-            onChange={handleChange}
+            onChange={readOnly ? undefined : handleChange} // Prevent change if read-only
+            InputProps={{ readOnly }} // Make field read-only
           />
 
           {/* Heure de Sortie */}
@@ -134,7 +157,8 @@ const MissionModal: React.FC<MissionModalProps> = ({
             variant="outlined"
             InputLabelProps={{ shrink: true }}
             value={formData.heure_sortie}
-            onChange={handleChange}
+            onChange={readOnly ? undefined : handleChange}
+            InputProps={{ readOnly }}
           />
 
           {/* Date de Retour */}
@@ -147,7 +171,8 @@ const MissionModal: React.FC<MissionModalProps> = ({
             variant="outlined"
             InputLabelProps={{ shrink: true }}
             value={formData.date_retour}
-            onChange={handleChange}
+            onChange={readOnly ? undefined : handleChange}
+            InputProps={{ readOnly }}
           />
 
           {/* Heure de Retour */}
@@ -159,7 +184,8 @@ const MissionModal: React.FC<MissionModalProps> = ({
             variant="outlined"
             InputLabelProps={{ shrink: true }}
             value={formData.heure_retour}
-            onChange={handleChange}
+            onChange={readOnly ? undefined : handleChange}
+            InputProps={{ readOnly }}
           />
 
           {/* Motif */}
@@ -167,24 +193,24 @@ const MissionModal: React.FC<MissionModalProps> = ({
             name="motif"
             fullWidth
             variant="filled"
+            required
             placeholder="Entrez le Motif"
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="mdi:reason" />
+                  <IconifyIcon icon={GoalIcon} />
                 </InputAdornment>
               ),
+              readOnly, // Make field read-only
             }}
             value={formData.motif}
-            onChange={handleChange}
+            onChange={readOnly ? undefined : handleChange}
           />
 
-          {/* Transport */}
           <TextField
             name="transport"
             variant="filled"
             fullWidth
-            disabled={isEdit} // Disable if editing
             select
             value={formData.transport} // Default value to empty string for placeholder
             onChange={handleChange}
@@ -204,29 +230,39 @@ const MissionModal: React.FC<MissionModalProps> = ({
 
           {/* Destination */}
           <TextField
-            name="Destination"
+            name="destination"
             fullWidth
             variant="filled"
+            required
             placeholder="Entrez la Destination"
-            value={formData.Destination}
-            onChange={handleChange}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconifyIcon icon={DestinationIcon} />
+                </InputAdornment>
+              ),
+              readOnly,
+            }}
+            value={formData.destination}
+            onChange={readOnly ? undefined : handleChange}
           />
+
           <TextField
             name="direction"
             variant="filled"
-            disabled={isEdit} // Disable if editing
             fullWidth
             margin="none"
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="ri:direction-line" />
+                  <IconifyIcon icon={DirectionIcon} />
                 </InputAdornment>
               ),
+              readOnly,
             }}
             select
             value={formData.direction}
-            onChange={handleChange}
+            onChange={readOnly ? undefined : handleChange}
             sx={{ width: 230 }}
           >
             {directions.map((direction) => (
@@ -238,11 +274,11 @@ const MissionModal: React.FC<MissionModalProps> = ({
         </Stack>
       </DialogContent>
       <DialogActions>
+        <Button type="submit" form="mission-form" color="primary" disabled={readOnly}>
+          {isEdit ? 'Mettre à Jour' : 'Soumettre'}
+        </Button>
         <Button onClick={onClose} color="secondary">
           Annuler
-        </Button>
-        <Button onClick={handleSubmit} color="primary">
-          {isEdit ? 'Mettre à Jour' : 'Soumettre'}
         </Button>
       </DialogActions>
     </Dialog>

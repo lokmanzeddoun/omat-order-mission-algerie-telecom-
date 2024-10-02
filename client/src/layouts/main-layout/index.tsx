@@ -1,8 +1,7 @@
 import { useState, PropsWithChildren } from 'react';
 import Stack from '@mui/material/Stack';
 import Sidebar from 'layouts/main-layout/sidebar';
-import Topbar from 'layouts/user-layout/topbar';
-import { Button } from '@mui/material';
+import Topbar from 'layouts/main-layout/topbar';
 
 const MainLayout = ({ children }: PropsWithChildren) => {
   const [mobileOpen, setMobileOpen] = useState(false);

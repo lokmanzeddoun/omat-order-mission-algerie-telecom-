@@ -10,7 +10,6 @@ import paths, { rootPaths } from './paths';
 const App = lazy(() => import('App'));
 const Signin = lazy(() => import('pages/authentication/Signin'));
 import Users from 'pages/users';
-import Dashboard from 'pages/Dashboard';
 import ProtectedRoute from 'ProtectedRoute';
 import Structures from 'pages/structures';
 import NotFoundPage from 'pages/not-found';
@@ -18,8 +17,9 @@ import UserLayout from 'layouts/user-layout';
 import UserDashboard from 'pages/UserDashboard';
 import RedirectBasedOnRole from 'RedirectBasedRole';
 import MyProfile from 'pages/userProfile';
-import OrderView from 'components/orders/OrderView';
 import OrderDashboard from 'pages/ordres';
+import DataGridWithJson from 'pages/barem';
+import Archive from 'pages/archive';
 
 const router = createBrowserRouter(
   [
@@ -78,6 +78,14 @@ const router = createBrowserRouter(
               path: '', // Relative path, starting with the parent's path
               element: <OrderDashboard />,
             },
+            {
+              path: "barem",
+              element: <DataGridWithJson />,
+            },
+            // {
+            //   path: "archive",
+            //   element: <Archive />,
+            // },
           ],
         },
         {

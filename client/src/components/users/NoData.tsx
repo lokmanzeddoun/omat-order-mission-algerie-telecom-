@@ -3,8 +3,8 @@ import NoContentImage from 'assets/no-content.svg';
 import Image from 'components/base/Image';
 
 const NoData = () => {
-  const title = 'No Data Available';
-  const description = 'There is no data to display at the moment.';
+  const title = 'Pas de données disponibles ';
+  const description = " Il n'y a aucune donnée à afficher pour le moment.";
 
   return (
     <Stack
@@ -23,14 +23,18 @@ const NoData = () => {
         <Typography
           variant="h6"
           component="span"
-          sx={{ mt: 1, textAlign: 'center', color: 'error.main' }}
+          sx={{ mt: 2, textAlign: 'center', color: 'error.main' }}
         >
           {title}
+          {}
         </Typography>
       )}
 
       {description && (
-        <Typography variant="caption" sx={{ mt: 1, textAlign: 'center', color: 'text.disabled' }}>
+        <Typography
+          variant="caption"
+          sx={{ mt: 2, ml: 2, textAlign: 'center', color: 'text.disabled' }}
+        >
           {description}
         </Typography>
       )}

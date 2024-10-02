@@ -14,22 +14,26 @@ import { RootState } from 'store/rootReducer';
 import { AppDispatch } from 'store';
 import {  logout } from 'components/auth/auth.thunk';
 import { useNavigate } from 'react-router-dom';
+import LogoutIcon from 'assets/icons/hugeicons--logout-03.svg?react';
+import ProfileIcon from 'assets/icons/hugeicons--user-circle-02.svg?react';
+import { FC, SVGProps } from 'react';
+
 interface MenuItems {
   id: number;
   title: string;
-  icon: string;
+  icon: FC<SVGProps<SVGSVGElement>>;
 }
 
 const menuItems: MenuItems[] = [
   {
     id: 1,
     title: 'Voire Profile',
-    icon: 'hugeicons:user-circle-02',
+    icon: ProfileIcon,
   },
   {
     id: 6,
     title: 'Logout',
-    icon: 'hugeicons:logout-03',
+    icon: LogoutIcon,
   },
 ];
 

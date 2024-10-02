@@ -10,6 +10,7 @@ export default {
   orders: `/${rootPaths.dashboard}/orders`,
   users: `/${rootPaths.dashboard}/users`,
   structures: `/${rootPaths.dashboard}/structures`,
+  barem: `/${rootPaths.dashboard}/barem`,
   home: `/${rootPaths.dashboard}/home`,
   me: `/${rootPaths.dashboard}/me`,
   messages: `/${rootPaths.pageRoot}/messages`,

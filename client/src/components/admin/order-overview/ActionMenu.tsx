@@ -7,22 +7,25 @@ import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
 import IconifyIcon from 'components/base/IconifyIcon';
-
+import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
+import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
+import MenuIcon from 'assets/icons/iconamoon--menu-kebab-horizontal-fill.svg?react';
+import { FC, SVGProps } from 'react';
 interface Action {
   id: number;
-  icon: string;
+  icon: FC<SVGProps<SVGSVGElement>>;
   title: string;
 }
 
 const actions: Action[] = [
   {
     id: 1,
-    icon: 'hugeicons:pencil-edit-02',
+    icon: EditIcon,
     title: 'Editer',
   },
   {
     id: 2,
-    icon: 'hugeicons:delete-02',
+    icon: DeleteIcon,
     title: 'Supprimer',
   },
 ];
@@ -50,7 +53,7 @@ const ActionMenu = ({ user, onEdit, onDelete }) => {
         sx={{ p: 0.75, border: 'none', bgcolor: 'transparent !important' }}
         size="large"
       >
-        <IconifyIcon icon="iconamoon:menu-kebab-horizontal-fill" color="text.primary" />
+        <IconifyIcon icon={MenuIcon} color="action" />
       </IconButton>
       <Menu
         anchorEl={anchorEl}
@@ -73,7 +76,7 @@ const ActionMenu = ({ user, onEdit, onDelete }) => {
               <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize' }}>
                 <IconifyIcon
                   icon={actionItem.icon}
-                  color={actionItem.id === 2 ? 'error.main' : 'text.primary'}
+                  color={actionItem.id === 2 ? 'error' : 'action'}
                 />
               </ListItemIcon>
               <ListItemText>

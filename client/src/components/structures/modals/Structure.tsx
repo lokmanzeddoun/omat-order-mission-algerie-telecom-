@@ -11,6 +11,8 @@ import {
 } from '@mui/material';
 import { RowData } from '..';
 import IconifyIcon from 'components/base/IconifyIcon';
+import ServiceIcon from 'assets/icons/mdi--account-service-outline.svg?react';
+import MatriculeIcon from 'assets/icons/teenyicons--id-solid.svg?react';
 interface StructureModalProps {
   open: boolean;
   onClose: () => void;
@@ -67,7 +69,7 @@ const StructureModal: React.FC<StructureModalProps> = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="teenyicons:id-solid" />
+                  <IconifyIcon icon={MatriculeIcon} />
                 </InputAdornment>
               ),
             }}
@@ -82,7 +84,7 @@ const StructureModal: React.FC<StructureModalProps> = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="mdi:account-service-outline" />
+                  <IconifyIcon icon={ServiceIcon} />
                 </InputAdornment>
               ),
             }}

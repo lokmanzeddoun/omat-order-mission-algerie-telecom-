@@ -13,33 +13,41 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
 import { AppDispatch } from 'store';
 import { logout } from 'components/auth/auth.thunk';
-import image from 'assets/avatar7.png';
+import image from 'assets/photo-1535713875002-d1d0cf377fde.jpeg';
+import AccountIcon from 'assets/icons/hugeicons--account-setting-02.svg?react';
+import LogoutIcon from 'assets/icons/hugeicons--logout-03.svg?react';
+import ProfileIcon from 'assets/icons/hugeicons--user-circle-02.svg?react';
+import { FC, SVGProps } from 'react';
+import { useNavigate } from 'react-router-dom';
+
 interface MenuItems {
   id: number;
   title: string;
-  icon: string;
+  icon: FC<SVGProps<SVGSVGElement>>;
 }
 
 const menuItems: MenuItems[] = [
   {
     id: 1,
     title: 'Voire Profile',
-    icon: 'hugeicons:user-circle-02',
+    icon: ProfileIcon,
   },
   {
     id: 2,
     title: 'Parametres',
-    icon: 'hugeicons:account-setting-02',
+    icon: AccountIcon,
   },
   {
     id: 6,
     title: 'Logout',
-    icon: 'hugeicons:logout-03',
+    icon: LogoutIcon,
   },
 ];
 
 const ProfileMenu = () => {
+  const navigate = useNavigate();
   const { user } = useSelector((state: RootState) => state.auth);
+
   const dispatch = useDispatch<AppDispatch>();
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -51,6 +59,9 @@ const ProfileMenu = () => {
 
   const handleProfileMenuClose = () => {
     setAnchorEl(null);
+  };
+  const handleProfileSubmit = () => {
+    navigate('/dashboard/me');
   };
   const handleLogout = () => {
     dispatch(logout());
@@ -93,6 +104,7 @@ const ProfileMenu = () => {
       >
         <Box p={1}>
           <MenuItem onClick={handleProfileMenuClose} sx={{ '&:hover': { bgcolor: 'info.light' } }}>
+            {/* <Avatar src={Avatar3} sx={{ mr: 1, height: 42, width: 42 }} /> */}
             <Stack direction="column">
               <Typography variant="body2" color="text.primary" fontWeight={600}>
                 {user.nom}
@@ -111,7 +123,7 @@ const ProfileMenu = () => {
             return (
               <MenuItem
                 key={item.id}
-                onClick={item.title === 'Logout' ? handleLogout : handleProfileMenuClose}
+                onClick={item.title === 'Logout' ? handleLogout : handleProfileSubmit}
                 sx={{ py: 1 }}
               >
                 <ListItemIcon

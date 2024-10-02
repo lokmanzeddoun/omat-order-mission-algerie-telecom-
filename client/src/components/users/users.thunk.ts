@@ -88,7 +88,7 @@ export const uploadUsers = (file: File) => async (dispatch: AppDispatch) => {
     console.log(res);
     if (res) {
       await dispatch(setAlert({ msg: 'File uploaded successfully', type: AlertTypes.SUCCESS }));
-      await dispatch(getAllUsers()); // Assuming 'res.data' contains the newly created users
+      return dispatch(getAllUsers()); // Assuming 'res.data' contains the newly created users
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
     }
@@ -114,7 +114,8 @@ export const deleteUser = (user: IUser) => async (dispatch: AppDispatch) => {
     const res = await axios.delete(`${API_URL}/users/${user.matricule}`);
     if (res) {
       await dispatch(setAlert({ msg: 'User Deleted Successfully', type: AlertTypes.SUCCESS }));
-      await dispatch(removeUser(res.data));
+      dispatch(removeUser(res.data));
+      return dispatch(getAllUsers()); // Assuming 'res.data' contains the newly created users
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
     }
@@ -134,31 +135,33 @@ export const deleteUser = (user: IUser) => async (dispatch: AppDispatch) => {
   }
 };
 
-export const updateUser = (user: IUser) => async (dispatch: AppDispatch) => {
-  //
-  try {
-    const res = await axios.patch(`${API_URL}/users/${user.matricule}`, user);
-    if (res) {
-      await dispatch(setAlert({ msg: 'User Updated Successfully', type: AlertTypes.SUCCESS }));
-      dispatch(editUser(res.data));
-    } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
-    }
-  } catch (error) {
-    let errorMessage = 'An error occurred';
+export const updateUser =
+  (matricule: number | null, user: IUser) => async (dispatch: AppDispatch) => {
+    //
+    try {
+      const res = await axios.patch(`${API_URL}/users/${matricule}`, user);
+      if (res) {
+        await dispatch(setAlert({ msg: 'User Updated Successfully', type: AlertTypes.SUCCESS }));
+        dispatch(editUser(res.data));
+        return dispatch(getAllUsers());
+      } else {
+        dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      }
+    } catch (error) {
+      let errorMessage = 'An error occurred';
 
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+      if (axios.isAxiosError(error)) {
+        // For Axios errors, you can extract more specific information
+        errorMessage = error.response?.data?.message || error.message;
+      } else if (error instanceof Error) {
+        // Handle other errors
+        errorMessage = error.message;
+      }
 
-    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
-    console.error('Error:', errorMessage);
-  }
-};
+      dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+      console.error('Error:', errorMessage);
+    }
+  };
 
 export const changePassword =
   (token: string | null, body: ChangePasswordDto) => async (dispatch: AppDispatch) => {

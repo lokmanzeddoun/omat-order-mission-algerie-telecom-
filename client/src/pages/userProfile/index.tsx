@@ -25,6 +25,12 @@ import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { changePassword } from 'components/users/users.thunk';
 import AppAlert from 'components/alert';
+import ProfileIcon from 'assets/icons/pajamas--profile.svg?react';
+import LockIcon from 'assets/icons/hugeicons--lock-key.svg?react';
+import EditIcon from 'assets/icons/material-symbols--edit-rounded.svg?react';
+import ViewIcon from 'assets/icons/fluent-mdl2--view.svg?react';
+import HideIcon from 'assets/icons/fluent-mdl2--hide-3.svg?react';
+import HomeIcon from 'assets/icons/ic--outline-home.svg?react';
 
 export default function MyProfile() {
   const [showPassword, setShowPassword] = useState(false);
@@ -90,10 +96,10 @@ export default function MyProfile() {
           color="inherit"
           href="/omat/dashboard"
         >
-          <IconifyIcon icon="ic:outline-home" fontSize="1.25rem" />
+          <IconifyIcon icon={HomeIcon} />
         </Link>
         <Typography sx={{ display: 'flex', alignItems: 'center', gap: 0.5, fontWeight: 600 }}>
-          <IconifyIcon icon="gg:profile" fontSize="1rem" />
+          <IconifyIcon icon={ProfileIcon} fontSize="1rem" />
           Profile
         </Typography>
       </Breadcrumbs>
@@ -199,7 +205,7 @@ export default function MyProfile() {
                         '&:hover': { bgcolor: 'background.paper' },
                       }}
                     >
-                      <IconifyIcon icon="material-symbols:edit-rounded" fontSize="small" />
+                      <IconifyIcon icon={EditIcon} fontSize="small" />
                     </IconButton>
                   </Box>
                 </Stack>
@@ -286,15 +292,15 @@ export default function MyProfile() {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <IconifyIcon icon="hugeicons:lock-key" />
+                        <IconifyIcon icon={LockIcon} />
                       </InputAdornment>
                     ),
                     endAdornment: (
                       <InputAdornment
                         position="end"
                         sx={{
-                          opacity: user.password ? 1 : 0,
-                          pointerEvents: user.password ? 'auto' : 'none',
+                          opacity: 1,
+                          pointerEvents: 'auto',
                         }}
                       >
                         <IconButton
@@ -304,7 +310,7 @@ export default function MyProfile() {
                           edge="end"
                         >
                           <IconifyIcon
-                            icon={showPassword ? 'fluent-mdl2:view' : 'fluent-mdl2:hide-3'}
+                            icon={showPassword ? ViewIcon : HideIcon}
                             color="neutral.light"
                           />
                         </IconButton>
@@ -323,15 +329,15 @@ export default function MyProfile() {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <IconifyIcon icon="hugeicons:lock-key" />
+                        <IconifyIcon icon={LockIcon} />
                       </InputAdornment>
                     ),
                     endAdornment: (
                       <InputAdornment
                         position="end"
                         sx={{
-                          opacity: user.password ? 1 : 0,
-                          pointerEvents: user.password ? 'auto' : 'none',
+                          opacity: 1,
+                          pointerEvents: 'auto',
                         }}
                       >
                         <IconButton
@@ -341,7 +347,7 @@ export default function MyProfile() {
                           edge="end"
                         >
                           <IconifyIcon
-                            icon={showPassword2 ? 'fluent-mdl2:view' : 'fluent-mdl2:hide-3'}
+                            icon={showPassword2 ? ViewIcon : HideIcon}
                             color="neutral.light"
                           />
                         </IconButton>
@@ -360,15 +366,15 @@ export default function MyProfile() {
                   InputProps={{
                     startAdornment: (
                       <InputAdornment position="start">
-                        <IconifyIcon icon="hugeicons:lock-key" />
+                        <IconifyIcon icon={LockIcon} />
                       </InputAdornment>
                     ),
                     endAdornment: (
                       <InputAdornment
                         position="end"
                         sx={{
-                          opacity: user.password ? 1 : 0,
-                          pointerEvents: user.password ? 'auto' : 'none',
+                          opacity: 1,
+                          pointerEvents: 'auto',
                         }}
                       >
                         <IconButton
@@ -378,7 +384,7 @@ export default function MyProfile() {
                           edge="end"
                         >
                           <IconifyIcon
-                            icon={showPassword3 ? 'fluent-mdl2:view' : 'fluent-mdl2:hide-3'}
+                            icon={showPassword3 ? ViewIcon : HideIcon}
                             color="neutral.light"
                           />
                         </IconButton>

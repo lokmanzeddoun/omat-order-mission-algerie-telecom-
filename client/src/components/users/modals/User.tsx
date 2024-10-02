@@ -15,6 +15,15 @@ import {
 import { RowData } from '..';
 import IconifyIcon from 'components/base/IconifyIcon';
 import Splash from 'components/loader/Splash';
+import NameIcon from 'assets/icons/ic--twotone-perm-identity.svg?react';
+import PrenomIcon from 'assets/icons/material-symbols--for-you-outline.svg?react';
+import MatriculeIcon from 'assets/icons/teenyicons--id-solid.svg?react';
+import RoleIcon from 'assets/icons/eos-icons--role-binding.svg?react';
+import CategoryIcon from 'assets/icons/bx--category.svg?react';
+import MailIcon from 'assets/icons/hugeicons--mail-at-sign-02.svg?react';
+import ServiceIcon from 'assets/icons/material-symbols--home-repair-service-outline.svg?react';
+import FunctionIcon from 'assets/icons/ri--function-add-fill.svg?react';
+
 interface UserModalProps {
   open: boolean;
   onClose: () => void;
@@ -30,7 +39,6 @@ import { Category } from 'constants/category';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
 import { AppDispatch } from 'store';
-import { fetchStructuresStart } from 'components/structures/structure.reducer';
 import { getAllStructures } from 'components/structures/structure.thunk';
 import { getAllUsers } from '../users.thunk';
 const UserModal: React.FC<UserModalProps> = ({
@@ -70,7 +78,9 @@ const UserModal: React.FC<UserModalProps> = ({
     console.log(formData);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
     if (isEdit) {
       // Only gather the changed fields for an update
       const updatedData: Partial<RowData> = {};
@@ -110,7 +120,14 @@ const UserModal: React.FC<UserModalProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{isEdit ? 'Editer Utilisateur' : 'Ajouter Nouvel Utilisateur'}</DialogTitle>
       <DialogContent>
-        <Stack component="form" mt={3} onSubmit={handleSubmit} direction="column" gap={2}>
+        <Stack
+          component="form"
+          id="user-form"
+          mt={3}
+          onSubmit={handleSubmit}
+          direction="column"
+          gap={2}
+        >
           {' '}
           <TextField
             name="matricule"
@@ -123,7 +140,7 @@ const UserModal: React.FC<UserModalProps> = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="teenyicons:id-solid" />
+                  <IconifyIcon icon={MatriculeIcon} />
                 </InputAdornment>
               ),
             }}
@@ -135,10 +152,11 @@ const UserModal: React.FC<UserModalProps> = ({
             fullWidth
             variant="filled"
             placeholder="Entrez Le nom"
+            required
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="ic:twotone-perm-identity" />
+                  <IconifyIcon icon={NameIcon} />
                 </InputAdornment>
               ),
             }}
@@ -150,10 +168,11 @@ const UserModal: React.FC<UserModalProps> = ({
             fullWidth
             placeholder="Entrez Le prenom"
             variant="filled"
+            required
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="icon-park-solid:edit-name" />
+                  <IconifyIcon icon={PrenomIcon} />
                 </InputAdornment>
               ),
             }}
@@ -165,11 +184,12 @@ const UserModal: React.FC<UserModalProps> = ({
             type="normal"
             fullWidth
             variant="filled"
+            required
             placeholder="Entrez Utilisateur Email"
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="hugeicons:mail-at-sign-02" />
+                  <IconifyIcon icon={MailIcon} />
                 </InputAdornment>
               ),
             }}
@@ -184,7 +204,7 @@ const UserModal: React.FC<UserModalProps> = ({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <IconifyIcon icon="eos-icons:role-binding" />
+                    <IconifyIcon icon={RoleIcon} />
                   </InputAdornment>
                 ),
               }}
@@ -211,7 +231,7 @@ const UserModal: React.FC<UserModalProps> = ({
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
-                    <IconifyIcon icon="bxs:category" />
+                    <IconifyIcon icon={CategoryIcon} />
                   </InputAdornment>
                 ),
               }}
@@ -237,10 +257,11 @@ const UserModal: React.FC<UserModalProps> = ({
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <IconifyIcon icon="ri:function-add-fill" />
+                  <IconifyIcon icon={FunctionIcon} />
                 </InputAdornment>
               ),
             }}
+            required
             value={formData.grade}
             onChange={handleChange}
           />
@@ -261,11 +282,12 @@ const UserModal: React.FC<UserModalProps> = ({
                 fullWidth
                 variant="filled"
                 placeholder="Entrez Le Service"
+                required
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
                     <InputAdornment position="start">
-                      <IconifyIcon icon="material-symbols:home-repair-service" />
+                      <IconifyIcon icon={ServiceIcon} />
                     </InputAdornment>
                   ),
                 }}
@@ -279,7 +301,7 @@ const UserModal: React.FC<UserModalProps> = ({
         <Button onClick={onClose} color="secondary">
           Annuler
         </Button>
-        <Button onClick={handleSubmit} color="primary">
+        <Button type="submit" color="primary" form="user-form">
           {isEdit ? 'Mettre à Jour' : 'Soumettre'}
         </Button>
       </DialogActions>

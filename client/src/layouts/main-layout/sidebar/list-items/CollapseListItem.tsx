@@ -7,6 +7,7 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemButton from '@mui/material/ListItemButton';
 import IconifyIcon from 'components/base/IconifyIcon';
+import ArrowIcon from 'assets/icons/iconamoon--arrow-down-2-duotone.svg?react';
 
 const CollapseListItem = ({ subheader, active, items, icon }: MenuItem) => {
   const [open, setOpen] = useState(false);
@@ -37,7 +38,7 @@ const CollapseListItem = ({ subheader, active, items, icon }: MenuItem) => {
           }}
         />
         <IconifyIcon
-          icon="iconamoon:arrow-down-2-duotone"
+          icon={ArrowIcon}
           sx={{
             color: active ? 'text.primary' : 'text.disabled',
             transform: open ? 'rotate(180deg)' : 'rotate(0deg)',

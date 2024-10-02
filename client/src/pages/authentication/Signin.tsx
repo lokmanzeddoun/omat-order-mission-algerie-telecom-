@@ -15,9 +15,10 @@ import { RootState } from 'store/rootReducer';
 import { login } from 'components/auth/auth.thunk';
 import { useNavigate } from 'react-router-dom';
 import Splash from 'components/loader/Splash';
-// interface User {
-// 	[key: string]: string;
-// }
+import MailIcon from 'assets/icons/hugeicons--mail-at-sign-02.svg?react';
+import LockIcon from 'assets/icons/hugeicons--lock-key.svg?react';
+import ViewIcon from 'assets/icons/fluent-mdl2--view.svg?react';
+import HideIcon from 'assets/icons/fluent-mdl2--hide-3.svg?react';
 
 const Signin = () => {
   const [isLoading, setIsLoading] = useState(false); // Track loading state
@@ -72,7 +73,7 @@ const Signin = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <IconifyIcon icon="hugeicons:mail-at-sign-02" />
+                <IconifyIcon icon={MailIcon} />
               </InputAdornment>
             ),
           }}
@@ -91,7 +92,7 @@ const Signin = () => {
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">
-                <IconifyIcon icon="hugeicons:lock-key" />
+                <IconifyIcon icon={LockIcon} />
               </InputAdornment>
             ),
             endAdornment: (
@@ -108,10 +109,7 @@ const Signin = () => {
                   sx={{ border: 'none', bgcolor: 'transparent !important' }}
                   edge="end"
                 >
-                  <IconifyIcon
-                    icon={showPassword ? 'fluent-mdl2:view' : 'fluent-mdl2:hide-3'}
-                    color="neutral.light"
-                  />
+                  <IconifyIcon icon={showPassword ? ViewIcon : HideIcon} color="neutral.light" />
                 </IconButton>
               </InputAdornment>
             ),

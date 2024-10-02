@@ -1,8 +1,8 @@
 import { InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
 import IconifyIcon from 'components/base/IconifyIcon';
-import OrderView from 'components/orders/OrderView';
+import OrderView from 'components/orders/OrderViewAdmin';
 import { ChangeEvent, useState } from 'react';
-
+import SearchIcon from 'assets/icons/mynaui--search.svg?react';
 const OrderDashboard = () => {
   const [searchText, setSearchText] = useState('');
 
@@ -17,7 +17,7 @@ const OrderDashboard = () => {
         </Typography>
         <TextField
           variant="filled"
-          size="small"
+          size="medium"
           placeholder="Recherche Ordre"
           value={searchText}
           onChange={handleInputChange}
@@ -25,7 +25,7 @@ const OrderDashboard = () => {
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
-                <IconifyIcon icon={'mynaui:search'} />
+                <IconifyIcon icon={SearchIcon} />
               </InputAdornment>
             ),
           }}

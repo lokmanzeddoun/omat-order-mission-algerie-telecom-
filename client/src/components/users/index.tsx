@@ -7,10 +7,11 @@ import {
   GridToolbar,
 } from '@mui/x-data-grid';
 import CustomPagination from './customPagination';
+import MissionModal from 'components/orders/CreateOrder';
 import NoData from './NoData';
 import { dateFormatFromUTC } from 'helpers/utils';
 import { SyntheticEvent, useEffect, useState } from 'react';
-import ActionMenu from 'components/admin/order-overview/ActionMenu';
+import ActionMenu from './ActionMenu';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
 import ConfirmDeletionModal from './modals/DeleteUser';
@@ -20,6 +21,8 @@ import { RootState } from 'store/rootReducer';
 import { addUser, deleteUser, getAllUsers, updateUser, uploadUsers } from './users.thunk';
 import { Role } from 'constants/role';
 import { Category } from 'constants/category';
+import Splash from 'components/loader/Splash';
+import { addOrder } from 'components/orders/orderthunk';
 export interface RowData {
   id: number;
   matricule: number;
@@ -134,8 +137,9 @@ const InvoiceOverviewTable: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
 
   const { users } = useSelector((state: RootState) => state.users);
-
+  const { token } = useSelector((state: RootState) => state.auth);
   const [open, setOpen] = useState(false);
+  const [open1, setOpen1] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<RowData | null>(null);
@@ -151,31 +155,40 @@ const InvoiceOverviewTable: React.FC = () => {
       await dispatch(getAllUsers());
     }
   };
+  const handleOrderSubmit = async (data: any) => {
+    const { structure, ...userWithoutStructure } = selectedUser;
+    data.user = userWithoutStructure;
+    await dispatch(addOrder(data, token));
+    // await dispatch(getAllUsers());
+    setOpen(false);
+    // Handle the submission (e.g., send data to a backend)
+  };
+
 
   // Function to handle opening of the delete modal
-  const handleDelete = async (user: any) => {
+  const handleDelete = (user: any) => {
     setSelectedUser(user);
     setDeleteModalOpen(true);
   };
   const ConfirmationDelete = async () => {
     await dispatch(deleteUser(selectedUser));
-    await dispatch(getAllUsers());
     setDeleteModalOpen(false);
   };
   const EditSumbission = async (data: RowData) => {
-    console.log(data);
     const { id, ...newData } = data;
-    console.log(newData);
-    await dispatch(updateUser(newData));
-    await dispatch(getAllUsers());
-    setDeleteModalOpen(false);
+    await dispatch(updateUser(selectedUser?.matricule, newData));
+    setEditModalOpen(false);
   };
   const handleOpen = () => setOpen(true);
+  const handleOpen1 = (user: any) => {
+    setSelectedUser(user);
+    setOpen1(true);
+  };
   const handleClose = () => setOpen(false);
+  const handleClose1 = () => setOpen1(false);
   const handleUserSubmit = async (data: RowData) => {
     const { id, ...newData } = data;
     await dispatch(addUser(newData));
-    await dispatch(getAllUsers());
     setOpen(false);
     // Handle the submission (e.g., send data to a backend)
   };
@@ -200,7 +213,7 @@ const InvoiceOverviewTable: React.FC = () => {
   const filterData = (tabIndex: number) => {
     switch (tabIndex) {
       case 1:
-        setItems(users.filter((row) => row.status === 'ACTIVE'));
+        setItems(users.filter((row) => row.role === 'USER'));
         break;
       case 2:
         setItems(users.filter((row) => row.role === 'ADMIN'));
@@ -212,14 +225,11 @@ const InvoiceOverviewTable: React.FC = () => {
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      await dispatch(getAllUsers());
-    };
     setLoading(true);
-    fetchData();
+    dispatch(getAllUsers());
     filterData(value);
     setLoading(false);
-  }, []);
+  }, [dispatch]);
 
   // Define the full columns array including the dynamic action column
   const columns: GridColDef[] = [
@@ -237,10 +247,14 @@ const InvoiceOverviewTable: React.FC = () => {
           user={params.row} // Pass the row data (user) to the ActionMenu
           onEdit={() => handleEdit(params.row)} // Attach the edit handler
           onDelete={() => handleDelete(params.row)} // Attach the delete handler
+          handleMissionOpen={() => handleOpen1(params.row)}
         />
       ),
     },
   ];
+  if (loading) {
+    return <Splash />;
+  }
   return (
     <Stack sx={{ overflow: 'auto', justifyContent: 'space-between', flexDirection: 'column' }}>
       <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
@@ -299,7 +313,7 @@ const InvoiceOverviewTable: React.FC = () => {
       <Box sx={{ borderBottom: 1, borderColor: 'secondary.lighter', mb: 3.5, mr: 2 }}>
         <Tabs value={value} onChange={handleChange} aria-label="transaction tabs">
           <Tab label="All Users" {...a11yProps(0)} />
-          <Tab label="Active Users" {...a11yProps(1)} />
+          <Tab label="Users" {...a11yProps(1)} />
           <Tab label="Admins" {...a11yProps(2)} />
         </Tabs>
       </Box>
@@ -368,6 +382,7 @@ const InvoiceOverviewTable: React.FC = () => {
           }}
         />
       </Card>
+      <MissionModal open={open1} onClose={handleClose1} onSubmit={handleOrderSubmit} />
       <CreateUserModal open={open} onClose={handleClose} onSubmit={handleUserSubmit} />
       {selectedUser ? (
         <>

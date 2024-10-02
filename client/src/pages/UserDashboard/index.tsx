@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconifyIcon from 'components/base/IconifyIcon';
 import OrderView from 'components/orders/OrderView';
+import SearchIcon from 'assets/icons/mynaui--search.svg?react';
 
 const UserDashboard = () => {
   const [searchText, setSearchText] = useState('');
@@ -29,7 +30,7 @@ const UserDashboard = () => {
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
-                <IconifyIcon icon={'mynaui:search'} />
+                <IconifyIcon icon={SearchIcon} />
               </InputAdornment>
             ),
           }}

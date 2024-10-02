@@ -1,17 +1,19 @@
 import { Pagination, PaginationItem, Stack, Typography } from '@mui/material';
 import IconifyIcon from 'components/base/IconifyIcon';
 import { ChangeEvent } from 'react';
+import ExpandLeftIcon from 'assets/icons/lets-icons--expand-left.svg?react';
+import ExpandRightIcon from 'assets/icons/lets-icons--expand-right.svg?react';
 
 const Prev = () => (
   <Stack direction="row" spacing={0.15} sx={{ alignItems: 'center' }}>
-    <IconifyIcon icon="lets-icons:expand-left" />
+    <IconifyIcon icon={ExpandLeftIcon} />
     <Typography
       fontWeight="medium"
       sx={{
         fontSize: { xs: 'caption.fontSize', md: 'body1.fontSize' },
       }}
     >
-      Previous
+      Précédent
     </Typography>
   </Stack>
 );
@@ -24,9 +26,9 @@ const Next = () => (
         fontSize: { xs: 'caption.fontSize', md: 'body1.fontSize' },
       }}
     >
-      Next
+      Suivant
     </Typography>
-    <IconifyIcon icon="lets-icons:expand-right" />
+    <IconifyIcon icon={ExpandRightIcon} />
   </Stack>
 );
 

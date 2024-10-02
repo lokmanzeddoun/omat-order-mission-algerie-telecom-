@@ -2,22 +2,23 @@ import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
 import Badge from '@mui/material/Badge';
 import Toolbar from '@mui/material/Toolbar';
-import TextField from '@mui/material/TextField';
 import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
-import InputAdornment from '@mui/material/InputAdornment';
 import IconifyIcon from 'components/base/IconifyIcon';
 import Image from 'components/base/Image';
 import LogoImg from 'assets/Logo.png';
 import ProfileMenu from './ProfileMenu';
 import AppAlert from 'components/alert';
-import { Button } from '@mui/material';
+import { Button, Typography } from '@mui/material';
 import MissionModal from 'components/orders/CreateOrder';
 import { useState } from 'react';
 import { addOrder } from 'components/orders/orderthunk';
 import { AppDispatch } from 'store';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
+import SearchIcon from 'assets/icons/mynaui--search.svg?react';
+import SolarIcon from 'assets/icons/solar--bell-outline.svg?react';
+import MenuIcon from 'assets/icons/clarity--menu-line.svg?react';
 
 interface TopbarProps {
   isClosing: boolean;
@@ -56,14 +57,22 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       zIndex={1200}
     >
       <Stack spacing={{ xs: 1, sm: 2 }} alignItems="center">
-        <ButtonBase
-          component={Link}
-          href="/"
-          disableRipple
-          sx={{ lineHeight: 0, display: { xs: 'none', sm: 'block', lg: 'none' } }}
+        <Stack
+          position="sticky"
+          top={0}
+          pt={4}
+          pb={2.5}
+          alignItems="center"
+          bgcolor="info.lighter"
+          zIndex={1000}
         >
-          <Image src={LogoImg} alt="logo" height={54} width={54} />
-        </ButtonBase>
+          <ButtonBase component={Link} href="/" disableRipple>
+            <Image src={LogoImg} alt="logo" height={40} width={40} sx={{ mr: 1.25 }} />
+            <Typography variant="h3" color="text.primary" letterSpacing={1}>
+              OMAT
+            </Typography>
+          </ButtonBase>
+        </Stack>
 
         <Toolbar sx={{ display: { xm: 'block', lg: 'none' } }}>
           <IconButton
@@ -73,13 +82,13 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
             aria-label="menu"
             onClick={handleDrawerToggle}
           >
-            <IconifyIcon icon="clarity:menu-line" />
+            <IconifyIcon icon={MenuIcon} />
           </IconButton>
         </Toolbar>
 
         <Toolbar sx={{ display: { xm: 'block', md: 'none' } }}>
           <IconButton size="large" edge="start" color="inherit" aria-label="search">
-            <IconifyIcon icon="mynaui:search" />
+            <IconifyIcon icon={SearchIcon} />
           </IconButton>
         </Toolbar>
         <MissionModal open={open} onClose={handleClose} onSubmit={handleUserSubmit} />
@@ -105,7 +114,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
         </Button>
         <IconButton size="large">
           <Badge color="error" variant="dot">
-            <IconifyIcon icon="solar:bell-outline" />
+            <IconifyIcon icon={SolarIcon} />
           </Badge>
         </IconButton>
         <ProfileMenu />
