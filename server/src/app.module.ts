@@ -11,6 +11,7 @@ import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
 import { LoggerModule as PinoLoggerModule } from 'nestjs-pino';
 import { DecompteModule } from './decompte/decompte.module';
+import { BaremModule } from './barem/barem.module';
 @Module({
   imports: [
     PinoLoggerModule.forRoot({
@@ -42,6 +43,7 @@ import { DecompteModule } from './decompte/decompte.module';
     AuthModule,
     MissionsModule,
     DecompteModule,
+    BaremModule,
   ],
   controllers: [AppController],
   providers: [AppService],

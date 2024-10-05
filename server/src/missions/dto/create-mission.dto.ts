@@ -8,14 +8,14 @@ export class CreateMissionDto {
   date_sortie: Date;
 
   @IsString()
-  heure_sortie: String;
+  heure_sortie: string;
 
   @IsDate()
   @Type(() => Date)
   date_retour: Date;
 
   @IsString()
-  heure_retour: String;
+  heure_retour: string;
 
   @IsString()
   motif: string;

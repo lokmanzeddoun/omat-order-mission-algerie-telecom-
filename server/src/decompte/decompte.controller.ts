@@ -1,20 +1,39 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
 import { DecompteService } from './decompte.service';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
-import { UpdateDecompteDto } from './dto/update-decompte.dto';
+import { Auth } from 'src/auth/guards/auth-role.guard';
+import { GetUser } from 'src/auth/decorators/getUser.decorator';
+import { User } from '@prisma/client';
 
 @Controller('decompte')
 export class DecompteController {
   constructor(private readonly decompteService: DecompteService) {}
 
-  @Post()
-  create(@Body() createDecompteDto: CreateDecompteDto) {
-    return this.decompteService.create(createDecompteDto);
+  @Auth()
+  @Post(':id')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  create(
+    @Body() createDecompteDto: CreateDecompteDto,
+    @Param('id') id: string,
+    @GetUser() user: User,
+  ) {
+    return this.decompteService.create(createDecompteDto, +id, user);
   }
 
   @Get()
-  findAll() {
-    return this.decompteService.findAll();
+  findAll(@Query('status') status: string) {
+    return this.decompteService.findAll(status);
   }
 
   @Get(':id')
@@ -23,12 +42,20 @@ export class DecompteController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateDecompteDto: UpdateDecompteDto) {
-    return this.decompteService.update(+id, updateDecompteDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateDecompteDto: CreateDecompteDto,
+    @GetUser() user: User,
+  ) {
+    return this.decompteService.update(+id, updateDecompteDto, user);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.decompteService.remove(+id);
+  }
+  @Get('user')
+  getUserDecompte(@GetUser() user: User) {
+    this.decompteService.getUserDecompte(user);
   }
 }

@@ -9,7 +9,7 @@ import Docxtemplater from 'docxtemplater';
 // import { load } from '@ /nodejs';
 import moment from 'moment';
 import * as fs from 'fs';
-import { Prisma, User } from '@prisma/client';
+import { MissionStatus, Prisma, User } from '@prisma/client';
 import { Readable } from 'stream';
 const inputFilePath = 'src/missions/TemplateOrdreDeMission.docx';
 import libre from 'libreoffice-convert';
@@ -22,15 +22,16 @@ const convertAsync = promisify(libre.convert);
 export class MissionsService {
   constructor(private readonly databaseService: DatabaseService) {}
   async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
+    console.log(createMissionDto)
     const res = await this.databaseService.mission.create({
       data: {
         ...createMissionDto,
         // userId: userData.matricule,
         date_sortie: createMissionDto.date_sortie
-          ? moment(createMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
+          ? moment.utc(createMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
           : null,
         date_retour: createMissionDto.date_retour
-          ? moment(createMissionDto.date_retour, 'YYYY-MM-DD').toDate()
+          ? moment.utc(createMissionDto.date_retour, 'YYYY-MM-DD').toDate()
           : null,
         transport: createMissionDto.transport || null, // Set transport to null if empty
         user: {
@@ -97,10 +98,14 @@ export class MissionsService {
     }
   }
 
-  findAll() {
+  findAll(delete_status: string, status: string) {
+    let missionStatus: MissionStatus;
+    if (status === 'completed') missionStatus = MissionStatus.COMPLETED;
+    else missionStatus = MissionStatus.INPROGRESS;
     return this.databaseService.mission.findMany({
       where: {
-        soft_delete: false,
+        soft_delete: delete_status === 'true',
+        status: missionStatus,
       },
       orderBy: [
         {
@@ -141,12 +146,16 @@ export class MissionsService {
       },
     });
   }
-  findByUser(user: User) {
-    // TODO fetch MIssion based on userId
+  findByUser(user: User, delete_status: string, status: string) {
+    // console.log()
+    let missionStatus: MissionStatus;
+    if (status === 'completed') missionStatus = MissionStatus.COMPLETED;
+    else missionStatus = MissionStatus.INPROGRESS;
     return this.databaseService.mission.findMany({
       where: {
         userId: user.matricule,
-        soft_delete: false,
+        soft_delete: delete_status === 'true',
+        status: missionStatus,
       },
       orderBy: [
         {
@@ -188,13 +197,13 @@ export class MissionsService {
         ...updateMissionDto,
         date_sortie:
           typeof updateMissionDto.date_sortie === 'string'
-            ? moment(updateMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
+            ? moment.utc(updateMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
             : updateMissionDto.date_sortie instanceof Date
               ? updateMissionDto.date_sortie
               : null,
         date_retour:
           typeof updateMissionDto.date_retour === 'string'
-            ? moment(updateMissionDto.date_retour, 'YYYY-MM-DD').toDate()
+            ? moment.utc(updateMissionDto.date_retour, 'YYYY-MM-DD').toDate()
             : updateMissionDto.date_retour instanceof Date
               ? updateMissionDto.date_retour
               : null,

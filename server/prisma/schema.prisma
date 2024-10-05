@@ -24,6 +24,7 @@ model User {
   serviceId String? 
   soft_delete Boolean? @default(false)
   missions Mission[]
+  messages Commentaire[]
 }
 
 model Structure {
@@ -46,6 +47,7 @@ model Mission {
   updatedAt DateTime @updatedAt
   user User @relation(fields: [userId],references: [matricule])
   soft_delete Boolean @default(false)
+  hors_wilaya Boolean @default(false)
   userId Int
   direction Direction @default(NORD)
   decompte Decompte[]
@@ -57,12 +59,39 @@ model Decompte {
   repas_sans_pec Int @default(0)
   hebergement_pec Int @default(0)
   hebergement_sans_pec Int @default(0)
+  montant Float
+  parcours Float?
   status DecompteStatus @default(PENDING)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   soft_delete Boolean @default(false)
   mission Mission @relation(fields: [missionId],references: [n_mission])
   missionId Int
+  messages Commentaire[]
+}
+
+model Commentaire {
+  id Int @default(autoincrement()) @id
+  title String
+  type MessageType
+  status String
+  user User @relation(fields: [userId],references: [matricule])
+  userId Int
+  decompte Decompte @relation(fields: [decompteId],references: [n_decompte])
+  decompteId Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  soft_delete Boolean @default(false)
+}
+
+model Barem {
+  id Int @default(autoincrement()) @id
+  libell Category
+  repas_nord Float
+  hebergement_nord Float
+  repas_sud Float
+  hebergement_sud Float
+  montant_km Float 
 }
 
 
@@ -93,7 +122,6 @@ enum Direction {
   SUD
 }
 enum MissionStatus {
-  PENDING
   INPROGRESS
   COMPLETED
 }
@@ -101,4 +129,10 @@ enum DecompteStatus {
   REGECTED
   ACCEPTED
   PENDING
+}
+
+enum MessageType {
+  FORGET_PASSWORD
+  DECOMPTE_STATUS
+  OTHER
 }

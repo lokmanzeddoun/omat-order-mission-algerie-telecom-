@@ -94,6 +94,45 @@ export class UsersService {
       where: {
         matricule,
       },
+      include: {
+        structure: true,
+      },
+    });
+  }
+
+  async findUsersInService(matricule: number) {
+    const user = await this.databaseService.user.findUnique({
+      where: {
+        matricule,
+      },
+    });
+    if (!user.serviceId) {
+      throw new BadRequestException(
+        "cette Utilisateur n'est pas attache a un service",
+      );
+    }
+    return this.databaseService.user.findMany({
+      where: {
+        serviceId: user.serviceId,
+        role: Role.USER,
+      },
+      select: {
+        matricule: true,
+        email: true,
+        nom: true,
+        prenom: true,
+        role: true,
+        category: true,
+        userSince: true,
+        grade: true,
+        status: true,
+        serviceId: true,
+        structure: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
   }
 

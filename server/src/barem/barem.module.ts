@@ -1,15 +1,15 @@
 import { Module } from '@nestjs/common';
-import { DecompteService } from './decompte.service';
-import { DecompteController } from './decompte.controller';
+import { BaremService } from './barem.service';
+import { BaremController } from './barem.controller';
 import { DatabaseModule } from 'src/database/database.module';
 import { PassportModule } from '@nestjs/passport';
 
 @Module({
-  controllers: [DecompteController],
-  providers: [DecompteService],
+  controllers: [BaremController],
+  providers: [BaremService],
   imports: [
     DatabaseModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
   ],
 })
-export class DecompteModule {}
+export class BaremModule {}

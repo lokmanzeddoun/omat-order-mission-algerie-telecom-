@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Res,
+  Query,
 } from '@nestjs/common';
 import { MissionsService } from './missions.service';
 // import { CreateMissionDto } from './dto/create-mission.dto';
@@ -23,20 +24,29 @@ export class MissionsController {
     @Body() createMissionDto: Prisma.MissionCreateInput,
     @GetUser() user: User,
   ) {
-    const userToUse = createMissionDto.user ? createMissionDto.user as User : user;
+    const userToUse = createMissionDto.user
+      ? (createMissionDto.user as User)
+      : user;
 
     return this.missionsService.create(createMissionDto, userToUse);
   }
 
   @Get()
   @Auth()
-  findAll() {
-    return this.missionsService.findAll();
+  findAll(
+    @Query('archive') soft_delete: string,
+    @Query('status') status: string,
+  ) {
+    return this.missionsService.findAll(soft_delete, status);
   }
   @Get('user')
   @Auth()
-  findByUser(@GetUser() user: User) {
-    return this.missionsService.findByUser(user);
+  findByUser(
+    @GetUser() user: User,
+    @Query('archive') soft_delete: string,
+    @Query('status') status: string,
+  ) {
+    return this.missionsService.findByUser(user,soft_delete,status);
   }
 
   @Get(':id')
