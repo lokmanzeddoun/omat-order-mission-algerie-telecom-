@@ -1,26 +1,369 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# OMAT - Order Mission Algeria Telecom
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+> **Ordre de Mission Algeria Telecom** - A comprehensive mission order and expense management system for Algeria Telecom employees.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 🎯 Project Overview
+
+OMAT is a modern web application designed to streamline the mission order process for Algeria Telecom. The system manages employee missions, expense reporting (decomptes), and administrative approval workflows. It automates the generation of official mission orders and provides a complete expense tracking system with built-in rate calculations.
+
+## 🏗️ Architecture & Technologies
+
+### Backend Stack
+- **Framework**: [NestJS](https://nestjs.com/) - Progressive Node.js framework
+- **Database**: [PostgreSQL](https://postgresql.org/) with [Prisma ORM](https://prisma.io/)
+- **Authentication**: JWT-based authentication with role-based access control
+- **Documentation**: [Swagger/OpenAPI](https://swagger.io/) integration
+- **File Processing**: Document generation (PDF), Excel import/export
+- **Validation**: Class-validator for request validation
+- **Logging**: Pino logger for structured logging
+
+### Core Dependencies
+```json
+{
+  "@nestjs/core": "^10.0.0",
+  "@nestjs/jwt": "^10.2.0",
+  "@nestjs/passport": "^10.0.3",
+  "@prisma/client": "5.19.1",
+  "docxtemplater": "^3.50.0",
+  "moment": "^2.30.1",
+  "bcryptjs": "^2.4.3"
+}
+```
+
+## 🔧 System Architecture
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   Frontend      │───▶│   NestJS API    │───▶│   PostgreSQL    │
+│   (Client)      │    │   (Backend)     │    │   (Database)    │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                              │
+                              ▼
+                       ┌─────────────────┐
+                       │   File System   │
+                       │  (PDF/Excel)    │
+                       └─────────────────┘
+```
+
+## 📊 Database Schema
+
+### Core Entities
+
+1. **User** - Employee information and authentication
+   - Matricule (ID), credentials, role, category, grade
+   - Belongs to a Structure (department)
+
+2. **Structure** - Organizational departments
+   - DG, DRH, DT, DC, DF, DI
+
+3. **Mission** - Mission orders
+   - Travel details, status, user assignment
+   - Automatic PDF generation
+
+4. **Decompte** - Expense reports
+   - Meals, accommodation, travel expenses
+   - Automatic calculation based on Barem rates
+
+5. **Barem** - Rate tables
+   - Different rates for employee categories
+   - North/South direction variations
+
+6. **Commentaire** - Administrative messages
+   - Approval/rejection reasons
+   - Communication between users and admins
+
+### Relationships
+```
+User ─────────────────▶ Structure (Many-to-One)
+User ─────────────────▶ Mission (One-to-Many)
+Mission ──────────────▶ Decompte (One-to-Many)
+Decompte ─────────────▶ Commentaire (One-to-Many)
+User ─────────────────▶ Commentaire (One-to-Many)
+Barem ────────────────▶ Category (Enum)
+```
+
+## 🌊 Data Flow
+
+### 1. Authentication Flow
+```
+Login Request → JWT Verification → Role-based Access → API Access
+```
+
+### 2. Mission Creation Flow
+```
+User Creates Mission → PDF Generation → Admin Review → Status Update
+```
+
+### 3. Expense Reporting Flow
+```
+Mission Completion → Decompte Creation → Rate Calculation → Admin Approval
+```
+
+### 4. Rate Calculation Logic
+```
+Employee Category → Barem Lookup → Direction (N/S) → Transport Type → Final Amount
+```
+
+## 🔒 Security & Authorization
+
+### Role-Based Access Control (RBAC)
+- **SUPER_ADMIN**: Full system access
+- **ADMIN**: Department management, approvals
+- **USER**: Personal missions and expense reports
+
+### Authentication Features
+- JWT token-based authentication
+- Password hashing with bcrypt
+- Role-based route protection
+- Refresh token support
+
+## 🏢 Core Components
+
+### 1. Authentication Module (`/auth`)
+- **Features**: Login, token refresh, password management
+- **Guards**: JWT authentication, role-based access
+- **Decorators**: `@Auth()`, `@GetUser()`
+
+### 2. User Management (`/users`)
+- **Features**: CRUD operations, Excel import, password changes
+- **Services**: User service with validation and hashing
+- **DTOs**: Create user, import Excel, change password
+
+### 3. Mission Management (`/missions`)
+- **Features**: Mission CRUD, PDF generation, status tracking
+- **Document Generation**: Automatic mission order PDFs
+- **Services**: Mission creation, document templating
+
+### 4. Expense Management (`/decompte`)
+- **Features**: Expense report CRUD, automatic calculations
+- **Rate Engine**: Dynamic calculation based on employee category
+- **Validation**: Business rules for meals and accommodation
+
+### 5. Rate Management (`/barem`)
+- **Features**: Rate table management by category
+- **Categories**: EXECUTION_MAITRISE, CADRE, CADRE_SUPERIEUR
+- **Variations**: North/South direction rates
+
+### 6. Structure Management (`/structures`)
+- **Features**: Department/service management
+- **Import/Export**: Excel support for bulk operations
+- **Hierarchy**: Organizational structure tracking
+
+## 🔄 Business Logic
+
+### Expense Calculation Engine
+```typescript
+// Automatic calculation based on:
+1. Employee Category (from Barem)
+2. Mission Direction (North/South)
+3. Transport Type (affects km reimbursement)
+4. PEC vs Non-PEC expenses (25% reduction for PEC)
+```
+
+### Document Generation
+- **Template**: DOCX template with placeholders
+- **Processing**: docxtemplater for variable replacement
+- **Output**: Automatic PDF conversion
+- **Content**: Mission details, employee info, approval sections
+
+### Validation Rules
+- **Mission Dates**: Logical date validation
+- **Expense Limits**: Business rule enforcement
+- **User Permissions**: Role-based operation restrictions
+- **Data Integrity**: Cross-entity validation
+
+## 🚀 API Endpoints
+
+### Authentication
+- `POST /auth/login` - User authentication
+- `POST /auth/refresh` - Token refresh
+
+### Users
+- `GET /users` - List all users
+- `POST /users` - Create user
+- `PATCH /users/:id` - Update user
+- `POST /users/upload` - Excel import
+
+### Missions
+- `GET /missions` - List missions
+- `POST /missions` - Create mission (generates PDF)
+- `GET /missions/user` - User's missions
+- `GET /missions/:id/download` - Download mission PDF
+
+### Expense Reports
+- `GET /decompte` - List expense reports
+- `POST /decompte/:missionId` - Create expense report
+- `PATCH /decompte/:id` - Update expense report
+- `GET /decompte/user` - User's expense reports
+
+### Administration
+- `GET /structures` - List departments
+- `GET /barem` - List rate tables
+- `POST /barem` - Create/update rates
+
+## 📱 Features Implemented
+
+### ✅ User Management
+- Role-based authentication (Super Admin, Admin, User)
+- Employee profile management
+- Department assignment
+- Excel import for bulk user creation
+- Password management
+
+### ✅ Mission Orders
+- Mission creation with automatic PDF generation
+- Status tracking (In Progress, Completed)
+- Multi-transport type support
+- Direction-based calculations (North/South)
+- Soft delete functionality
+
+### ✅ Expense Management
+- Automatic expense calculation
+- Rate-based reimbursement (by employee category)
+- PEC vs non-PEC expense tracking
+- Approval workflow
+- Comment system for rejections
+
+### ✅ Administrative Features
+- Rate table management
+- Department structure management
+- Bulk operations via Excel
+- Comprehensive reporting
+- Audit trails
+
+### ✅ Document Generation
+- Automatic mission order PDF creation
+- Template-based document generation
+- LibreOffice conversion pipeline
+- Downloadable mission orders
+
+### ✅ API Documentation
+- Complete Swagger/OpenAPI documentation
+- Interactive API testing
+- Authentication integration
+- Schema definitions
+
+## 🔧 Development Setup
+
+### Prerequisites
+- Node.js 18+ and npm
+- PostgreSQL database
+- Git
+
+### Quick Start
+```bash
+# Clone repository
+git clone <repository-url>
+cd server
+
+# Install dependencies
+npm install
+
+# Setup environment
+cp .env.example .env
+# Edit .env with your database configuration
+
+# Database setup and seeding
+./setup-db.sh
+
+# Start development server
+npm run start:dev
+```
+
+### Environment Configuration
+```env
+DATABASE_URL="postgresql://username:password@localhost:5432/omat_mission_db"
+JWT_SECRET="your-super-secret-jwt-key"
+JWT_EXPIRES_IN="7d"
+PORT=8000
+NODE_ENV="development"
+```
+
+### Database Management
+```bash
+# Run migrations
+npx prisma migrate deploy
+
+# Seed with test data
+npm run db:seed
+
+# Reset database
+npx prisma migrate reset
+```
+
+## 📖 API Documentation
+
+Once the application is running, access the interactive Swagger documentation at:
+```
+http://localhost:8000/docs
+```
+
+Features:
+- Complete API endpoint documentation
+- Interactive testing interface
+- Authentication integration
+- Request/response schemas
+- Example data
+
+## 🔐 Test Credentials
+
+The seeded database includes test accounts:
+
+| Role        | Email                            | Password    | Department |
+| ----------- | -------------------------------- | ----------- | ---------- |
+| Super Admin | superadmin@algérietelecom.dz     | password123 | DG         |
+| Admin       | ahmed.benali@algérietelecom.dz   | password123 | DRH        |
+| User        | karim.mansouri@algérietelecom.dz | password123 | DT         |
+
+## 📊 Database Seeding
+
+The application includes comprehensive test data:
+- 6 organizational structures
+- 8 users with different roles
+- 4 sample missions
+- 4 expense reports with various statuses
+- 3 rate tables for different employee categories
+
+## 🛠️ Development Scripts
+
+```bash
+# Development
+npm run start:dev          # Start with hot reload
+npm run start:debug        # Start with debugging
+
+# Building
+npm run build              # Build for production
+npm run start:prod         # Start production build
+
+# Database
+npm run db:seed            # Seed test data
+./setup-db.sh             # Full database setup
+
+# Testing
+npm run test               # Unit tests
+npm run test:e2e          # End-to-end tests
+npm run test:cov          # Coverage report
+
+# Code Quality
+npm run lint               # ESLint
+npm run format            # Prettier formatting
+```
+
+## 🤝 Contributing
+
+1. Follow the existing code structure and patterns
+2. Use proper TypeScript types and interfaces
+3. Include proper validation and error handling
+4. Update documentation for new features
+5. Test your changes thoroughly
+
+## 📄 License
+
+This project is private and proprietary to Algeria Telecom.
+
+---
+
+**OMAT** - Streamlining mission management for Algeria Telecom 🇩🇿
 
 ## Description
 

@@ -1,13 +1,13 @@
 import { Button } from '@mui/material';
 import { GridCellParams, GridRowModel } from '@mui/x-data-grid';
-import axios from 'axios';
+import http from 'helpers/http';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { saveAs } from 'file-saver';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
 import { AppDispatch } from 'store';
-const API_URL = 'http://localhost:8000';
+// use shared http client
 
 type ParamsProps = {
   params: GridCellParams;
@@ -17,7 +17,7 @@ const RenderCellDownload = ({ params }: ParamsProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const handleDownloadRequest = async (row: GridRowModel) => {
     console.log(row);
-    const res = await axios.get<Blob>(`${API_URL}/missions/${row.n_mission}/download`, {
+  const res = await http.get<Blob>(`/missions/${row.n_mission}/download`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,

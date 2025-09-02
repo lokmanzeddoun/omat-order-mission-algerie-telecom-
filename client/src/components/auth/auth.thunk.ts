@@ -1,6 +1,5 @@
-import axios from 'axios';
 import { loginSuccess, userLoaded, authFailed, logoutSuccess } from './auth.reducers';
-const API_URL = 'http://localhost:8000';
+import http from 'helpers/http';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
@@ -15,7 +14,7 @@ export const loadUser = () => async (dispatch: AppDispatch) => {
     return;
   }
   try {
-    const res = await axios.get(`${API_URL}/users/${matricule}`);
+    const res = await http.get(`/users/${matricule}`);
     if (res.data) {
       return dispatch(userLoaded(res.data));
     }
@@ -35,7 +34,8 @@ export const loadUser = () => async (dispatch: AppDispatch) => {
 
 export const login = (payload: ReqLogin) => async (dispatch: any) => {
   try {
-    const res = await axios.post(`${API_URL}/auth/login`, payload);
+  console.info('[auth.thunk] login called', payload);
+    const res = await http.post(`/auth/login`, payload);
     const data = res.data;
     if (res.status === 200 && data) {
       dispatch(loginSuccess(data));

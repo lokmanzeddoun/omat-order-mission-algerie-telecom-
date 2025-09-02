@@ -6,13 +6,17 @@ import svgr from 'vite-plugin-svgr';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd());
-  const API_URL = `${env.VITE_API_URL ?? 'http://localhost:3000'}`;
+  const API_URL = `${env.VITE_API_URL ?? 'http://localhost:8000'}`;
   const PORT = parseInt(`${env.VITE_PORT ?? '3000'}`, 10);
   return {
     plugins: [react(), tsconfigPaths(), svgr()],
     server: {
       proxy: {
-        '/api': API_URL,
+        '/api': {
+          target: API_URL,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
       },
       host: '0.0.0.0',
       port: PORT,

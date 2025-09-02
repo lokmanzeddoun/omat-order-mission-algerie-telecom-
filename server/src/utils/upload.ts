@@ -4,7 +4,7 @@ import { diskStorage } from 'multer';
 import { HttpException, HttpStatus } from '@nestjs/common';
 
 export const PATH_DOWNLOADED_FILE = `src/utils`;
-export const SUPPORTED_FILES = [ 'xlsx', 'sheet'];
+export const SUPPORTED_FILES = ['xlsx', 'sheet'];
 
 export const multerConfig = {
   dest: process.env.UPLOAD_LOCATION || './',

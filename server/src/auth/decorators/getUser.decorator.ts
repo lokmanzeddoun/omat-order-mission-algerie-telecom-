@@ -13,7 +13,7 @@ export const GetUser = createParamDecorator((data, ctx: ExecutionContext) => {
 
   if (data) {
     if (isArray(data)) {
-      let userData = {};
+      const userData = {};
       data.forEach((param) => {
         userData[param] = user[param];
       });

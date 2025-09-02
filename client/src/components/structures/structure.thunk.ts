@@ -1,4 +1,5 @@
 import axios from 'axios';
+import http from 'helpers/http';
 import {
   fetchStructuresSuccess,
   fetchStructuresStart,
@@ -6,7 +7,7 @@ import {
   removeStructure,
   createStructure,
 } from './structure.reducer';
-const API_URL = 'http://localhost:8000';
+// use shared http client
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
@@ -16,7 +17,7 @@ export const getAllStructures = () => async (dispatch: AppDispatch) => {
   // loading the users fetched
   dispatch(fetchStructuresStart());
   try {
-    const res = await axios.get<IStructure[]>(`${API_URL}/structures`);
+    const res = await http.get<IStructure[]>(`/structures`);
     if (res.data) {
       return dispatch(fetchStructuresSuccess(res.data));
     }
@@ -40,7 +41,7 @@ export const getAllStructures = () => async (dispatch: AppDispatch) => {
 
 export const addStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   try {
-    const res = await axios.post<IStructure>(`${API_URL}/structures`, structure, {
+    const res = await http.post<IStructure>(`/structures`, structure, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -72,7 +73,7 @@ export const uploadStructure = (file: File) => async (dispatch: AppDispatch) => 
   formData.append('file', file); // Attach the file to the request
 
   try {
-    const res = await axios.post(`${API_URL}/structures/upload`, formData, {
+    const res = await http.post(`/structures/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data', // Ensure the correct content type for file upload
       },
@@ -103,7 +104,7 @@ export const uploadStructure = (file: File) => async (dispatch: AppDispatch) => 
 export const deleteStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   //
   try {
-    const res = await axios.delete(`${API_URL}/structures/${structure.code}`);
+    const res = await http.delete(`/structures/${structure.code}`);
     if (res) {
       await dispatch(setAlert({ msg: 'Structure Deleted Successfully', type: AlertTypes.SUCCESS }));
       await dispatch(removeStructure(res.data));
@@ -129,7 +130,7 @@ export const deleteStructure = (structure: IStructure) => async (dispatch: AppDi
 export const updateStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   //
   try {
-    const res = await axios.patch(`${API_URL}/structures/${structure.code}`, structure);
+    const res = await http.patch(`/structures/${structure.code}`, structure);
     if (res) {
       await dispatch(setAlert({ msg: 'Structure Updated Successfully', type: AlertTypes.SUCCESS }));
       dispatch(editStructure(res.data));

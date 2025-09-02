@@ -12,7 +12,7 @@ const config: Config = {
     title: 'OMAT API',
     description: 'The OMAT API For Order Mission',
     version: '1.0',
-    path: 'api',
+    path: 'docs',
   },
   security: {
     expiresIn: '60m',

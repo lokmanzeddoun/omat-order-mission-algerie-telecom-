@@ -332,7 +332,7 @@ const calculateMealsAndAccommodation = (
 
   let meals = 0;
   let accommodations = 0;
-  let currentDate = new Date(start);
+  const currentDate = new Date(start);
 
   while (currentDate <= end) {
     // Check for lunch (11:00 to 14:00)

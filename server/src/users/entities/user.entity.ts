@@ -37,7 +37,6 @@ export class User {
   })
   email: string;
 
-
   @ApiProperty({
     description: 'User Role (admin, user)',
     nullable: false,

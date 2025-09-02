@@ -15,7 +15,7 @@ export class ChangePasswordDto {
   @MinLength(4)
   @MaxLength(20)
   @Match('password', {
-      message:"confirmPassword Don't match the password"
+    message: "confirmPassword Don't match the password",
   })
   passwordConfirm: string;
 }

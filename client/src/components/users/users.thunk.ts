@@ -1,4 +1,5 @@
 import axios from 'axios';
+import http from 'helpers/http';
 import {
   fetchUsersStart,
   fetchUsersSuccess,
@@ -6,7 +7,7 @@ import {
   removeUser,
   editUser,
 } from './users.reducers';
-const API_URL = 'http://localhost:8000';
+// Requests go through Vite proxy in dev
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
@@ -22,7 +23,7 @@ export const getAllUsers = () => async (dispatch: AppDispatch) => {
   // loading the users fetched
   dispatch(fetchUsersStart());
   try {
-    const res = await axios.get(`${API_URL}/users`);
+    const res = await http.get(`/users`);
     if (res.data) {
       return dispatch(fetchUsersSuccess(res.data));
     }
@@ -48,7 +49,7 @@ export const addUser = (user: IUser) => async (dispatch: AppDispatch) => {
   user.matricule = +user.matricule;
   console.log(user);
   try {
-    const res = await axios.post<IUser>(`${API_URL}/users`, user, {
+    const res = await http.post<IUser>(`/users`, user, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -80,7 +81,7 @@ export const uploadUsers = (file: File) => async (dispatch: AppDispatch) => {
   formData.append('file', file); // Attach the file to the request
 
   try {
-    const res = await axios.post(`${API_URL}/users/upload`, formData, {
+    const res = await http.post(`/users/upload`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data', // Ensure the correct content type for file upload
       },
@@ -111,7 +112,7 @@ export const uploadUsers = (file: File) => async (dispatch: AppDispatch) => {
 export const deleteUser = (user: IUser) => async (dispatch: AppDispatch) => {
   //
   try {
-    const res = await axios.delete(`${API_URL}/users/${user.matricule}`);
+    const res = await http.delete(`/users/${user.matricule}`);
     if (res) {
       await dispatch(setAlert({ msg: 'User Deleted Successfully', type: AlertTypes.SUCCESS }));
       dispatch(removeUser(res.data));
@@ -139,7 +140,7 @@ export const updateUser =
   (matricule: number | null, user: IUser) => async (dispatch: AppDispatch) => {
     //
     try {
-      const res = await axios.patch(`${API_URL}/users/${matricule}`, user);
+      const res = await http.patch(`/users/${matricule}`, user);
       if (res) {
         await dispatch(setAlert({ msg: 'User Updated Successfully', type: AlertTypes.SUCCESS }));
         dispatch(editUser(res.data));
@@ -166,7 +167,7 @@ export const updateUser =
 export const changePassword =
   (token: string | null, body: ChangePasswordDto) => async (dispatch: AppDispatch) => {
     try {
-      const res = await axios.post(`${API_URL}/users/changePassword`, body, {
+      const res = await http.post(`/users/changePassword`, body, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,

@@ -21,8 +21,6 @@ export interface SwaggerConfig {
   path: string;
 }
 
-
-
 export interface SecurityConfig {
   expiresIn: string;
   refreshIn: string;

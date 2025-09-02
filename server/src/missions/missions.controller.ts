@@ -46,7 +46,7 @@ export class MissionsController {
     @Query('archive') soft_delete: string,
     @Query('status') status: string,
   ) {
-    return this.missionsService.findByUser(user,soft_delete,status);
+    return this.missionsService.findByUser(user, soft_delete, status);
   }
 
   @Get(':id')

@@ -7,8 +7,9 @@ import {
   removeOrder,
 } from './orderReducer';
 import axios from 'axios';
+import http from 'helpers/http';
 
-const API_URL = 'http://localhost:8000';
+// Use shared http client
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
@@ -18,7 +19,7 @@ export const addOrder =
   (order: IMission, token: string | null) => async (dispatch: AppDispatch) => {
     try {
       // Set responseType to blob to handle file downloads
-      const res = await axios.post<Blob>(`${API_URL}/missions`, order, {
+  const res = await http.post<Blob>(`/missions`, order, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -70,7 +71,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
   try {
     dispatch(fetchOrdersStart()); // Start loading
 
-    const res = await axios.get(`${API_URL}/missions/user`, {
+  const res = await http.get(`/missions/user`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -100,7 +101,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
 export const updateMission = (order: IMission) => async (dispatch: AppDispatch) => {
   //
   try {
-    const res = await axios.patch(`${API_URL}/missions/${order.n_mission}`, order);
+  const res = await http.patch(`/missions/${order.n_mission}`, order);
     if (res) {
       await dispatch(setAlert({ msg: 'Order Updated Successfully', type: AlertTypes.SUCCESS }));
       dispatch(editMission(res.data));
@@ -126,7 +127,7 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
   try {
     dispatch(fetchOrdersStart()); // Start loading
 
-    const res = await axios.get(`${API_URL}/missions`, {
+  const res = await http.get(`/missions`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -155,7 +156,7 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
 
 export const deleteOrder = (n_mission: number | null) => async (dispatch: AppDispatch) => {
   try {
-    const res = await axios.delete(`${API_URL}/missions/${n_mission}`);
+    const res = await http.delete(`/missions/${n_mission}`);
     if (res) {
       await dispatch(setAlert({ msg: 'Order Deleted Successfully', type: AlertTypes.SUCCESS }));
       dispatch(removeOrder(res.data));

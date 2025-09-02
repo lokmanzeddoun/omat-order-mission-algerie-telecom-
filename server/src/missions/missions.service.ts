@@ -22,7 +22,7 @@ const convertAsync = promisify(libre.convert);
 export class MissionsService {
   constructor(private readonly databaseService: DatabaseService) {}
   async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
-    console.log(createMissionDto)
+    console.log(createMissionDto);
     const res = await this.databaseService.mission.create({
       data: {
         ...createMissionDto,
@@ -50,7 +50,7 @@ export class MissionsService {
     const content = fs.readFileSync(inputFilePath, 'binary');
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip);
-    let replacements = {
+    const replacements = {
       id: res.n_mission,
       date: moment().format('DD/MM/YYYY'), // e.g., "25-Jul-2024"
       fullname: `${user.nom} ${user.prenom}`, // Assuming male employee for the dummy data
@@ -242,7 +242,7 @@ export class MissionsService {
     const content = fs.readFileSync(inputFilePath, 'binary');
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip);
-    let replacements = {
+    const replacements = {
       id: mission.n_mission,
       date: moment().format('DD/MM/YYYY'), // e.g., "25-Jul-2024"
       fullname: `${user.nom} ${user.prenom}`, // Assuming male employee for the dummy data

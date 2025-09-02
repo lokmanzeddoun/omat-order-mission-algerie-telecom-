@@ -10,7 +10,7 @@ import { PrismaModule } from 'nestjs-prisma';
 @Module({
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
-    imports:[
+  imports: [
     ConfigModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.registerAsync({
@@ -21,9 +21,9 @@ import { PrismaModule } from 'nestjs-prisma';
           secret: configService.get('JWT_SECRET'),
           signOptions: {
             expiresIn: configService.get('JWT_EXP'),
-          }
-        }
-      }
+          },
+        };
+      },
     }),
     PrismaModule,
   ],
