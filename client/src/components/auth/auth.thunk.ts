@@ -34,7 +34,7 @@ export const loadUser = () => async (dispatch: AppDispatch) => {
 
 export const login = (payload: ReqLogin) => async (dispatch: any) => {
   try {
-  console.info('[auth.thunk] login called', payload);
+    console.info('[auth.thunk] login called', payload);
     const res = await http.post(`/auth/login`, payload);
     const data = res.data;
     if (res.status === 200 && data) {

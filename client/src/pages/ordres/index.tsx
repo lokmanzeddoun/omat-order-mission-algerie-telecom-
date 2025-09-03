@@ -1,4 +1,4 @@
-import { InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Box, InputAdornment, Paper, Stack, TextField, Typography } from '@mui/material';
 import IconifyIcon from 'components/base/IconifyIcon';
 import OrderView from 'components/orders/OrderViewAdmin';
 import { ChangeEvent, useState } from 'react';
@@ -11,25 +11,28 @@ const OrderDashboard = () => {
   };
   return (
     <Stack direction="column" spacing={1} width={1}>
-      <Stack alignItems="center" justifyContent="space-between">
-        <Typography variant="h4" minWidth={200}>
+      <Stack direction="row" alignItems="center" sx={{ px: 2 }}>
+        <Box flex={1} />
+        <Typography variant="h4" sx={{ flex: 1, textAlign: 'center' }} minWidth={200}>
           Ordre Missions
         </Typography>
-        <TextField
-          variant="filled"
-          size="medium"
-          placeholder="Recherche Ordre"
-          value={searchText}
-          onChange={handleInputChange}
-          sx={{ width: 1, maxWidth: 250 }}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconifyIcon icon={SearchIcon} />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Box flex={1} display="flex" justifyContent="flex-end">
+          <TextField
+            variant="filled"
+            size="medium"
+            placeholder="Recherche Ordre"
+            value={searchText}
+            onChange={handleInputChange}
+            sx={{ width: 1, maxWidth: 250 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconifyIcon icon={SearchIcon} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
       </Stack>
 
       <Paper sx={{ mt: 1.5, p: 0, pb: 0.75, minHeight: 411, width: 1 }}>
