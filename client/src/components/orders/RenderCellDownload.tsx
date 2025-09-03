@@ -17,7 +17,7 @@ const RenderCellDownload = ({ params }: ParamsProps) => {
   const dispatch = useDispatch<AppDispatch>();
   const handleDownloadRequest = async (row: GridRowModel) => {
     console.log(row);
-  const res = await http.get<Blob>(`/missions/${row.n_mission}/download`, {
+    const res = await http.get<Blob>(`/missions/${row.n_mission}/download`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,

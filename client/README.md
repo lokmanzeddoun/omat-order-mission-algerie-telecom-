@@ -48,3 +48,7 @@ export default tseslint.config({
   },
 })
 ```
+
+## Documentation
+
+- Project report and functional overview: see `docs/PROJECT_REPORT.md`.

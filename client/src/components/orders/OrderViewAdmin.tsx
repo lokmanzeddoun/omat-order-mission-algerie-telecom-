@@ -1,18 +1,13 @@
 import { SyntheticEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import {
-  DataGrid,
-  GridColDef,
-  useGridApiRef,
-  GridApi,
-  GridToolbar,
-  GridRowsProp,
-  GridPaginationModel,
-} from '@mui/x-data-grid';
-import DataGridFooter from 'components/common/DataGridFooter';
+import { DataGrid, GridColDef, GridToolbar, GridRowsProp, GridPaginationModel } from '@mui/x-data-grid';
 // import { rows } from 'data/taskOverview';
 import ActionMenu from './ActionMenu';
+import DecompteModal from './DecompteModal';
+import { addDecompte } from './decompte.thunk';
+import DecomptePdfPreview from './DecomptePdfPreview';
+import { IDecompte } from './decompte.reducer';
 import moment from 'moment';
 import RenderCellDownload from './RenderCellDownload';
 import { useDispatch, useSelector } from 'react-redux';
@@ -173,10 +168,10 @@ const initialColumns: GridColDef<IMission>[] = [
         params.value === 'PENDING'
           ? 'primary'
           : params.value === 'COMPLETED'
-          ? 'success'
-          : params.value === 'INPROGRESS'
-          ? 'warning'
-          : 'info';
+            ? 'success'
+            : params.value === 'INPROGRESS'
+              ? 'warning'
+              : 'info';
 
       return (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
@@ -268,11 +263,14 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   });
   const [viewOnly, setViewOnly] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [isDecompteOpen, setDecompteOpen] = useState(false);
+  const [isPdfOpen, setPdfOpen] = useState(false);
+  const [lastDecompte, setLastDecompte] = useState<IDecompte | null>(null);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedOrder, setselectedOrder] = useState(null);
+  const [selectedOrder, setselectedOrder] = useState<IMission | null>(null);
   const [items, setItems] = useState<GridRowsProp<IMission>>([]);
   const [value, setValue] = useState(0);
-  const handleChange = (event: SyntheticEvent, newValue: number) => {
+  const handleChange = (_event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
     filterData(newValue);
   };
@@ -286,8 +284,13 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
     setselectedOrder(order);
     setEditModalOpen(true);
   };
+  const handleValidate = (order: any) => {
+    setselectedOrder(order);
+    setDecompteOpen(true);
+  };
   const ConfirmationDelete = async () => {
-    await dispatch(deleteOrder(selectedOrder.n_mission));
+    if (!selectedOrder) return;
+    await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
     await dispatch(fetchAllOrders(token));
     setDeleteModalOpen(false);
   };
@@ -295,6 +298,14 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
     await dispatch(updateMission(data));
     await dispatch(fetchAllOrders(token));
     setEditModalOpen(false);
+  };
+  const DecompteSubmission = async (data: any) => {
+    if (!selectedOrder) return;
+    const payload = { ...data, missionId: selectedOrder.n_mission! } as IDecompte;
+    await dispatch(addDecompte(payload, selectedOrder, token));
+    setLastDecompte(payload);
+    setDecompteOpen(false);
+    setPdfOpen(true);
   };
   const filterData = useCallback(
     (tabIndex: number) => {
@@ -307,7 +318,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           break;
       }
     },
-    [orders],
+    [orders, user?.matricule],
   );
 
   const columns: GridColDef[] = useMemo(() => {
@@ -345,6 +356,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
               order={params.row}
               onEdit={() => handleEdit(params.row)}
               onDelete={() => handleDelete(params.row)}
+              onValidate={() => handleValidate(params.row)}
             />
           ),
         },
@@ -367,22 +379,23 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             order={params.row}
             onEdit={() => handleEdit(params.row)}
             onDelete={() => handleDelete(params.row)}
+            onValidate={() => handleValidate(params.row)}
           />
         ),
       },
     ];
-  }, [value, initialColumns]);
+  }, [value]);
   const filteredRows = useMemo(() => {
     if (!searchText) return items; // Use filtered `items` instead of `orders`
 
-    const filterWords = searchText.split(/\b\W+\b/).filter((word) => word !== '');
     return items.filter((row) => {
       const motifMatches = row.motif?.toLowerCase().includes(searchText.toLowerCase());
       const destinationMatches = row.destination?.toLowerCase().includes(searchText.toLowerCase());
+      const anyRow: any = row as any;
       const userMatches =
-        row.user &&
-        (row.user.nom.toLowerCase().includes(searchText.toLowerCase()) ||
-          row.user.prenom.toLowerCase().includes(searchText.toLowerCase()));
+        anyRow.user &&
+        (anyRow.user.nom?.toLowerCase().includes(searchText.toLowerCase()) ||
+          anyRow.user.prenom?.toLowerCase().includes(searchText.toLowerCase()));
       return motifMatches || destinationMatches || userMatches;
     });
   }, [items, searchText]);
@@ -463,17 +476,16 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           disableColumnFilter
           paginationMode="server"
           paginationModel={paginationModel}
-          onCellDoubleClick={(params, event) => {
-            if (!event.ctrlKey) {
-              event.defaultMuiPrevented = true;
-            }
+          onCellDoubleClick={() => {
             setEditModalOpen(true);
             setViewOnly(true);
           }}
           localeText={localizedTextsMap}
           onRowSelectionModelChange={(ids) => {
-            const selectedRows = orders.filter((row) => ids.includes(row.n_mission));
-            setselectedOrder(selectedRows[0]);
+            const selectedRows = orders.filter(
+              (row) => row.n_mission != null && ids.includes(row.n_mission as any),
+            );
+            setselectedOrder(selectedRows[0] || null);
           }}
           slots={{
             noRowsOverlay: () => <NoData />,
@@ -498,7 +510,6 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             '& .MuiDataGrid-row:hover': {
               cursor: 'pointer',
             },
-            px: { xs: 0, md: 3 },
             '& .MuiDataGrid-main': {
               minHeight: 300,
             },
@@ -515,6 +526,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             '& .MuiTypography-root': {
               fontSize: { xs: 13, lg: 16 },
             },
+            px: { xs: 0, md: 3 },
           }}
         />
       </Card>
@@ -522,11 +534,44 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
         <CustomPagination
           page={paginationModel.page + 1}
           pageCount={Math.ceil(items.length / paginationModel.pageSize)}
-          onPageChange={(event, value) =>
+          onPageChange={(_event, value) =>
             setPaginationModel((prev) => ({ ...prev, page: value - 1 }))
           }
         />
       </Box>
+      {/* Render modals after the main content to avoid any unintended layout shifts */}
+      {selectedOrder ? (
+        <>
+          <DecompteModal
+            open={isDecompteOpen}
+            onClose={() => setDecompteOpen(false)}
+            onSubmit={DecompteSubmission}
+            order={selectedOrder as any}
+          />
+          <EditMissionModal
+            open={isEditModalOpen}
+            onClose={() => setEditModalOpen(false)}
+            missionData={selectedOrder}
+            onSubmit={EditSumbission}
+            viewOnly={viewOnly}
+          />
+          <ConfirmDeletionModal
+            open={isDeleteModalOpen}
+            onClose={() => setDeleteModalOpen(false)}
+            itemName={selectedOrder}
+            onConfirm={ConfirmationDelete}
+          />
+        </>
+      ) : null}
+      {selectedOrder && lastDecompte ? (
+        <DecomptePdfPreview
+          open={isPdfOpen}
+          onClose={() => setPdfOpen(false)}
+          mission={selectedOrder}
+          decompte={lastDecompte}
+          user={user}
+        />
+      ) : null}
     </>
   );
 };

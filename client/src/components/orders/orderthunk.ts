@@ -19,7 +19,7 @@ export const addOrder =
   (order: IMission, token: string | null) => async (dispatch: AppDispatch) => {
     try {
       // Set responseType to blob to handle file downloads
-  const res = await http.post<Blob>(`/missions`, order, {
+      const res = await http.post<Blob>(`/missions`, order, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -71,7 +71,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
   try {
     dispatch(fetchOrdersStart()); // Start loading
 
-  const res = await http.get(`/missions/user`, {
+    const res = await http.get(`/missions/user`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -101,7 +101,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
 export const updateMission = (order: IMission) => async (dispatch: AppDispatch) => {
   //
   try {
-  const res = await http.patch(`/missions/${order.n_mission}`, order);
+    const res = await http.patch(`/missions/${order.n_mission}`, order);
     if (res) {
       await dispatch(setAlert({ msg: 'Order Updated Successfully', type: AlertTypes.SUCCESS }));
       dispatch(editMission(res.data));
@@ -127,7 +127,7 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
   try {
     dispatch(fetchOrdersStart()); // Start loading
 
-  const res = await http.get(`/missions`, {
+    const res = await http.get(`/missions`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,

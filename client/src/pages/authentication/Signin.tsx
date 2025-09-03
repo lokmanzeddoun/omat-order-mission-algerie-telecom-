@@ -43,8 +43,8 @@ const Signin = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-  console.info('[signin] submitting login', userData);
-  await dispatch(login(userData));
+    console.info('[signin] submitting login', userData);
+    await dispatch(login(userData));
   };
   if (isLoading) {
     return <Splash />; // Fallback UI while checking authentication

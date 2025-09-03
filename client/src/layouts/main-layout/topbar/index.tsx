@@ -45,6 +45,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
 
   return (
     <Stack
+      direction="row"
       px={3.5}
       height={90}
       alignItems="center"
@@ -54,7 +55,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       top={0}
       zIndex={1200}
     >
-      <Stack spacing={{ xs: 1, sm: 2 }} alignItems="center">
+      <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
         <ButtonBase
           component={Link}
           href="/"
@@ -78,7 +79,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       </Stack>
       <AppAlert />
 
-      <Stack spacing={{ xs: 1, sm: 2 }} alignItems="center">
+      <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
         <Button variant="contained" color="primary" onClick={handleOpen}>
           Ajouter Mission
         </Button>

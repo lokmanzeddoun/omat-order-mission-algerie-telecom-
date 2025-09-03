@@ -24,3 +24,42 @@ export const numberFormat = (number: number, notation: 'standard' | 'compact' = 
   new Intl.NumberFormat('en-US', {
     notation,
   }).format(number);
+
+// Calculate available meals and accommodations between two date-times
+// startDate: YYYY-MM-DD (mission date_sortie UTC-based)
+// startTime: HH:mm
+// endDate: YYYY-MM-DD
+// endTime: HH:mm
+export const calculateMealsAndAccommodation = (
+  startDate: string,
+  startTime: string,
+  endDate: string,
+  endTime: string,
+) => {
+  try {
+    const start = dayjs.utc(`${startDate}T${startTime}:00Z`);
+    const end = dayjs.utc(`${endDate}T${endTime}:00Z`);
+    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+      return { meals: 0, accommodations: 0 };
+    }
+
+    const totalHours = end.diff(start, 'hour');
+    const fullDays = Math.floor(totalHours / 24);
+    const remainingHours = totalHours % 24;
+
+    // Simple policy: 2 meals per full day
+    // Remaining hours grant meals: 0 (<4h), 1 (4-12h), 2 (>12h)
+    let partialMeals = 0;
+    if (remainingHours >= 4 && remainingHours <= 12) partialMeals = 1;
+    else if (remainingHours > 12) partialMeals = 2;
+
+    const meals = fullDays * 2 + partialMeals;
+
+    // Nights = number of midnights crossed ~ difference in calendar days
+    const accommodations = end.startOf('day').diff(start.startOf('day'), 'day');
+
+    return { meals, accommodations: Math.max(0, accommodations) };
+  } catch {
+    return { meals: 0, accommodations: 0 };
+  }
+};

@@ -12,6 +12,7 @@ import ValidateIcon from 'assets/icons/hugeicons--document-validation.svg?react'
 import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
 import MenuIcon from 'assets/icons/iconamoon--menu-kebab-horizontal-fill.svg?react';
 import { FC, SVGProps } from 'react';
+import { IMission } from './orderReducer';
 
 interface Action {
   id: number;
@@ -37,7 +38,14 @@ const actions: Action[] = [
   },
 ];
 
-const ActionMenu = ({ order, onEdit, onDelete }) => {
+interface ActionMenuProps {
+  order: IMission;
+  onEdit?: (order: IMission) => void;
+  onDelete?: (order: IMission) => void;
+  onValidate?: (order: IMission) => void;
+}
+
+const ActionMenu = ({ order, onEdit, onDelete, onValidate }: ActionMenuProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -49,7 +57,20 @@ const ActionMenu = ({ order, onEdit, onDelete }) => {
     setAnchorEl(null);
   };
 
-  const handleActionItemClick = () => {
+  const handleActionItemClick = (id: number) => {
+    switch (id) {
+      case 1:
+        onEdit?.(order);
+        break;
+      case 2:
+        onDelete?.(order);
+        break;
+      case 3:
+        onValidate?.(order);
+        break;
+      default:
+        break;
+    }
     handleActionMenuClose();
   };
 
@@ -79,16 +100,7 @@ const ActionMenu = ({ order, onEdit, onDelete }) => {
       >
         {actions.map((actionItem) => {
           return (
-            <MenuItem
-              key={actionItem.id}
-              onClick={
-                actionItem.id === 1
-                  ? onEdit
-                  : actionItem.id === 2
-                  ? onDelete
-                  : handleActionItemClick
-              }
-            >
+            <MenuItem key={actionItem.id} onClick={() => handleActionItemClick(actionItem.id)}>
               <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize' }}>
                 <IconifyIcon
                   icon={actionItem.icon}
@@ -103,8 +115,8 @@ const ActionMenu = ({ order, onEdit, onDelete }) => {
                     actionItem.id === 3
                       ? 'success.main'
                       : actionItem.id === 2
-                      ? 'error.main'
-                      : 'text.primary'
+                        ? 'error.main'
+                        : 'text.primary'
                   }
                 >
                   {actionItem.title}
