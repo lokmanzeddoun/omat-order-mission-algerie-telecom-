@@ -1,22 +1,12 @@
-import { Box, Button, Card, Chip, Stack, Tab, Tabs, Typography, TextField, ListItemIcon, ListItemText, MenuItem as MUIMenuItem } from '@mui/material';
-import {
-  DataGrid,
-  GridColDef,
-  GridPaginationModel,
-  GridRowsProp,
-  GridFilterModel,
-  GridRowSelectionModel,
-} from '@mui/x-data-grid';
-import Menu from '@mui/material/Menu';
-import IconifyIcon from 'components/base/IconifyIcon';
-import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
-import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
-import CreateIcon from 'assets/icons/solar--document-add-linear.svg?react';
+import { Box, Button, Card, Chip, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { GridColDef, GridPaginationModel, GridRowsProp } from '@mui/x-data-grid';
+import SmartTable from 'components/common/SmartTable';
+// removed: per SmartTable
 import CustomPagination from './customPagination';
 import MissionModal from 'components/orders/CreateOrder';
 import NoData from './NoData';
 import { dateFormatFromUTC } from 'helpers/utils';
-import { SyntheticEvent, useEffect, useRef, useState } from 'react';
+import { SyntheticEvent, useEffect, useState } from 'react';
 import ActionMenu from './ActionMenu';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
@@ -139,7 +129,7 @@ const a11yProps = (index: number) => ({
   'aria-controls': `transaction-tabpanel-${index}`,
 });
 
-const rowHeight = 60; // default row height
+// const rowHeight = 60; // default row height (handled by SmartTable)
 
 const InvoiceOverviewTable: React.FC = () => {
   // get users State
@@ -213,13 +203,7 @@ const InvoiceOverviewTable: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<GridRowsProp<RowData>>([]);
   const [value, setValue] = useState(0);
-  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
-  const [headerSearchField, setHeaderSearchField] = useState<string | null>(null);
-  const [headerSearchValue, setHeaderSearchValue] = useState<string>('');
-  const [ctx, setCtx] = useState<{ mouseX: number; mouseY: number } | null>(null);
-  const [ctxRow, setCtxRow] = useState<RowData | null>(null);
-  const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>([]);
-  const gridRef = useRef<HTMLDivElement | null>(null);
+  // header search & context menu handled by SmartTable
 
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -235,36 +219,11 @@ const InvoiceOverviewTable: React.FC = () => {
     setPaginationModel(model);
   };
 
-  const handleColumnHeaderDoubleClick = (params: any) => {
-    const field = params.field as string;
-    if (!field) return; // skip action column
-    setHeaderSearchField(field);
-    const existing = filterModel.items.find((it) => it.field === field);
-    setHeaderSearchValue((existing?.value as string) || '');
-  };
+  // handled by SmartTable
 
-  const applyHeaderFilter = (field: string, value: string) => {
-    setFilterModel((prev) => {
-      const others = prev.items.filter((it) => it.field !== field);
-      const nextItems = value
-        ? [...others, { field, operator: 'contains', value } as any]
-        : others;
-      return { items: nextItems } as GridFilterModel;
-    });
-  };
+  // header search handled by SmartTable
 
-  const handleContextMenu: React.MouseEventHandler<HTMLDivElement> = (event) => {
-    event.preventDefault();
-    const target = event.target as HTMLElement;
-    const rowEl = target.closest('[data-id]') as HTMLElement | null;
-    const id = rowEl?.getAttribute('data-id');
-    if (!id) return;
-    const row = items.find((r) => String(r.matricule) === id) || null;
-    if (!row) return;
-    setCtxRow(row);
-    setRowSelectionModel([row.matricule]);
-    setCtx({ mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
-  };
+  // handled by SmartTable
 
   const mapUsersToRows = (arr: any[]): RowData[] =>
     arr.map((u: any) => ({
@@ -307,45 +266,11 @@ const InvoiceOverviewTable: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users, value]);
 
-  // Clear selection when clicking outside the grid
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      if (gridRef.current && !gridRef.current.contains(target)) {
-        setRowSelectionModel([]);
-      }
-    };
-    document.addEventListener('mousedown', onDocClick);
-    return () => document.removeEventListener('mousedown', onDocClick);
-  }, []);
+  // no-op: handled by SmartTable
 
   // Define the full columns array including the dynamic action column
   const columns: GridColDef[] = [
-    ...initialColumns.map((col) => ({
-      ...col,
-      renderHeader:
-        col.field && col.field !== ''
-          ? () =>
-            headerSearchField === col.field ? (
-              <TextField
-                autoFocus
-                size="small"
-                placeholder={`Rechercher ${col.headerName}`}
-                value={headerSearchValue}
-                onChange={(e) => {
-                  setHeaderSearchValue(e.target.value);
-                  applyHeaderFilter(col.field as string, e.target.value);
-                }}
-                onBlur={() => {
-                  if (!headerSearchValue) setHeaderSearchField(null);
-                }}
-                sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
-              />
-            ) : (
-              <>{col.headerName}</>
-            )
-          : col.renderHeader,
-    })),
+    ...initialColumns,
     {
       field: '',
       headerAlign: 'right',
@@ -442,125 +367,31 @@ const InvoiceOverviewTable: React.FC = () => {
             border: 1,
             borderColor: 'neutral.light',
             bgcolor: { xs: 'transparent', sm: 'white' },
-            boxShadow: (theme) => `inset 0px -1px ${theme.palette.neutral.light}`, // color for row border
+            boxShadow: (theme) => `inset 0px -1px ${theme.palette.neutral.light}`,
           },
         }}
       >
-        <div onContextMenu={handleContextMenu} ref={gridRef}>
-          <DataGrid
-            getRowId={(row) => row.matricule}
-            rowHeight={rowHeight}
-            rows={items.slice(
-              paginationModel.page * paginationModel.pageSize,
-              (paginationModel.page + 1) * paginationModel.pageSize,
-            )}
-            rowCount={items.length}
-            columns={columns}
-            paginationMode="server"
-            paginationModel={paginationModel}
-            onPaginationModelChange={handlePaginationModelChange}
-            onColumnHeaderDoubleClick={handleColumnHeaderDoubleClick as any}
-            filterModel={filterModel}
-            onFilterModelChange={setFilterModel}
-            slots={{
-              noRowsOverlay: () => <NoData />,
-              pagination: () => null,
-            }}
-            disableColumnMenu
-            disableColumnFilter
-            loading={loading}
-            rowSelectionModel={rowSelectionModel}
-            onRowSelectionModelChange={(m) => setRowSelectionModel(m)}
-            disableDensitySelector
-            disableColumnSelector
-            onCellDoubleClick={(params) => {
-              setSelectedUser(params.row);
-              setViewOnly(true);
-              setEditModalOpen(true);
-            }}
-            sx={{
-              px: { xs: 0, md: 3 },
-              '& .MuiDataGrid-main': {
-                minHeight: 300,
-              },
-              '& .MuiDataGrid-virtualScroller': {
-                minHeight: 300,
-                p: 0,
-              },
-              '& .MuiDataGrid-columnHeader': {
-                fontSize: { xs: 13, lg: 16 },
-                userSelect: 'none',
-              },
-              '& .MuiDataGrid-columnHeader .MuiInputBase-input': { userSelect: 'text' },
-              '& .MuiDataGrid-cell': {
-                fontSize: { xs: 13, lg: 16 },
-                userSelect: 'none',
-              },
-              '& .MuiTypography-root': {
-                fontSize: { xs: 13, lg: 16 },
-              },
-              // Keep selection logic but remove visual highlight
-              '& .MuiDataGrid-row.Mui-selected': {
-                backgroundColor: 'transparent !important',
-              },
-              '& .MuiDataGrid-row.Mui-selected:hover': {
-                backgroundColor: 'transparent !important',
-              },
-              '& .MuiDataGrid-row': {
-                userSelect: 'none',
-              },
-              '& .MuiDataGrid-cell--selected': {
-                backgroundColor: 'transparent !important',
-              },
-              '& .MuiDataGrid-cell--selected:hover': {
-                backgroundColor: 'transparent !important',
-              },
-            }}
-          />
-        </div>
+        <SmartTable<RowData>
+          columns={columns}
+          rows={items.slice(
+            paginationModel.page * paginationModel.pageSize,
+            (paginationModel.page + 1) * paginationModel.pageSize,
+          )}
+          rowCount={items.length}
+          getRowId={(row) => row.matricule}
+          paginationModel={paginationModel}
+          onPaginationModelChange={handlePaginationModelChange}
+          loading={loading}
+          noRowsOverlay={NoData as any}
+          onViewDetails={(row) => {
+            setSelectedUser(row);
+            setViewOnly(true);
+            setEditModalOpen(true);
+          }}
+          contextMenuItems={[]}
+        />
       </Card>
-      {/* Inline header search replaces previous popover */}
-      <Menu
-        open={ctx !== null}
-        onClose={() => setCtx(null)}
-        anchorReference="anchorPosition"
-        anchorPosition={ctx ? { top: ctx.mouseY, left: ctx.mouseX } : undefined}
-        sx={{ mt: 0.5, '& .MuiList-root': { width: 180 } }}
-      >
-        <MUIMenuItem
-          onClick={() => {
-            if (ctxRow) handleOpen1(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={CreateIcon} color="primary" />
-          </ListItemIcon>
-          <ListItemText>Ajouter</ListItemText>
-        </MUIMenuItem>
-        <MUIMenuItem
-          onClick={() => {
-            if (ctxRow) handleEdit(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={EditIcon} />
-          </ListItemIcon>
-          <ListItemText>Editer</ListItemText>
-        </MUIMenuItem>
-        <MUIMenuItem
-          onClick={() => {
-            if (ctxRow) handleDelete(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={DeleteIcon} color="error" />
-          </ListItemIcon>
-          <ListItemText sx={{ color: 'error.main' }}>Supprimer</ListItemText>
-        </MUIMenuItem>
-      </Menu>
+      {/* Context menu is handled inside SmartTable via contextMenuItems if provided */}
       <MissionModal open={open1} onClose={handleClose1} onSubmit={handleOrderSubmit} />
       <CreateUserModal open={open} onClose={handleClose} onSubmit={handleUserSubmit} />
       {selectedUser ? (

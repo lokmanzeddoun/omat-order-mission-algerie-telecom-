@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import { DataGrid, GridColDef, useGridApiRef, GridApi, GridToolbar, GridFilterModel } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, useGridApiRef, GridApi, GridToolbar, GridFilterModel, GridRowId, GridRowClassNameParams } from '@mui/x-data-grid';
 import { TextField } from '@mui/material';
 import DataGridFooter from 'components/common/DataGridFooter';
 import ActionMenu from './ActionMenu';
@@ -307,6 +307,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
   const [headerSearchField, setHeaderSearchField] = useState<string | null>(null);
   const [headerSearchValue, setHeaderSearchValue] = useState<string>('');
+  const [highlightRowId, setHighlightRowId] = useState<GridRowId | null>(null);
 
   const apiRef = useGridApiRef<GridApi>();
 
@@ -416,6 +417,8 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
     const row = filteredRows.find((r) => String(r.n_mission) === id);
     if (!row) return;
     setCtxRow(row);
+    setselectedOrder(row);
+    setHighlightRowId(row.n_mission as GridRowId);
     setCtx({ mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
   };
 
@@ -461,13 +464,21 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             setHeaderSearchValue((existing?.value as string) || '');
           }}
           localeText={localizedTextsMap}
-          onRowDoubleClick={(params) => handleViewDetails(params.row as IMission)}
+          onRowDoubleClick={(params) => {
+            setHighlightRowId(params.id as GridRowId);
+            handleViewDetails(params.row as IMission);
+          }}
           onRowSelectionModelChange={(ids) => {
             const selectedRows = orders.filter(
               (row) => row.n_mission != null && (ids as any[]).includes(row.n_mission as any),
             );
             setselectedOrder(selectedRows[0] ?? null);
           }}
+          getRowClassName={(params: GridRowClassNameParams) =>
+            highlightRowId != null && String(params.id) === String(highlightRowId)
+              ? 'action-highlight'
+              : ''
+          }
           slots={{
             noRowsOverlay: () => <NoData />,
             pagination: DataGridFooter,
@@ -507,6 +518,8 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             '& .MuiDataGrid-cell--selected:hover': {
               backgroundColor: 'transparent !important',
             },
+            // Action-based highlight
+            '& .action-highlight': { backgroundColor: 'primary.light !important' },
           }}
         />
       </div>
