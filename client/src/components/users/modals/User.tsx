@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { FormEvent, useEffect, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -30,6 +30,7 @@ interface UserModalProps {
   onSubmit: (data: RowData) => void;
   isEdit?: boolean;
   initialData?: RowData; // Initial data for edit mode
+  viewOnly?: boolean;
 }
 
 const roles = ['USER', 'ADMIN', 'SUPER_ADMIN'];
@@ -47,6 +48,7 @@ const UserModal: React.FC<UserModalProps> = ({
   onSubmit,
   isEdit = false,
   initialData,
+  viewOnly = false,
 }) => {
   const initialFormData: RowData = initialData || {
     id: 0,
@@ -81,24 +83,13 @@ const UserModal: React.FC<UserModalProps> = ({
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (isEdit) {
-      // Only gather the changed fields for an update
-      const updatedData: Partial<RowData> = {};
-
-      Object.keys(formData).forEach((key) => {
-        if (formData[key] !== initialFormData[key as keyof RowData]) {
-          updatedData[key as keyof RowData] = formData[key as keyof RowData];
-        }
-      });
-      updatedData.matricule = formData.matricule;
-      // If there's something to update, submit the updated data
-      if (Object.keys(updatedData).length > 0) {
-        onSubmit(updatedData as RowData); // Send only the updated fields
-      }
-    } else {
-      // For create, submit the entire formData
-      onSubmit(formData);
+    if (viewOnly) {
+      onClose();
+      return;
     }
+
+    // For edit or create, submit the entire formData; server will handle partials if supported
+    onSubmit(formData);
 
     setFormData(initialFormData); // Reset form after submission
     dispatch(getAllUsers());
@@ -118,7 +109,9 @@ const UserModal: React.FC<UserModalProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEdit ? 'Editer Utilisateur' : 'Ajouter Nouvel Utilisateur'}</DialogTitle>
+      <DialogTitle>
+        {viewOnly ? 'Détails Utilisateur' : isEdit ? 'Editer Utilisateur' : 'Ajouter Nouvel Utilisateur'}
+      </DialogTitle>
       <DialogContent>
         <Stack
           component="form"
@@ -143,6 +136,7 @@ const UserModal: React.FC<UserModalProps> = ({
                   <IconifyIcon icon={MatriculeIcon} />
                 </InputAdornment>
               ),
+              readOnly: viewOnly,
             }}
             value={formData.matricule ? formData.matricule : ''}
             onChange={handleChange}
@@ -159,6 +153,7 @@ const UserModal: React.FC<UserModalProps> = ({
                   <IconifyIcon icon={NameIcon} />
                 </InputAdornment>
               ),
+              readOnly: viewOnly,
             }}
             value={formData.nom}
             onChange={handleChange}
@@ -175,6 +170,7 @@ const UserModal: React.FC<UserModalProps> = ({
                   <IconifyIcon icon={PrenomIcon} />
                 </InputAdornment>
               ),
+              readOnly: viewOnly,
             }}
             value={formData.prenom}
             onChange={handleChange}
@@ -192,6 +188,7 @@ const UserModal: React.FC<UserModalProps> = ({
                   <IconifyIcon icon={MailIcon} />
                 </InputAdornment>
               ),
+              readOnly: viewOnly,
             }}
             value={formData.email}
             onChange={handleChange}
@@ -200,7 +197,7 @@ const UserModal: React.FC<UserModalProps> = ({
             <TextField
               name="role"
               variant="filled"
-              disabled={isEdit} // Disable if editing
+              disabled={isEdit || viewOnly} // Disable if editing or view only
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -224,7 +221,7 @@ const UserModal: React.FC<UserModalProps> = ({
             </TextField>
             <TextField
               name="category"
-              disabled={isEdit} // Disable if editing
+              disabled={isEdit || viewOnly} // Disable if editing or view only
               fullWidth
               margin="none"
               variant="filled"
@@ -260,6 +257,7 @@ const UserModal: React.FC<UserModalProps> = ({
                   <IconifyIcon icon={FunctionIcon} />
                 </InputAdornment>
               ),
+              readOnly: viewOnly,
             }}
             required
             value={formData.grade}
@@ -268,7 +266,7 @@ const UserModal: React.FC<UserModalProps> = ({
           <Autocomplete
             options={structures}
             getOptionLabel={(option) => option.name} // Maps the options to labels
-            onChange={(event, newValue) => {
+            onChange={(_event, newValue) => {
               setFormData({
                 ...formData,
                 serviceId: newValue?.code || '', // Assuming `code` represents the `serviceId`
@@ -290,10 +288,12 @@ const UserModal: React.FC<UserModalProps> = ({
                       <IconifyIcon icon={ServiceIcon} />
                     </InputAdornment>
                   ),
+                  readOnly: viewOnly,
                 }}
                 value={formData.serviceId}
               />
             )}
+            disabled={viewOnly}
           />
         </Stack>
       </DialogContent>
@@ -301,9 +301,11 @@ const UserModal: React.FC<UserModalProps> = ({
         <Button onClick={onClose} color="secondary">
           Annuler
         </Button>
-        <Button type="submit" color="primary" form="user-form">
-          {isEdit ? 'Mettre à Jour' : 'Soumettre'}
-        </Button>
+        {!viewOnly && (
+          <Button type="submit" color="primary" form="user-form">
+            {isEdit ? 'Mettre à Jour' : 'Soumettre'}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

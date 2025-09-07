@@ -4,6 +4,7 @@ import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
+import Box from '@mui/material/Box';
 import IconifyIcon from 'components/base/IconifyIcon';
 import OrderView from 'components/orders/OrderView';
 import SearchIcon from 'assets/icons/mynaui--search.svg?react';
@@ -16,8 +17,16 @@ const UserDashboard = () => {
 
   return (
     <Stack direction="column" spacing={1} width={1}>
-      <Stack alignItems="center" justifyContent="space-between">
-        <Typography variant="h4" minWidth={200} sx={{ ml: 9 }}>
+      <Stack
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: '1fr auto 1fr',
+          alignItems: 'center',
+          gap: 2,
+        }}
+      >
+        <Box />
+        <Typography variant="h4" minWidth={200} sx={{ justifySelf: 'center' }}>
           Mes ordre de missions
         </Typography>
         <TextField
@@ -26,7 +35,7 @@ const UserDashboard = () => {
           placeholder="Recherche Ordre"
           value={searchText}
           onChange={handleInputChange}
-          sx={{ width: 1, maxWidth: 300, mr: 9 }}
+          sx={{ width: 1, maxWidth: 320, justifySelf: 'end', mr: { xs: 2, sm: 3 } }}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">

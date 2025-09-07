@@ -1,21 +1,12 @@
-import { useState, PropsWithChildren } from 'react';
+import { PropsWithChildren } from 'react';
 import Stack from '@mui/material/Stack';
 import Topbar from 'layouts/user-layout/topbar';
 
 const UserLayout = ({ children }: PropsWithChildren) => {
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [isClosing] = useState(false);
-
   return (
     <Stack width={1} minHeight="100vh">
-      <Stack
-        component="main"
-        direction="column"
-        width={{ xs: 1, lg: 'calc(100% - 252px)' }}
-        ml={{ lg: '252px' }}
-        flexGrow={1}
-      >
-        <Topbar isClosing={isClosing} mobileOpen={mobileOpen} setMobileOpen={setMobileOpen} />
+      <Stack component="main" direction="column" width={1} flexGrow={1}>
+        <Topbar />
         {children}
       </Stack>
     </Stack>

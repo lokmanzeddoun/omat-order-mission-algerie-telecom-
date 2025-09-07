@@ -5,16 +5,18 @@ interface EditUserModalProps {
   onClose: () => void;
   onSubmit: (data: RowData) => void;
   userData?: RowData; // Pre-filled user data
+  viewOnly?: boolean;
 }
 
-const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, onSubmit, userData }) => {
+const EditUserModal: React.FC<EditUserModalProps> = ({ open, onClose, onSubmit, userData, viewOnly }) => {
   return (
     <UserModal
       open={open}
       onClose={onClose}
       onSubmit={onSubmit}
-      isEdit={true} // Pass true to indicate edit mode
+      isEdit={!viewOnly} // if viewOnly, don't present edit mode
       initialData={userData} // Pass pre-filled user data
+      viewOnly={viewOnly}
     />
   );
 };

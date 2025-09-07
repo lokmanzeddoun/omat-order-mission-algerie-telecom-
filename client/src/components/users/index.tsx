@@ -1,16 +1,22 @@
-import { Box, Button, Card, Chip, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Stack, Tab, Tabs, Typography, TextField, ListItemIcon, ListItemText, MenuItem as MUIMenuItem } from '@mui/material';
 import {
   DataGrid,
   GridColDef,
   GridPaginationModel,
   GridRowsProp,
-  GridToolbar,
+  GridFilterModel,
+  GridRowSelectionModel,
 } from '@mui/x-data-grid';
+import Menu from '@mui/material/Menu';
+import IconifyIcon from 'components/base/IconifyIcon';
+import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
+import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
+import CreateIcon from 'assets/icons/solar--document-add-linear.svg?react';
 import CustomPagination from './customPagination';
 import MissionModal from 'components/orders/CreateOrder';
 import NoData from './NoData';
 import { dateFormatFromUTC } from 'helpers/utils';
-import { SyntheticEvent, useEffect, useState } from 'react';
+import { SyntheticEvent, useEffect, useRef, useState } from 'react';
 import ActionMenu from './ActionMenu';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
@@ -34,6 +40,8 @@ export interface RowData {
   category: Category;
   serviceId: string | null;
   status?: string;
+  service?: string;
+  structure?: { name: string; code?: string } | null;
 }
 
 const initialColumns: GridColDef[] = [
@@ -76,6 +84,7 @@ const initialColumns: GridColDef[] = [
     minWidth: 200,
     hideable: false,
     renderCell: (params) => <>{params.row?.structure?.name}</>,
+    valueGetter: (params: any) => params?.row?.structure?.name ?? '',
   },
   {
     field: 'grade',
@@ -141,10 +150,12 @@ const InvoiceOverviewTable: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [open1, setOpen1] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<RowData | null>(null);
   const handleEdit = (user: any) => {
     setSelectedUser(user);
+    setViewOnly(false);
     setEditModalOpen(true);
   };
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,7 +167,9 @@ const InvoiceOverviewTable: React.FC = () => {
     }
   };
   const handleOrderSubmit = async (data: any) => {
-    const { structure, ...userWithoutStructure } = selectedUser;
+    if (!selectedUser) return;
+    const userWithoutStructure = { ...(selectedUser as any) };
+    delete (userWithoutStructure as any).structure;
     data.user = userWithoutStructure;
     await dispatch(addOrder(data, token));
     // await dispatch(getAllUsers());
@@ -171,12 +184,15 @@ const InvoiceOverviewTable: React.FC = () => {
     setDeleteModalOpen(true);
   };
   const ConfirmationDelete = async () => {
-    await dispatch(deleteUser(selectedUser));
+    if (selectedUser) {
+      await dispatch(deleteUser(selectedUser as any));
+    }
     setDeleteModalOpen(false);
   };
   const EditSumbission = async (data: RowData) => {
-    const { id, ...newData } = data;
-    await dispatch(updateUser(selectedUser?.matricule, newData));
+    const newData = { ...(data as any) };
+    delete (newData as any).id;
+    await dispatch(updateUser(selectedUser ? selectedUser.matricule : null, newData as any));
     setEditModalOpen(false);
   };
   const handleOpen = () => setOpen(true);
@@ -187,21 +203,30 @@ const InvoiceOverviewTable: React.FC = () => {
   const handleClose = () => setOpen(false);
   const handleClose1 = () => setOpen1(false);
   const handleUserSubmit = async (data: RowData) => {
-    const { id, ...newData } = data;
-    await dispatch(addUser(newData));
+    const newData = { ...(data as any) };
+    delete (newData as any).id;
+    const payload: any = { password: 'Temp1234!', ...newData };
+    await dispatch(addUser(payload));
     setOpen(false);
     // Handle the submission (e.g., send data to a backend)
   };
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<GridRowsProp<RowData>>([]);
   const [value, setValue] = useState(0);
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+  const [headerSearchField, setHeaderSearchField] = useState<string | null>(null);
+  const [headerSearchValue, setHeaderSearchValue] = useState<string>('');
+  const [ctx, setCtx] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [ctxRow, setCtxRow] = useState<RowData | null>(null);
+  const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>([]);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
     pageSize: 10,
   });
 
-  const handleChange = (event: SyntheticEvent, newValue: number) => {
+  const handleChange = (_event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
     filterData(newValue);
   };
@@ -210,16 +235,63 @@ const InvoiceOverviewTable: React.FC = () => {
     setPaginationModel(model);
   };
 
+  const handleColumnHeaderDoubleClick = (params: any) => {
+    const field = params.field as string;
+    if (!field) return; // skip action column
+    setHeaderSearchField(field);
+    const existing = filterModel.items.find((it) => it.field === field);
+    setHeaderSearchValue((existing?.value as string) || '');
+  };
+
+  const applyHeaderFilter = (field: string, value: string) => {
+    setFilterModel((prev) => {
+      const others = prev.items.filter((it) => it.field !== field);
+      const nextItems = value
+        ? [...others, { field, operator: 'contains', value } as any]
+        : others;
+      return { items: nextItems } as GridFilterModel;
+    });
+  };
+
+  const handleContextMenu: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    event.preventDefault();
+    const target = event.target as HTMLElement;
+    const rowEl = target.closest('[data-id]') as HTMLElement | null;
+    const id = rowEl?.getAttribute('data-id');
+    if (!id) return;
+    const row = items.find((r) => String(r.matricule) === id) || null;
+    if (!row) return;
+    setCtxRow(row);
+    setRowSelectionModel([row.matricule]);
+    setCtx({ mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
+  };
+
+  const mapUsersToRows = (arr: any[]): RowData[] =>
+    arr.map((u: any) => ({
+      id: u.id ?? u.matricule ?? 0,
+      matricule: u.matricule,
+      nom: u.nom,
+      prenom: u.prenom,
+      email: u.email,
+      role: u.role,
+      grade: u.grade ?? '',
+      category: u.category,
+      serviceId: u.serviceId ?? u.service ?? null,
+      status: u.status,
+      service: u.service,
+      structure: u.structure ?? null,
+    }));
+
   const filterData = (tabIndex: number) => {
     switch (tabIndex) {
       case 1:
-        setItems(users.filter((row) => row.role === 'USER'));
+        setItems(mapUsersToRows(users.filter((row) => row.role === 'USER')));
         break;
       case 2:
-        setItems(users.filter((row) => row.role === 'ADMIN'));
+        setItems(mapUsersToRows(users.filter((row) => row.role === 'ADMIN')));
         break;
       default:
-        setItems(users);
+        setItems(mapUsersToRows(users));
         break;
     }
   };
@@ -227,13 +299,53 @@ const InvoiceOverviewTable: React.FC = () => {
   useEffect(() => {
     setLoading(true);
     dispatch(getAllUsers());
-    filterData(value);
     setLoading(false);
   }, [dispatch]);
 
+  useEffect(() => {
+    filterData(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, value]);
+
+  // Clear selection when clicking outside the grid
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (gridRef.current && !gridRef.current.contains(target)) {
+        setRowSelectionModel([]);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
   // Define the full columns array including the dynamic action column
   const columns: GridColDef[] = [
-    ...initialColumns, // Spread the static columns
+    ...initialColumns.map((col) => ({
+      ...col,
+      renderHeader:
+        col.field && col.field !== ''
+          ? () =>
+            headerSearchField === col.field ? (
+              <TextField
+                autoFocus
+                size="small"
+                placeholder={`Rechercher ${col.headerName}`}
+                value={headerSearchValue}
+                onChange={(e) => {
+                  setHeaderSearchValue(e.target.value);
+                  applyHeaderFilter(col.field as string, e.target.value);
+                }}
+                onBlur={() => {
+                  if (!headerSearchValue) setHeaderSearchField(null);
+                }}
+                sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+              />
+            ) : (
+              <>{col.headerName}</>
+            )
+          : col.renderHeader,
+    })),
     {
       field: '',
       headerAlign: 'right',
@@ -334,54 +446,105 @@ const InvoiceOverviewTable: React.FC = () => {
           },
         }}
       >
-        <DataGrid
-          getRowId={(row) => row.matricule}
-          rowHeight={rowHeight}
-          rows={items.slice(
-            paginationModel.page * paginationModel.pageSize,
-            (paginationModel.page + 1) * paginationModel.pageSize,
-          )}
-          rowCount={items.length}
-          columns={columns}
-          paginationMode="server"
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationModelChange}
-          slots={{
-            noRowsOverlay: () => <NoData />,
-            pagination: () => null, // Hide the default pagination component
-            toolbar: GridToolbar,
-          }}
-          disableColumnMenu
-          loading={loading}
-          checkboxSelection
-          disableRowSelectionOnClick
-          disableDensitySelector
-          disableColumnSelector
-          onRowSelectionModelChange={(ids) => {
-            const selectedRows = items.filter((row) => ids.includes(row.id));
-            setSelectedUser(selectedRows[0]);
-          }}
-          sx={{
-            px: { xs: 0, md: 3 },
-            '& .MuiDataGrid-main': {
-              minHeight: 300,
-            },
-            '& .MuiDataGrid-virtualScroller': {
-              minHeight: 300,
-              p: 0,
-            },
-            '& .MuiDataGrid-columnHeader': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-            '& .MuiDataGrid-cell': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-            '& .MuiTypography-root': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-          }}
-        />
+        <div onContextMenu={handleContextMenu} ref={gridRef}>
+          <DataGrid
+            getRowId={(row) => row.matricule}
+            rowHeight={rowHeight}
+            rows={items.slice(
+              paginationModel.page * paginationModel.pageSize,
+              (paginationModel.page + 1) * paginationModel.pageSize,
+            )}
+            rowCount={items.length}
+            columns={columns}
+            paginationMode="server"
+            paginationModel={paginationModel}
+            onPaginationModelChange={handlePaginationModelChange}
+            onColumnHeaderDoubleClick={handleColumnHeaderDoubleClick as any}
+            filterModel={filterModel}
+            onFilterModelChange={setFilterModel}
+            slots={{
+              noRowsOverlay: () => <NoData />,
+              pagination: () => null,
+            }}
+            disableColumnMenu
+            disableColumnFilter
+            loading={loading}
+            rowSelectionModel={rowSelectionModel}
+            onRowSelectionModelChange={(m) => setRowSelectionModel(m)}
+            disableDensitySelector
+            disableColumnSelector
+            onCellDoubleClick={(params) => {
+              setSelectedUser(params.row);
+              setViewOnly(true);
+              setEditModalOpen(true);
+            }}
+            sx={{
+              px: { xs: 0, md: 3 },
+              '& .MuiDataGrid-main': {
+                minHeight: 300,
+              },
+              '& .MuiDataGrid-virtualScroller': {
+                minHeight: 300,
+                p: 0,
+              },
+              '& .MuiDataGrid-columnHeader': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiDataGrid-cell': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiTypography-root': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiDataGrid-row.Mui-selected': {
+                bgcolor: 'primary.light',
+              },
+            }}
+          />
+        </div>
       </Card>
+      {/* Inline header search replaces previous popover */}
+      <Menu
+        open={ctx !== null}
+        onClose={() => setCtx(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={ctx ? { top: ctx.mouseY, left: ctx.mouseX } : undefined}
+        sx={{ mt: 0.5, '& .MuiList-root': { width: 180 } }}
+      >
+        <MUIMenuItem
+          onClick={() => {
+            if (ctxRow) handleOpen1(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={CreateIcon} color="primary" />
+          </ListItemIcon>
+          <ListItemText>Ajouter</ListItemText>
+        </MUIMenuItem>
+        <MUIMenuItem
+          onClick={() => {
+            if (ctxRow) handleEdit(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={EditIcon} />
+          </ListItemIcon>
+          <ListItemText>Editer</ListItemText>
+        </MUIMenuItem>
+        <MUIMenuItem
+          onClick={() => {
+            if (ctxRow) handleDelete(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={DeleteIcon} color="error" />
+          </ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>Supprimer</ListItemText>
+        </MUIMenuItem>
+      </Menu>
       <MissionModal open={open1} onClose={handleClose1} onSubmit={handleOrderSubmit} />
       <CreateUserModal open={open} onClose={handleClose} onSubmit={handleUserSubmit} />
       {selectedUser ? (
@@ -391,6 +554,7 @@ const InvoiceOverviewTable: React.FC = () => {
             onClose={() => setEditModalOpen(false)}
             userData={selectedUser}
             onSubmit={EditSumbission}
+            viewOnly={viewOnly}
           />
           <ConfirmDeletionModal
             open={isDeleteModalOpen}
@@ -405,7 +569,7 @@ const InvoiceOverviewTable: React.FC = () => {
         <CustomPagination
           page={paginationModel.page + 1}
           pageCount={Math.ceil(items.length / paginationModel.pageSize)}
-          onPageChange={(event, value) =>
+          onPageChange={(_event, value) =>
             setPaginationModel((prev) => ({ ...prev, page: value - 1 }))
           }
         />
