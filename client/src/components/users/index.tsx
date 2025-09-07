@@ -489,15 +489,31 @@ const InvoiceOverviewTable: React.FC = () => {
               },
               '& .MuiDataGrid-columnHeader': {
                 fontSize: { xs: 13, lg: 16 },
+                userSelect: 'none',
               },
+              '& .MuiDataGrid-columnHeader .MuiInputBase-input': { userSelect: 'text' },
               '& .MuiDataGrid-cell': {
                 fontSize: { xs: 13, lg: 16 },
+                userSelect: 'none',
               },
               '& .MuiTypography-root': {
                 fontSize: { xs: 13, lg: 16 },
               },
+              // Keep selection logic but remove visual highlight
               '& .MuiDataGrid-row.Mui-selected': {
-                bgcolor: 'primary.light',
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiDataGrid-row.Mui-selected:hover': {
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiDataGrid-row': {
+                userSelect: 'none',
+              },
+              '& .MuiDataGrid-cell--selected': {
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiDataGrid-cell--selected:hover': {
+                backgroundColor: 'transparent !important',
               },
             }}
           />

@@ -8,7 +8,7 @@ import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
 
 @Injectable()
 export class StructuresService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(private readonly databaseService: DatabaseService) { }
   create(createStructureDto: CreateStructureDto) {
     return this.databaseService.structure.create({ data: createStructureDto });
   }
