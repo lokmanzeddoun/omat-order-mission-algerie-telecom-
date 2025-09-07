@@ -1,5 +1,5 @@
 import { DatabaseService } from '../database/database.service';
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
 import * as xlsx from 'xlsx';
@@ -30,11 +30,21 @@ export class StructuresService {
   }
 
   update(code: string, updateStructureDto: UpdateStructureDto) {
+    // Forbid changing the primary/unique key 'code'
+    if (
+      Object.prototype.hasOwnProperty.call(updateStructureDto as any, 'code') &&
+      (updateStructureDto as any).code !== undefined &&
+      (updateStructureDto as any).code !== code
+    ) {
+      throw new BadRequestException("You can't modify structure code");
+    }
+    const data = { ...(updateStructureDto as any) };
+    delete (data as any).code; // ensure 'code' never gets passed to update
     return this.databaseService.structure.update({
       where: {
         code,
       },
-      data: updateStructureDto,
+      data, // Only update mutable fields (e.g., name)
     });
   }
 
@@ -71,9 +81,10 @@ export class StructuresService {
 
         if (existingStructure) {
           // Update the user if it exists
+          // Do not update 'code' to avoid FK issues
           await this.databaseService.structure.update({
             where: { code: serviceData.code },
-            data: serviceData,
+            data: { name: serviceData.name },
           });
         } else {
           // Create a new Structure

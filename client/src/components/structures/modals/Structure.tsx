@@ -19,6 +19,7 @@ interface StructureModalProps {
   onSubmit: (data: RowData) => void;
   isEdit?: boolean;
   initialData?: RowData; // Initial data for edit mode
+  viewOnly?: boolean;
 }
 
 const StructureModal: React.FC<StructureModalProps> = ({
@@ -27,6 +28,7 @@ const StructureModal: React.FC<StructureModalProps> = ({
   onSubmit,
   isEdit = false,
   initialData,
+  viewOnly = false,
 }) => {
   const initialFormData: RowData = initialData || {
     code: '',
@@ -48,6 +50,10 @@ const StructureModal: React.FC<StructureModalProps> = ({
   };
 
   const handleSubmit = () => {
+    if (viewOnly) {
+      onClose();
+      return;
+    }
     onSubmit(formData);
     setFormData(initialFormData); // Reset form after submission
     onClose();
@@ -55,7 +61,7 @@ const StructureModal: React.FC<StructureModalProps> = ({
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEdit ? 'Editer Service' : 'Ajouter Nouvel Service'}</DialogTitle>
+      <DialogTitle>{viewOnly ? 'Détails Service' : isEdit ? 'Editer Service' : 'Ajouter Nouvel Service'}</DialogTitle>
       <DialogContent>
         <Stack component="form" mt={3} onSubmit={handleSubmit} direction="column" gap={2}>
           {' '}
@@ -72,6 +78,7 @@ const StructureModal: React.FC<StructureModalProps> = ({
                   <IconifyIcon icon={MatriculeIcon} />
                 </InputAdornment>
               ),
+              readOnly: viewOnly,
             }}
             value={formData.code}
             onChange={handleChange}
@@ -87,6 +94,7 @@ const StructureModal: React.FC<StructureModalProps> = ({
                   <IconifyIcon icon={ServiceIcon} />
                 </InputAdornment>
               ),
+              readOnly: viewOnly,
             }}
             value={formData.name}
             onChange={handleChange}
@@ -97,9 +105,11 @@ const StructureModal: React.FC<StructureModalProps> = ({
         <Button onClick={onClose} color="secondary">
           Annuler
         </Button>
-        <Button onClick={handleSubmit} color="primary">
-          {isEdit ? 'Mettre à Jour' : 'Soumettre'}
-        </Button>
+        {!viewOnly && (
+          <Button onClick={handleSubmit} color="primary">
+            {isEdit ? 'Mettre à Jour' : 'Soumettre'}
+          </Button>
+        )}
       </DialogActions>
     </Dialog>
   );

@@ -18,15 +18,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
 import SearchIcon from 'assets/icons/mynaui--search.svg?react';
 import SolarIcon from 'assets/icons/solar--bell-outline.svg?react';
-import MenuIcon from 'assets/icons/clarity--menu-line.svg?react';
 
-interface TopbarProps {
-  isClosing: boolean;
-  mobileOpen: boolean;
-  setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
-const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
+const Topbar = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { token } = useSelector((state: RootState) => state.auth);
 
@@ -38,11 +31,6 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
     // await dispatch(getAllUsers());
     setOpen(false);
     // Handle the submission (e.g., send data to a backend)
-  };
-  const handleDrawerToggle = () => {
-    if (!isClosing) {
-      setMobileOpen(!mobileOpen);
-    }
   };
 
   return (
@@ -74,18 +62,6 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
             </Typography>
           </ButtonBase>
         </Stack>
-
-        <Toolbar sx={{ display: { xm: 'block', lg: 'none' } }}>
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            onClick={handleDrawerToggle}
-          >
-            <IconifyIcon icon={MenuIcon} />
-          </IconButton>
-        </Toolbar>
 
         <Toolbar sx={{ display: { xm: 'block', md: 'none' } }}>
           <IconButton size="large" edge="start" color="inherit" aria-label="search">

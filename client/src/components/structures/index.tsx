@@ -1,8 +1,12 @@
-import { Box, Button, Card, Stack, Typography } from '@mui/material';
-import { DataGrid, GridColDef, GridPaginationModel, GridToolbar } from '@mui/x-data-grid';
+import { Box, Button, Card, Stack, Typography, TextField, ListItemIcon, ListItemText, MenuItem as MUIMenuItem } from '@mui/material';
+import { DataGrid, GridColDef, GridPaginationModel, GridFilterModel, GridRowSelectionModel } from '@mui/x-data-grid';
+import Menu from '@mui/material/Menu';
+import IconifyIcon from 'components/base/IconifyIcon';
+import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
+import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
 import CustomPagination from 'components/users/customPagination';
 import NoData from 'components/users/NoData';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ActionMenu from 'components/admin/order-overview/ActionMenu';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
@@ -57,6 +61,7 @@ const InvoiceOverviewTable: React.FC = () => {
 
   const [open, setOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
+  const [viewOnly, setViewOnly] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
 
   const handleOpen = () => setOpen(true);
@@ -64,6 +69,7 @@ const InvoiceOverviewTable: React.FC = () => {
 
   const handleEdit = (structure: any) => {
     setselectedStructure(structure);
+    setViewOnly(false);
     setEditModalOpen(true);
   };
   const handleStructureSubmit = async (data: RowData) => {
@@ -73,6 +79,13 @@ const InvoiceOverviewTable: React.FC = () => {
     // Handle the submission (e.g., send data to a backend)
   };
   const [loading, setLoading] = useState(false);
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+  const [headerSearchField, setHeaderSearchField] = useState<string | null>(null);
+  const [headerSearchValue, setHeaderSearchValue] = useState<string>('');
+  const [ctx, setCtx] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [ctxRow, setCtxRow] = useState<RowData | null>(null);
+  const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>([]);
+  const gridRef = useRef<HTMLDivElement | null>(null);
 
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
     page: 0,
@@ -83,13 +96,46 @@ const InvoiceOverviewTable: React.FC = () => {
     setPaginationModel(model);
   };
 
+  const handleColumnHeaderDoubleClick = (params: any) => {
+    const field = params.field as string;
+    if (!field) return;
+    setHeaderSearchField(field);
+    const existing = filterModel.items.find((it) => it.field === field);
+    setHeaderSearchValue((existing?.value as string) || '');
+  };
+
+  const applyHeaderFilter = (field: string, value: string) => {
+    setFilterModel((prev) => {
+      const others = prev.items.filter((it) => it.field !== field);
+      const nextItems = value
+        ? [...others, { field, operator: 'contains', value } as any]
+        : others;
+      return { items: nextItems } as GridFilterModel;
+    });
+  };
+
+  const handleContextMenu: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    event.preventDefault();
+    const target = event.target as HTMLElement;
+    const rowEl = target.closest('[data-id]') as HTMLElement | null;
+    const id = rowEl?.getAttribute('data-id');
+    if (!id) return;
+    const row = structures.find((r) => String(r.code) === id) || null;
+    if (!row) return;
+    setCtxRow(row);
+    setRowSelectionModel([row.code]);
+    setCtx({ mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
+  };
+
   // Function to handle opening of the delete modal
   const handleDelete = async (structure: any) => {
     setselectedStructure(structure);
     setDeleteModalOpen(true);
   };
   const ConfirmationDelete = async () => {
-    await dispatch(deleteStructure(selectedStructure));
+    if (selectedStructure) {
+      await dispatch(deleteStructure(selectedStructure as any));
+    }
     await dispatch(getAllStructures());
     setDeleteModalOpen(false);
   };
@@ -111,11 +157,47 @@ const InvoiceOverviewTable: React.FC = () => {
     setLoading(true);
     dispatch(getAllStructures());
     setLoading(false);
+  }, [dispatch]);
+
+  // Clear selection when clicking outside the grid
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (gridRef.current && !gridRef.current.contains(target)) {
+        setRowSelectionModel([]);
+      }
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   // Define the full columns array including the dynamic action column
   const columns: GridColDef[] = [
-    ...initialColumns, // Spread the static columns
+    ...initialColumns.map((col) => ({
+      ...col,
+      renderHeader:
+        col.field && col.field !== ''
+          ? () =>
+            headerSearchField === col.field ? (
+              <TextField
+                autoFocus
+                size="small"
+                placeholder={`Rechercher ${col.headerName}`}
+                value={headerSearchValue}
+                onChange={(e) => {
+                  setHeaderSearchValue(e.target.value);
+                  applyHeaderFilter(col.field as string, e.target.value);
+                }}
+                onBlur={() => {
+                  if (!headerSearchValue) setHeaderSearchField(null);
+                }}
+                sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+              />
+            ) : (
+              <>{col.headerName}</>
+            )
+          : col.renderHeader,
+    })),
     {
       field: '',
       headerAlign: 'right',
@@ -208,54 +290,98 @@ const InvoiceOverviewTable: React.FC = () => {
           },
         }}
       >
-        <DataGrid
-          getRowId={(row) => row.code}
-          rowHeight={rowHeight}
-          rows={structures.slice(
-            paginationModel.page * paginationModel.pageSize,
-            (paginationModel.page + 1) * paginationModel.pageSize,
-          )}
-          rowCount={structures.length}
-          columns={columns}
-          paginationMode="server"
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationModelChange}
-          slots={{
-            noRowsOverlay: () => <NoData />,
-            pagination: () => null, // Hide the default pagination component
-            toolbar: GridToolbar,
-          }}
-          disableColumnMenu
-          loading={loading}
-          checkboxSelection
-          disableRowSelectionOnClick
-          disableDensitySelector
-          disableColumnSelector
-          onRowSelectionModelChange={(ids) => {
-            const selectedRows = structures.filter((row) => ids.includes(row.code));
-            setselectedStructure(selectedRows[0]);
-          }}
-          sx={{
-            px: { xs: 0, md: 3 },
-            '& .MuiDataGrid-main': {
-              minHeight: 300,
-            },
-            '& .MuiDataGrid-virtualScroller': {
-              minHeight: 300,
-              p: 0,
-            },
-            '& .MuiDataGrid-columnHeader': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-            '& .MuiDataGrid-cell': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-            '& .MuiTypography-root': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-          }}
-        />
+        <div onContextMenu={handleContextMenu} ref={gridRef}>
+          <DataGrid
+            getRowId={(row) => row.code}
+            rowHeight={rowHeight}
+            rows={structures.slice(
+              paginationModel.page * paginationModel.pageSize,
+              (paginationModel.page + 1) * paginationModel.pageSize,
+            )}
+            rowCount={structures.length}
+            columns={columns}
+            paginationMode="server"
+            paginationModel={paginationModel}
+            onPaginationModelChange={handlePaginationModelChange}
+            onColumnHeaderDoubleClick={handleColumnHeaderDoubleClick as any}
+            filterModel={filterModel}
+            onFilterModelChange={setFilterModel}
+            slots={{
+              noRowsOverlay: () => <NoData />,
+              pagination: () => null,
+            }}
+            disableColumnMenu
+            disableColumnFilter
+            loading={loading}
+            rowSelectionModel={rowSelectionModel}
+            onRowSelectionModelChange={(m) => {
+              setRowSelectionModel(m);
+              const selectedRows = structures.filter((row) => m.includes(row.code));
+              setselectedStructure(selectedRows[0] ?? null);
+            }}
+            disableDensitySelector
+            disableColumnSelector
+            onCellDoubleClick={(params) => {
+              setselectedStructure(params.row);
+              setViewOnly(true);
+              setEditModalOpen(true);
+            }}
+            sx={{
+              px: { xs: 0, md: 3 },
+              '& .MuiDataGrid-main': {
+                minHeight: 300,
+              },
+              '& .MuiDataGrid-virtualScroller': {
+                minHeight: 300,
+                p: 0,
+              },
+              '& .MuiDataGrid-columnHeader': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiDataGrid-cell': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiTypography-root': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiDataGrid-row.Mui-selected': {
+                bgcolor: 'primary.light',
+              },
+            }}
+          />
+        </div>
       </Card>
+      {/* Inline header search replaces previous popover */}
+      <Menu
+        open={ctx !== null}
+        onClose={() => setCtx(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={ctx ? { top: ctx.mouseY, left: ctx.mouseX } : undefined}
+        sx={{ mt: 0.5, '& .MuiList-root': { width: 180 } }}
+      >
+        <MUIMenuItem
+          onClick={() => {
+            if (ctxRow) handleEdit(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={EditIcon} />
+          </ListItemIcon>
+          <ListItemText>Editer</ListItemText>
+        </MUIMenuItem>
+        <MUIMenuItem
+          onClick={() => {
+            if (ctxRow) handleDelete(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={DeleteIcon} color="error" />
+          </ListItemIcon>
+          <ListItemText sx={{ color: 'error.main' }}>Supprimer</ListItemText>
+        </MUIMenuItem>
+      </Menu>
       <CreateStructureModal open={open} onClose={handleClose} onSubmit={handleStructureSubmit} />
       {selectedStructure ? (
         <>
@@ -264,6 +390,7 @@ const InvoiceOverviewTable: React.FC = () => {
             onClose={() => setEditModalOpen(false)}
             userData={selectedStructure}
             onSubmit={EditSumbission}
+            viewOnly={viewOnly}
           />
           <ConfirmDeletionModal
             open={isDeleteModalOpen}
@@ -278,7 +405,7 @@ const InvoiceOverviewTable: React.FC = () => {
         <CustomPagination
           page={paginationModel.page + 1}
           pageCount={Math.ceil(structures.length / paginationModel.pageSize)}
-          onPageChange={(event, value) =>
+          onPageChange={(_event, value) =>
             setPaginationModel((prev) => ({ ...prev, page: value - 1 }))
           }
         />

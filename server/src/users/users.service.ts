@@ -136,12 +136,31 @@ export class UsersService {
     });
   }
 
-  update(matricule: number, @Body() updateUserDto: Prisma.UserCreateInput) {
+  update(matricule: number, @Body() updateUserDto: Prisma.UserUpdateInput) {
+    // Prevent changing immutable identifiers
+    if (
+      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'serviceId') &&
+      (updateUserDto as any).serviceId !== undefined
+    ) {
+      throw new BadRequestException(
+        "You can't modify serviceId via update endpoint",
+      );
+    }
+    if (
+      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'matricule') &&
+      (updateUserDto as any).matricule !== undefined &&
+      (updateUserDto as any).matricule !== matricule
+    ) {
+      throw new BadRequestException("You can't modify user's matricule");
+    }
+
+    const data = { ...(updateUserDto as any) };
+    delete (data as any).serviceId;
+    delete (data as any).matricule;
+
     return this.databaseService.user.update({
-      where: {
-        matricule,
-      },
-      data: { ...updateUserDto, matricule: +updateUserDto.matricule },
+      where: { matricule },
+      data,
     });
   }
 

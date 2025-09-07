@@ -20,6 +20,15 @@ import Splash from 'components/loader/Splash';
 import ConfirmDeletionModal from './DeleteMissionModal';
 import EditMissionModal from './EditMissionModal';
 import { Box, Card, Tab, Tabs } from '@mui/material';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Typography from '@mui/material/Typography';
+import IconifyIcon from 'components/base/IconifyIcon';
+import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
+import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
+import ValidateIcon from 'assets/icons/hugeicons--document-validation.svg?react';
 import CustomPagination from 'components/users/customPagination';
 
 const localizedTextsMap = {
@@ -270,6 +279,8 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   const [selectedOrder, setselectedOrder] = useState<IMission | null>(null);
   const [items, setItems] = useState<GridRowsProp<IMission>>([]);
   const [value, setValue] = useState(0);
+  const [ctx, setCtx] = useState<{ mouseX: number; mouseY: number } | null>(null);
+  const [ctxRow, setCtxRow] = useState<IMission | null>(null);
   const handleChange = (_event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
     filterData(newValue);
@@ -414,6 +425,18 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
     return <Splash />;
   }
 
+  const handleContextMenu: React.MouseEventHandler<HTMLDivElement> = (event) => {
+    event.preventDefault();
+    const target = event.target as HTMLElement;
+    const rowEl = target.closest('[data-id]') as HTMLElement | null;
+    const id = rowEl?.getAttribute('data-id');
+    if (!id) return;
+    const row = filteredRows.find((r) => String(r.n_mission) === id) || null;
+    if (!row) return;
+    setCtxRow(row);
+    setCtx({ mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
+  };
+
   return (
     <>
       <Box sx={{ borderBottom: 1, borderColor: 'secondary.lighter', mb: 3.5, mr: 2 }}>
@@ -456,80 +479,132 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           },
         }}
       >
-        <DataGrid
-          getRowId={(row) => row.n_mission}
-          density="standard"
-          columns={columns.map((column) => ({
-            ...column,
-            width: column.width || 150, // Example: Set a default width
-          }))}
-          rows={filteredRows.slice(
-            paginationModel.page * paginationModel.pageSize,
-            (paginationModel.page + 1) * paginationModel.pageSize,
-          )}
-          rowCount={filteredRows.length}
-          rowHeight={50}
-          disableColumnResize
-          disableColumnMenu
-          disableColumnSelector
-          disableDensitySelector
-          disableColumnFilter
-          paginationMode="server"
-          paginationModel={paginationModel}
-          onCellDoubleClick={() => {
-            setEditModalOpen(true);
-            setViewOnly(true);
-          }}
-          localeText={localizedTextsMap}
-          onRowSelectionModelChange={(ids) => {
-            const selectedRows = orders.filter(
-              (row) => row.n_mission != null && ids.includes(row.n_mission as any),
-            );
-            setselectedOrder(selectedRows[0] || null);
-          }}
-          slots={{
-            noRowsOverlay: () => <NoData />,
-            pagination: () => null, // Hide the default pagination component
-            toolbar: GridToolbar,
-          }}
-          slotProps={{ toolbar: { printOptions: { disableToolbarButton: true } } }}
-          initialState={{
-            pagination: { paginationModel: { pageSize: 5 } },
-          }}
-          // autosizeOptions={{
-          //   includeOutliers: true,
-          //   includeHeaders: false,
-          //   outliersFactor: 1,
-          //   expand: true,
-          // }}
-          pageSizeOptions={[10]}
-          sx={{
-            '.MuiDataGrid-cell:focus': {
-              outline: 'none',
-            },
-            '& .MuiDataGrid-row:hover': {
-              cursor: 'pointer',
-            },
-            '& .MuiDataGrid-main': {
-              minHeight: 300,
-            },
-            '& .MuiDataGrid-virtualScroller': {
-              minHeight: 300,
-              p: 0,
-            },
-            '& .MuiDataGrid-columnHeader': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-            '& .MuiDataGrid-cell': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-            '& .MuiTypography-root': {
-              fontSize: { xs: 13, lg: 16 },
-            },
-            px: { xs: 0, md: 3 },
-          }}
-        />
+        <div onContextMenu={handleContextMenu}>
+          <DataGrid
+            getRowId={(row) => row.n_mission}
+            density="standard"
+            columns={columns.map((column) => ({
+              ...column,
+              width: column.width || 150, // Example: Set a default width
+            }))}
+            rows={filteredRows.slice(
+              paginationModel.page * paginationModel.pageSize,
+              (paginationModel.page + 1) * paginationModel.pageSize,
+            )}
+            rowCount={filteredRows.length}
+            rowHeight={50}
+            disableColumnResize
+            disableColumnMenu
+            disableColumnSelector
+            disableDensitySelector
+            disableColumnFilter
+            paginationMode="server"
+            paginationModel={paginationModel}
+            onCellDoubleClick={() => {
+              setEditModalOpen(true);
+              setViewOnly(true);
+            }}
+            localeText={localizedTextsMap}
+            onRowSelectionModelChange={(ids) => {
+              const selectedRows = orders.filter(
+                (row) => row.n_mission != null && ids.includes(row.n_mission as any),
+              );
+              setselectedOrder(selectedRows[0] || null);
+            }}
+            slots={{
+              noRowsOverlay: () => <NoData />,
+              pagination: () => null, // Hide the default pagination component
+              toolbar: GridToolbar,
+            }}
+            slotProps={{ toolbar: { printOptions: { disableToolbarButton: true } } }}
+            initialState={{
+              pagination: { paginationModel: { pageSize: 5 } },
+            }}
+            // autosizeOptions={{
+            //   includeOutliers: true,
+            //   includeHeaders: false,
+            //   outliersFactor: 1,
+            //   expand: true,
+            // }}
+            pageSizeOptions={[10]}
+            sx={{
+              '.MuiDataGrid-cell:focus': {
+                outline: 'none',
+              },
+              '& .MuiDataGrid-row:hover': {
+                cursor: 'pointer',
+              },
+              '& .MuiDataGrid-columnHeaders': {
+                bgcolor: 'primary.main',
+              },
+              '& .MuiDataGrid-main': {
+                minHeight: 300,
+              },
+              '& .MuiDataGrid-virtualScroller': {
+                minHeight: 300,
+                p: 0,
+              },
+              '& .MuiDataGrid-columnHeader': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiDataGrid-cell': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              '& .MuiTypography-root': {
+                fontSize: { xs: 13, lg: 16 },
+              },
+              px: { xs: 0, md: 3 },
+            }}
+          />
+        </div>
       </Card>
+      <Menu
+        open={ctx !== null}
+        onClose={() => setCtx(null)}
+        anchorReference="anchorPosition"
+        anchorPosition={ctx ? { top: ctx.mouseY, left: ctx.mouseX } : undefined}
+        sx={{ mt: 0.5, '& .MuiList-root': { width: 140 } }}
+      >
+        <MenuItem
+          onClick={() => {
+            if (ctxRow) handleValidate(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={ValidateIcon} color="success" />
+          </ListItemIcon>
+          <ListItemText>
+            <Typography color="success.main">Valider</Typography>
+          </ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (ctxRow) handleEdit(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={EditIcon} color="action" />
+          </ListItemIcon>
+          <ListItemText>
+            <Typography>Editer</Typography>
+          </ListItemText>
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (ctxRow) handleDelete(ctxRow);
+            setCtx(null);
+          }}
+        >
+          <ListItemIcon sx={{ mr: 1 }}>
+            <IconifyIcon icon={DeleteIcon} color="error" />
+          </ListItemIcon>
+          <ListItemText>
+            <Typography color="error.main">Annuler</Typography>
+          </ListItemText>
+        </MenuItem>
+      </Menu>
       <Box sx={{ mt: 2, display: 'flex', justifyContent: { xs: 'center', md: 'flex-end' } }}>
         <CustomPagination
           page={paginationModel.page + 1}
