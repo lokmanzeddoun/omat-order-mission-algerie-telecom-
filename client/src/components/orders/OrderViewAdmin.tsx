@@ -1,7 +1,8 @@
 import { SyntheticEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import { DataGrid, GridColDef, GridToolbar, GridRowsProp, GridPaginationModel } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridToolbar, GridRowsProp, GridPaginationModel, GridFilterModel } from '@mui/x-data-grid';
+import { TextField } from '@mui/material';
 // import { rows } from 'data/taskOverview';
 import ActionMenu from './ActionMenu';
 import DecompteModal from './DecompteModal';
@@ -102,11 +103,15 @@ const initialColumns: GridColDef<IMission>[] = [
     align: 'center',
     flex: 2,
     minWidth: 150,
+    filterable: true,
+    valueGetter: (params: any) => {
+      const v = params.value;
+      return v ? moment(v).format('YYYY-MM-DD') : '';
+    },
     renderCell: (params: any) => {
-      // Check if the date value exists and is valid
-      const dateRetourValue = params.value; // Extract the value
-      return dateRetourValue ? (
-        moment(dateRetourValue).format('YYYY/MM/DD') // Correctly format the date
+      const v = (params.row as any)?.date_sortie;
+      return v ? (
+        moment(v).format('YYYY/MM/DD')
       ) : (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
           <Chip label={null} size="small" color="default" />
@@ -142,11 +147,15 @@ const initialColumns: GridColDef<IMission>[] = [
     align: 'center',
     flex: 2,
     minWidth: 150,
+    filterable: true,
+    valueGetter: (params: any) => {
+      const v = params.value;
+      return v ? moment(v).format('YYYY-MM-DD') : '';
+    },
     renderCell: (params: any) => {
-      // Check if the date value exists and is valid
-      const dateRetourValue = params.value; // Extract the value
-      return dateRetourValue ? (
-        moment(dateRetourValue).format('YYYY/MM/DD') // Correctly format the date
+      const v = (params.row as any)?.date_retour;
+      return v ? (
+        moment(v).format('YYYY/MM/DD')
       ) : (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
           <Chip label={null} size="small" color="default" />
@@ -281,6 +290,9 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   const [value, setValue] = useState(0);
   const [ctx, setCtx] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [ctxRow, setCtxRow] = useState<IMission | null>(null);
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+  const [headerSearchField, setHeaderSearchField] = useState<string | null>(null);
+  const [headerSearchValue, setHeaderSearchValue] = useState<string>('');
   const handleChange = (_event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
     filterData(newValue);
@@ -343,17 +355,86 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           align: 'center',
           flex: 2,
           minWidth: 150,
-          renderCell: (params: any) => {
-            return params?.value ? (
-              params.value.nom + ' ' + params.value.prenom // Render the user who made the order
+          filterable: true,
+          valueGetter: (params: any) => {
+            const u = params.value;
+            return u ? `${u.nom ?? ''} ${u.prenom ?? ''}`.trim() : '';
+          },
+          renderHeader: () =>
+            headerSearchField === 'user' ? (
+              <TextField
+                autoFocus
+                size="small"
+                placeholder={`Rechercher Utilisateur`}
+                value={headerSearchValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setHeaderSearchValue(val);
+                  const field = 'user';
+                  const operator = 'contains';
+                  setFilterModel((prev) => {
+                    const others = prev.items.filter((it: any) => it.field !== field);
+                    const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
+                    return { items: nextItems } as GridFilterModel;
+                  });
+                }}
+                onBlur={() => {
+                  if (!headerSearchValue) setHeaderSearchField(null);
+                }}
+                sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+              />
             ) : (
-              <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
-                <Chip label={null} size="small" color="default" />
-              </Stack>
-            );
+              <>Utilisateur</>
+            ),
+          renderCell: (params: any) => {
+            const u = (params.row && (params.row as any).user) || params.value;
+            if (!u) {
+              return (
+                <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
+                  <Chip label={null} size="small" color="default" />
+                </Stack>
+              );
+            }
+            return typeof u === 'string' ? u : `${u.nom ?? ''} ${u.prenom ?? ''}`;
           },
         },
-        ...initialColumns,
+        ...initialColumns.map((col) => ({
+          ...col,
+          renderHeader:
+            col.field && col.headerName
+              ? () =>
+                headerSearchField === col.field ? (
+                  <TextField
+                    autoFocus
+                    size="small"
+                    type={col.field === 'date_sortie' || col.field === 'date_retour' ? 'date' : 'text'}
+                    placeholder={
+                      col.field === 'date_sortie' || col.field === 'date_retour'
+                        ? undefined
+                        : `Rechercher ${col.headerName}`
+                    }
+                    value={headerSearchValue}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setHeaderSearchValue(val);
+                      const field = col.field as string;
+                      const operator = field === 'date_sortie' || field === 'date_retour' ? 'equals' : 'contains';
+                      setFilterModel((prev) => {
+                        const others = prev.items.filter((it: any) => it.field !== field);
+                        const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
+                        return { items: nextItems } as GridFilterModel;
+                      });
+                    }}
+                    onBlur={() => {
+                      if (!headerSearchValue) setHeaderSearchField(null);
+                    }}
+                    sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+                  />
+                ) : (
+                  <>{col.headerName}</>
+                )
+              : col.renderHeader,
+        })),
         {
           field: '',
           headerAlign: 'right',
@@ -376,7 +457,43 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
 
     // Second Tab Columns (Mes Ordres)
     return [
-      ...initialColumns,
+      ...initialColumns.map((col) => ({
+        ...col,
+        renderHeader:
+          col.field && col.headerName
+            ? () =>
+              headerSearchField === col.field ? (
+                <TextField
+                  autoFocus
+                  size="small"
+                  type={col.field === 'date_sortie' || col.field === 'date_retour' ? 'date' : 'text'}
+                  placeholder={
+                    col.field === 'date_sortie' || col.field === 'date_retour'
+                      ? undefined
+                      : `Rechercher ${col.headerName}`
+                  }
+                  value={headerSearchValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setHeaderSearchValue(val);
+                    const field = col.field as string;
+                    const operator = field === 'date_sortie' || field === 'date_retour' ? 'equals' : 'contains';
+                    setFilterModel((prev) => {
+                      const others = prev.items.filter((it: any) => it.field !== field);
+                      const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
+                      return { items: nextItems } as GridFilterModel;
+                    });
+                  }}
+                  onBlur={() => {
+                    if (!headerSearchValue) setHeaderSearchField(null);
+                  }}
+                  sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+                />
+              ) : (
+                <>{col.headerName}</>
+              )
+            : col.renderHeader,
+      })),
       {
         field: '',
         headerAlign: 'right',
@@ -395,7 +512,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
         ),
       },
     ];
-  }, [value]);
+  }, [value, headerSearchField, headerSearchValue]);
   const filteredRows = useMemo(() => {
     if (!searchText) return items; // Use filtered `items` instead of `orders`
 
@@ -498,6 +615,15 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             disableColumnSelector
             disableDensitySelector
             disableColumnFilter
+            filterModel={filterModel}
+            onFilterModelChange={setFilterModel}
+            onColumnHeaderDoubleClick={(params: any) => {
+              const field = params.field as string;
+              if (!field) return;
+              setHeaderSearchField(field);
+              const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
+              setHeaderSearchValue((existing?.value as string) || '');
+            }}
             paginationMode="server"
             paginationModel={paginationModel}
             onCellDoubleClick={() => {
@@ -537,6 +663,13 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: 'primary.main',
               },
+              '& .MuiDataGrid-columnHeader': {
+                fontSize: { xs: 13, lg: 16 },
+                userSelect: 'none',
+              },
+              '& .MuiDataGrid-columnHeader .MuiInputBase-input': {
+                userSelect: 'text',
+              },
               '& .MuiDataGrid-main': {
                 minHeight: 300,
               },
@@ -544,16 +677,30 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
                 minHeight: 300,
                 p: 0,
               },
-              '& .MuiDataGrid-columnHeader': {
-                fontSize: { xs: 13, lg: 16 },
-              },
               '& .MuiDataGrid-cell': {
                 fontSize: { xs: 13, lg: 16 },
+                userSelect: 'none',
               },
               '& .MuiTypography-root': {
                 fontSize: { xs: 13, lg: 16 },
               },
+              '& .MuiDataGrid-row': {
+                userSelect: 'none',
+              },
               px: { xs: 0, md: 3 },
+              // Keep selection logic but remove visual highlight
+              '& .MuiDataGrid-row.Mui-selected': {
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiDataGrid-row.Mui-selected:hover': {
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiDataGrid-cell--selected': {
+                backgroundColor: 'transparent !important',
+              },
+              '& .MuiDataGrid-cell--selected:hover': {
+                backgroundColor: 'transparent !important',
+              },
             }}
           />
         </div>

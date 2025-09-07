@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
-import { DataGrid, GridColDef, useGridApiRef, GridApi, GridToolbar } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, useGridApiRef, GridApi, GridToolbar, GridFilterModel } from '@mui/x-data-grid';
+import { TextField } from '@mui/material';
 import DataGridFooter from 'components/common/DataGridFooter';
 import ActionMenu from './ActionMenu';
 import moment from 'moment';
@@ -88,8 +89,13 @@ const initialColumns: GridColDef<IMission>[] = [
     align: 'center',
     flex: 2,
     minWidth: 150,
+    filterable: true,
+    valueGetter: (params: any) => {
+      const v = params.value;
+      return v ? moment(v).format('YYYY-MM-DD') : '';
+    },
     renderCell: (params: any) => {
-      const value = params.value;
+      const value = (params.row as any)?.date_sortie;
       return value ? (
         moment(value).format('YYYY/MM/DD')
       ) : (
@@ -126,8 +132,13 @@ const initialColumns: GridColDef<IMission>[] = [
     align: 'center',
     flex: 2,
     minWidth: 150,
+    filterable: true,
+    valueGetter: (params: any) => {
+      const v = params.value;
+      return v ? moment(v).format('YYYY-MM-DD') : '';
+    },
     renderCell: (params: any) => {
-      const value = params.value;
+      const value = (params.row as any)?.date_retour;
       return value ? (
         moment(value).format('YYYY/MM/DD')
       ) : (
@@ -293,6 +304,9 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   const [viewOnly, setViewOnly] = useState(false);
   const [ctx, setCtx] = useState<{ mouseX: number; mouseY: number } | null>(null);
   const [ctxRow, setCtxRow] = useState<IMission | null>(null);
+  const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+  const [headerSearchField, setHeaderSearchField] = useState<string | null>(null);
+  const [headerSearchValue, setHeaderSearchValue] = useState<string>('');
 
   const apiRef = useGridApiRef<GridApi>();
 
@@ -336,7 +350,43 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   }, [orders, searchText]);
 
   const columns: GridColDef[] = [
-    ...initialColumns,
+    ...initialColumns.map((col) => ({
+      ...col,
+      renderHeader:
+        col.field && col.headerName
+          ? () =>
+            headerSearchField === col.field ? (
+              <TextField
+                autoFocus
+                size="small"
+                type={col.field === 'date_sortie' || col.field === 'date_retour' ? 'date' : 'text'}
+                placeholder={
+                  col.field === 'date_sortie' || col.field === 'date_retour'
+                    ? undefined
+                    : `Rechercher ${col.headerName}`
+                }
+                value={headerSearchValue}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setHeaderSearchValue(val);
+                  const field = col.field as string;
+                  const operator = field === 'date_sortie' || field === 'date_retour' ? 'equals' : 'contains';
+                  setFilterModel((prev) => {
+                    const others = prev.items.filter((it: any) => it.field !== field);
+                    const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
+                    return { items: nextItems } as GridFilterModel;
+                  });
+                }}
+                onBlur={() => {
+                  if (!headerSearchValue) setHeaderSearchField(null);
+                }}
+                sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+              />
+            ) : (
+              <>{col.headerName}</>
+            )
+          : col.renderHeader,
+    })),
     {
       field: 'actions',
       headerName: '',
@@ -401,6 +451,15 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           disableColumnSelector
           disableDensitySelector
           disableColumnFilter
+          filterModel={filterModel}
+          onFilterModelChange={setFilterModel}
+          onColumnHeaderDoubleClick={(params: any) => {
+            const field = params.field as string;
+            if (!field) return;
+            setHeaderSearchField(field);
+            const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
+            setHeaderSearchValue((existing?.value as string) || '');
+          }}
           localeText={localizedTextsMap}
           onRowDoubleClick={(params) => handleViewDetails(params.row as IMission)}
           onRowSelectionModelChange={(ids) => {
@@ -430,9 +489,24 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             '& .MuiDataGrid-columnHeaders': { bgcolor: 'grey.100' },
             '& .MuiDataGrid-main': { minHeight: 300 },
             '& .MuiDataGrid-virtualScroller': { minHeight: 300, p: 0 },
-            '& .MuiDataGrid-columnHeader': { fontSize: { xs: 13, lg: 16 } },
-            '& .MuiDataGrid-cell': { fontSize: { xs: 13, lg: 16 } },
+            '& .MuiDataGrid-columnHeader': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },
+            '& .MuiDataGrid-columnHeader .MuiInputBase-input': { userSelect: 'text' },
+            '& .MuiDataGrid-cell': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },
             '& .MuiTypography-root': { fontSize: { xs: 13, lg: 16 } },
+            '& .MuiDataGrid-row': { userSelect: 'none' },
+            // Keep selection logic but remove visual highlight
+            '& .MuiDataGrid-row.Mui-selected': {
+              backgroundColor: 'transparent !important',
+            },
+            '& .MuiDataGrid-row.Mui-selected:hover': {
+              backgroundColor: 'transparent !important',
+            },
+            '& .MuiDataGrid-cell--selected': {
+              backgroundColor: 'transparent !important',
+            },
+            '& .MuiDataGrid-cell--selected:hover': {
+              backgroundColor: 'transparent !important',
+            },
           }}
         />
       </div>
