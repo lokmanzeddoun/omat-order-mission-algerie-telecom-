@@ -5,6 +5,7 @@ import SupportIcon from 'assets/icons/fluent--person-support-16-regular.svg?reac
 import ArchiveIcon from 'assets/icons/material-symbols--archive-outline.svg?react';
 import OrderIcon from 'assets/icons/hugeicons--book-open-01.svg?react';
 import { FC, SVGProps } from 'react';
+import DecompteIcon from 'assets/icons/hugeicons--document-validation.svg?react';
 
 export interface SubMenuItem {
   name: string;
@@ -25,6 +26,12 @@ export interface MenuItem {
 }
 
 const sitemap: MenuItem[] = [
+  {
+    id: 'decomptes',
+    subheader: 'Décomptes',
+    path: '/dashboard/admins/decomptes',
+    icon: DecompteIcon,
+  },
   {
     id: 'order',
     subheader: 'Ordres',

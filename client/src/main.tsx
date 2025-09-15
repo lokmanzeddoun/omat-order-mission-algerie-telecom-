@@ -13,10 +13,10 @@ createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<Provider store={store}>
 			{/* <PersistGate loading={null} persistor={persistor}> */}
-				<ThemeProvider theme={theme}>
-					<CssBaseline />
-					<RouterProvider router={router} />
-				</ThemeProvider>
+			<ThemeProvider theme={theme}>
+				<CssBaseline />
+				<RouterProvider router={router} />
+			</ThemeProvider>
 			{/* </PersistGate> */}
 		</Provider>
 	</StrictMode>
