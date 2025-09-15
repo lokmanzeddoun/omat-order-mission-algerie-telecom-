@@ -19,7 +19,8 @@ import RedirectBasedOnRole from 'RedirectBasedRole';
 import MyProfile from 'pages/userProfile';
 import OrderDashboard from 'pages/ordres';
 import DataGridWithJson from 'pages/barem';
-import Archive from 'pages/archive';
+// import Archive from 'pages/archive';
+import DecomptesPage from 'pages/decomptes';
 
 const router = createBrowserRouter(
   [
@@ -57,7 +58,7 @@ const router = createBrowserRouter(
         {
           path: `${rootPaths.dashboard}/admins`, // This is the parent route for admins
           element: (
-            <ProtectedRoute allowedRoles={['ADMIN']}>
+            <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
               <MainLayout>
                 <Suspense fallback={<PageLoader />}>
                   <Outlet />
@@ -81,6 +82,10 @@ const router = createBrowserRouter(
             {
               path: "barem",
               element: <DataGridWithJson />,
+            },
+            {
+              path: 'decomptes',
+              element: <DecomptesPage />,
             },
             // {
             //   path: "archive",

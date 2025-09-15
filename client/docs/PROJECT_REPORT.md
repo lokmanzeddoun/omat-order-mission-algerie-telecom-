@@ -3,7 +3,7 @@
 A structured report-style overview of the application, derived from the existing codebase and the internship report context. This serves as living documentation to guide completion of missing features.
 
 ## 1. Executive Summary
-
+s
 OMAT streamlines mission orders (ordres de mission) across hierarchical services within an organization (Algérie Télécom). Admins create and manage orders for users (employees). For each issued order, the system supports a “décompte” phase to validate expenses and compute the payable amount based on a “barème” (per-diem rates) including meals (lunch/dinner) and lodging by employee grade. The application enforces role-based access, service hierarchy, and a review/validation workflow, culminating in payment readiness.
 
 ## 2. Goals & Objectives

@@ -1,0 +1,22 @@
+---
+applyTo: '**'
+---
+# Instruction on the Decompte table
+- The Structure Of Table : 
+    - N Decompte : represent the decompte Number 
+    - Date Decompte : represent the date of the decompte
+    - Numero Mission : Represent the mission number
+    - Date Mission : represent the date of the mission
+    - Matricule Missionaire : represent The missionary's ID
+    - Nom Prenom : represent the missionary's full name
+    - Date Sortie : represent the exit date
+    - Date Retour : represent the return date
+    - Destination : represent the destination of the mission
+    - Moyen Transport : represent the mean of transport used during the mission
+    - Motif de Deplacement : represent the reason of the mission
+    - Heure Sortie : represent the exit time
+    - Heure Retour : represent the return time
+    - Nbr Repas PEC : represent the number of meals taken in charge
+    - Nbr Hebergement PEC : represent the number of nights taken in charge
+    - Nbr Repas Non PEC : represent the number of meals not taken in charge
+    - Nbr Hebergement Non PEC : represent the number of nights not taken in charge

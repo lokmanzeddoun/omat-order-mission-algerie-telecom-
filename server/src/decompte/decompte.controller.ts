@@ -9,16 +9,18 @@ import {
   Query,
   UsePipes,
   ValidationPipe,
+  Res,
 } from '@nestjs/common';
 import { DecompteService } from './decompte.service';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { User } from '@prisma/client';
+import { Response } from 'express';
 
 @Controller('decompte')
 export class DecompteController {
-  constructor(private readonly decompteService: DecompteService) {}
+  constructor(private readonly decompteService: DecompteService) { }
 
   @Auth()
   @Post(':id')
@@ -57,5 +59,11 @@ export class DecompteController {
   @Get('user')
   getUserDecompte(@GetUser() user: User) {
     this.decompteService.getUserDecompte(user);
+  }
+
+  @Get(':id/download')
+  @Auth()
+  download(@Param('id') id: string, @Res() res: Response) {
+    return this.decompteService.downloadDecompte(+id, res);
   }
 }

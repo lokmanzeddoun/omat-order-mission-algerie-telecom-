@@ -1,0 +1,32 @@
+---
+applyTo: '**'
+---
+There is a decompte word document act as template here are the fields to fill in:
+- {matricule} : represent the user matricule
+- {fullanme} : represent the user full name
+- {post} : represent the user post 
+- {structure} : represent the user structure
+- {id} : represent the decompte id
+- {date} : represent the decompte date
+- {reference} : represent the mission related to decompte
+- {destination} : represent the mission destination related to decompte
+- {motif} : represent the mission motif related to decompte
+- {date_depart} : represent the mission departure date related to decompte
+- {date_retour} : represent the mission return date related to decompte
+- {h_d} : represent the mission departure hour related to decompte
+- {h_r} : represent the mission return hour related to decompte
+- {m_d} : represent the mission departure minute related to decompte
+- {m_r} : represent the mission return minute related to decompte
+- {nbr_jour} : represent the number of days related to decompte
+- {d_parcours} : represent the distance parcours in KM
+- {m_indrmnite} : represent the indemnity Kilometrique In Dz(Price Unit)
+- {n_1} : Prise en charge Nbr Repas In the nord
+- {n_2} : Prise en charge Nbr Nuitée(Hebergement) In the nord
+- {n_3} : Non Prise en charge Nbr Repas In the nord
+- {n_4} : Non Prise en charge Nbr Nuitée(Hebergement) In the nord
+- {s_1} : Prise en charge Nbr Repas In the sud
+- {s_2} : Prise en charge Nbr Nuitée(Hebergement) In the sud
+- {s_3} : Non Prise en charge Nbr Repas In the sud
+- {s_4} : Non Prise en charge Nbr Nuitée In the sud
+- {f_transport} : Frais De Transport
+- {m_total} : Montant Total
