@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpStatus, Post, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpStatus, Post, Res, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { loginUserDto } from './dto/loginDto';
@@ -24,19 +24,45 @@ export class AuthController {
       loginUserDto.email,
       loginUserDto.password,
     );
-    response.status(HttpStatus.OK).send(data);
+    // Set refresh token as httpOnly cookie (rotating token will be set on refresh)
+    const isProd = process.env.NODE_ENV === 'production';
+    response.cookie('refresh_token', data.refreshToken, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days default
+    });
+    // Return only access token in body (client should not access refresh cookie)
+    response.status(HttpStatus.OK).send({ user: data.user, token: data.accessToken });
   }
 
-  @Get('refresh-token')
+  @Post('refresh')
   @ApiOperation({
     summary: 'REFRESH TOKEN',
-    description:
-      'Private endpoint allowed for logged in users to refresh the Access Token before it expires.',
+    description: 'Read refresh token from httpOnly cookie and issue new tokens.',
   })
-  @ApiBearerAuth()
   @ApiResponse({ status: 200, description: 'Ok', type: LoginResponse })
-  @Auth()
-  refreshToken(@GetUser() user: User) {
-    return this.authService.refreshToken(user);
+  async refresh(@Req() req, @Res() res) {
+    const refreshToken = req.cookies?.refresh_token;
+    if (!refreshToken) {
+      return res.status(HttpStatus.UNAUTHORIZED).send({ message: 'No refresh token' });
+    }
+    try {
+      const data = await this.authService.refreshTokenFromToken(refreshToken);
+      const isProd = process.env.NODE_ENV === 'production';
+      res.cookie('refresh_token', data.refreshToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: 'lax',
+        path: '/',
+        maxAge: 1000 * 60 * 60 * 24 * 7,
+      });
+      return res.status(HttpStatus.OK).send({ user: data.user, token: data.accessToken });
+    } catch (err) {
+      // Clear cookie on invalid token
+      res.clearCookie('refresh_token', { path: '/' });
+      return res.status(HttpStatus.UNAUTHORIZED).send({ message: 'Invalid refresh token' });
+    }
   }
 }

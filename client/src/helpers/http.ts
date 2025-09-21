@@ -5,6 +5,7 @@ const baseURL = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL ?? 
 
 const http = axios.create({
     baseURL,
+    withCredentials: true,
 });
 
 if (typeof window !== 'undefined') {
@@ -33,6 +34,28 @@ if (import.meta.env.DEV) {
             const fullUrl = `${cfg.baseURL ?? ''}${cfg.url ?? ''}`;
             const status = error?.response?.status;
             console.warn(`[http] × ${method} ${fullUrl} ${status ?? ''}`, error?.message);
+
+            // If unauthorized, attempt one refresh and retry original request
+            if (status === 401 && !cfg.__isRetryRequest) {
+                cfg.__isRetryRequest = true;
+                // call refresh endpoint which will use httpOnly cookie and return new access token
+                return http.post('/auth/refresh')
+                    .then((r) => {
+                        // assume server returns { token }
+                        const newToken = r.data?.token;
+                        if (newToken) {
+                            // set authorization header for original request
+                            cfg.headers = cfg.headers || {};
+                            cfg.headers['Authorization'] = `Bearer ${newToken}`;
+                        }
+                        return http(cfg);
+                    })
+                    .catch(() => {
+                        // refresh failed, propagate original error
+                        return Promise.reject(error);
+                    });
+            }
+
             return Promise.reject(error);
         },
     );

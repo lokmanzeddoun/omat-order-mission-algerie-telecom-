@@ -5,6 +5,7 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import { PrismaClientExceptionFilter } from './prisma-client-exception/prisma-client-exception.filter';
+import * as cookieParser from 'cookie-parser';
 
 import type {
   CorsConfig,
@@ -56,6 +57,8 @@ async function bootstrap() {
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     });
   }
+  // Cookie parser (required to read httpOnly cookies)
+  app.use(cookieParser());
   await app.listen(nestConfig.port);
 }
 bootstrap();
