@@ -68,7 +68,12 @@ const UserModal: React.FC<UserModalProps> = ({
   useEffect(() => {
     dispatch(getAllStructures());
     if (isEdit && initialData) {
-      setFormData(initialData);
+      // If editing, use the serviceId directly from the server data
+      // The serviceId already contains the structure code
+      setFormData({
+        ...initialData,
+        serviceId: initialData.serviceId || null,
+      });
     }
   }, [isEdit, initialData, dispatch]);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,7 +93,7 @@ const UserModal: React.FC<UserModalProps> = ({
       return;
     }
 
-    // For edit or create, submit the entire formData; server will handle partials if supported
+    // Submit the form data for both create and edit operations
     onSubmit(formData);
 
     setFormData(initialFormData); // Reset form after submission
@@ -136,10 +141,11 @@ const UserModal: React.FC<UserModalProps> = ({
                   <IconifyIcon icon={MatriculeIcon} />
                 </InputAdornment>
               ),
-              readOnly: viewOnly,
+              readOnly: viewOnly || isEdit, // Disable when editing or viewing
             }}
             value={formData.matricule ? formData.matricule : ''}
             onChange={handleChange}
+            disabled={isEdit || viewOnly} // Also disable the field when editing
           />
           <TextField
             name="nom"
@@ -266,12 +272,12 @@ const UserModal: React.FC<UserModalProps> = ({
           <Autocomplete
             options={structures}
             getOptionLabel={(option) => option.name} // Maps the options to labels
+            value={structures.find((s) => s.code === formData.serviceId) || null} // Find and set the current service
             onChange={(_event, newValue) => {
               setFormData({
                 ...formData,
-                serviceId: newValue?.code || '', // Assuming `code` represents the `serviceId`
+                serviceId: newValue?.code || null, // Allow null for optional service
               });
-              console.log(formData);
             }}
             renderInput={(params) => (
               <TextField
@@ -280,7 +286,7 @@ const UserModal: React.FC<UserModalProps> = ({
                 fullWidth
                 variant="filled"
                 placeholder="Entrez Le Service"
-                required
+                required={!isEdit} // Only required when creating new user, not when editing
                 InputProps={{
                   ...params.InputProps,
                   startAdornment: (
@@ -290,7 +296,6 @@ const UserModal: React.FC<UserModalProps> = ({
                   ),
                   readOnly: viewOnly,
                 }}
-                value={formData.serviceId}
               />
             )}
             disabled={viewOnly}

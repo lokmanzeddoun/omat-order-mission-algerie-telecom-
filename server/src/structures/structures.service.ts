@@ -1,10 +1,15 @@
 import { DatabaseService } from '../database/database.service';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
 import * as xlsx from 'xlsx';
 import { WorkBook, WorkSheet } from 'xlsx';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
+import { Response } from 'express';
 
 @Injectable()
 export class StructuresService {
@@ -96,6 +101,71 @@ export class StructuresService {
     } catch (error) {
       console.error('Error in  Excel', error.stack);
       throw error;
+    }
+  }
+
+  async exportStructures(res: Response) {
+    try {
+      // Fetch all structures from database (server-side, not client-side)
+      const structures = await this.databaseService.structure.findMany({
+        where: {
+          soft_delete: false,
+        },
+        include: {
+          users: {
+            select: {
+              matricule: true,
+              nom: true,
+              prenom: true,
+              role: true,
+            },
+          },
+        },
+        orderBy: [
+          {
+            name: 'asc',
+          },
+        ],
+      });
+
+      // Create workbook and worksheet
+      const workbook = xlsx.utils.book_new();
+
+      // Prepare data for Excel export
+      const structuresData = structures.map((structure) => ({
+        Code: structure.code,
+        Name: structure.name,
+        'Number of Users': structure.users.length,
+      }));
+
+      // Convert data to worksheet
+      const worksheet = xlsx.utils.json_to_sheet(structuresData);
+
+      // Add worksheet to workbook
+      xlsx.utils.book_append_sheet(workbook, worksheet, 'Structures');
+
+      // Generate Excel buffer
+      const excelBuffer = xlsx.write(workbook, {
+        type: 'buffer',
+        bookType: 'xlsx',
+      });
+
+      // Set response headers for file download
+      const filename = `structures_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      res.setHeader('Content-Length', excelBuffer.length);
+
+      // Send the Excel file
+      res.end(excelBuffer);
+    } catch (error) {
+      console.error('Error exporting structures to Excel:', error);
+      throw new InternalServerErrorException(
+        'Failed to export structures to Excel',
+      );
     }
   }
 }

@@ -9,6 +9,7 @@ import {
   UseInterceptors,
   UploadedFile,
   HttpException,
+  Res,
 } from '@nestjs/common';
 import { StructuresService } from './structures.service';
 import { CreateStructureDto } from './dto/create-structure.dto';
@@ -18,6 +19,7 @@ import { Structure } from './entities/structure.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SUPPORTED_FILES } from 'src/utils/upload';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
+import { Response } from 'express';
 @ApiTags('Structures')
 @Controller('structures')
 export class StructuresController {
@@ -37,6 +39,19 @@ export class StructuresController {
   @Get()
   findAll() {
     return this.structuresService.findAll();
+  }
+
+  @Get('export')
+  @ApiOperation({
+    summary: 'EXPORT STRUCTURES TO EXCEL',
+    description: 'Export all structures from database to Excel file',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Excel file downloaded successfully',
+  })
+  async exportStructures(@Res() res: Response) {
+    return this.structuresService.exportStructures(res);
   }
 
   @Get(':id')
