@@ -14,6 +14,7 @@ import { DecompteModule } from './decompte/decompte.module';
 import { BaremModule } from './barem/barem.module';
 import { ExercicesModule } from './exercices/exercices.module';
 import { ArchiveModule } from './archive/archive.module';
+import { CommentsModule } from './comments/comments.module';
 @Module({
   imports: [
     PinoLoggerModule.forRoot({
@@ -47,6 +48,7 @@ import { ArchiveModule } from './archive/archive.module';
     DecompteModule,
     BaremModule,
     ExercicesModule,
+    CommentsModule,
     ArchiveModule,
   ],
   controllers: [AppController],

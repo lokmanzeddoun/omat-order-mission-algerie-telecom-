@@ -32,12 +32,31 @@ export const loadUser = () => async (dispatch: AppDispatch) => {
   }
 };
 
+// Restore session using httpOnly refresh cookie. Call on app startup.
+export const restoreSession = () => async (dispatch: AppDispatch) => {
+  try {
+    const res = await http.post('/auth/refresh');
+    const data = res.data as ResLoginApi;
+    if (res.status === 200 && data) {
+      // set Authorization header for subsequent requests
+      http.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+      dispatch(loginSuccess(data));
+      return;
+    }
+    dispatch(authFailed());
+  } catch {
+    dispatch(authFailed());
+  }
+};
+
 export const login = (payload: ReqLogin) => async (dispatch: any) => {
   try {
     console.info('[auth.thunk] login called', payload);
     const res = await http.post(`/auth/login`, payload);
     const data = res.data;
     if (res.status === 200 && data) {
+      // server sets refresh cookie; client receives access token in body
+      http.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
       dispatch(loginSuccess(data));
       dispatch(
         setAlert({
@@ -67,6 +86,20 @@ export const login = (payload: ReqLogin) => async (dispatch: any) => {
 };
 
 export const logout = () => async (dispatch: any) => {
+  try {
+    // Inform server to clear refresh cookie
+    await http.post('/auth/logout');
+  } catch {
+    // ignore server logout errors
+  }
+
+  // clear client-side auth header
+  try {
+    delete http.defaults.headers.common['Authorization'];
+  } catch {
+    /* ignore */
+  }
+
   dispatch(logoutSuccess());
   dispatch(
     setAlert({

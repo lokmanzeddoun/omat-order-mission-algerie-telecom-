@@ -1,5 +1,6 @@
 import { useSelector } from 'react-redux';
 import { Navigate } from 'react-router-dom';
+import PageLoader from 'components/loader/PageLoader';
 import { RootState } from 'store/rootReducer';
 
 interface ProtectedRouteProps {
@@ -8,12 +9,15 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children, allowedRoles = [] }: ProtectedRouteProps) => {
-  const { token, isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const { token, isAuthenticated, user, loading } = useSelector((state: RootState) => state.auth);
 
   // Check if the user is authenticated
+  // If app still determining auth state, show loader to avoid login flash
+  if (loading) {
+    return <PageLoader />;
+  }
+
   if (!token || !isAuthenticated) {
-    localStorage.removeItem('user'); // Remove user info from localStorage if not authenticated
-    localStorage.removeItem('token'); // Remove user info from localStorage if not authenticated
     return <Navigate to="/" replace />;
   }
 

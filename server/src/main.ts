@@ -4,6 +4,7 @@ import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
+import cookieParser = require('cookie-parser');
 import { PrismaClientExceptionFilter } from './prisma-client-exception/prisma-client-exception.filter';
 
 import type {
@@ -56,6 +57,8 @@ async function bootstrap() {
       allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
     });
   }
+  // Cookie parser (required to read httpOnly cookies)
+  app.use(cookieParser());
   await app.listen(nestConfig.port);
 }
 bootstrap();

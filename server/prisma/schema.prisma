@@ -8,8 +8,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 model User {
-  matricule Int @id 
-  nom String 
+  matricule Int @id
+  nom String
   prenom String
   email String @unique
   createdAt DateTime? @default(now())
@@ -21,7 +21,7 @@ model User {
   grade String
   category Category
   structure Structure? @relation(fields: [serviceId], references: [code])
-  serviceId String? 
+  serviceId String?
   soft_delete Boolean? @default(false)
   missions Mission[]
   messages Commentaire[]
@@ -83,8 +83,9 @@ model Commentaire {
   status String
   user User @relation(fields: [userId],references: [matricule])
   userId Int
-  decompte Decompte @relation(fields: [decompteId],references: [n_decompte])
-  decompteId Int
+  // Make decompte optional so comments can be generic support tickets (e.g., forget-password)
+  decompte Decompte? @relation(fields: [decompteId],references: [n_decompte])
+  decompteId Int?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   soft_delete Boolean @default(false)
@@ -97,7 +98,7 @@ model Barem {
   hebergement_nord Float
   repas_sud Float
   hebergement_sud Float
-  montant_km Float 
+  montant_km Float
 }
 
 model Exercice {
@@ -131,7 +132,7 @@ enum Category {
 }
 
 enum TransportType {
-  SERVICE_CAR 
+  SERVICE_CAR
   PERSONAL_CAR
   TRANSPORT_ENTREPRISE
   TRANSPORT_EMPLOYEE

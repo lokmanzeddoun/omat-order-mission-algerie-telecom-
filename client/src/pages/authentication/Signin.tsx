@@ -123,9 +123,9 @@ const Signin = () => {
             label="Se souvenir de moi"
             sx={{ ml: -1 }}
           />
-          <Link href="#!" fontSize="body2.fontSize">
-            Mot de pass oublié?
-          </Link>
+                  <Link component="button" type="button" onClick={() => navigate('/authentication/forgot-password')} fontSize="body2.fontSize">
+                    Mot de pass oublié?
+                  </Link>
         </Stack>
 
         <Button type="submit" variant="contained" size="medium" fullWidth>

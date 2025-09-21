@@ -1,4 +1,6 @@
-import Link from '@mui/material/Link';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from 'store/rootReducer';
+import { useNavigate } from 'react-router-dom';
 import Stack from '@mui/material/Stack';
 import Badge from '@mui/material/Badge';
 import Toolbar from '@mui/material/Toolbar';
@@ -11,13 +13,12 @@ import ProfileMenu from './ProfileMenu';
 import { addOrder } from 'components/orders/orderthunk';
 import { AppDispatch } from 'store';
 import MissionModal from 'components/orders/CreateOrder';
-import { useDispatch, useSelector } from 'react-redux';
+// ...existing code... (react-redux imports consolidated above)
 import AppAlert from 'components/alert';
 import { Button } from '@mui/material';
 import MenuIcon from 'assets/icons/clarity--menu-line.svg?react';
 import SolarIcon from 'assets/icons/solar--bell-outline.svg?react';
 import { useState } from 'react';
-import { RootState } from 'store/rootReducer';
 import ExerciceSelector from 'components/exercices/ExerciceSelector';
 
 interface TopbarProps {
@@ -25,6 +26,23 @@ interface TopbarProps {
   mobileOpen: boolean;
   setMobileOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
+
+// Small logo button used in the topbar (guarded navigation)
+const LogoButtonSmall: React.FC = () => {
+  const { loading } = useSelector((s: RootState) => s.auth);
+  const navigate = useNavigate();
+  const onClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    navigate('/');
+  };
+
+  return (
+    <ButtonBase disableRipple sx={{ lineHeight: 0, display: { xs: 'none', sm: 'block', lg: 'none' } }} onClick={onClick}>
+      <Image src={LogoImg} alt="logo" height={54} width={54} />
+    </ButtonBase>
+  );
+};
 
 const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
   const dispatch = useDispatch<AppDispatch>();
@@ -57,14 +75,8 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       zIndex={1200}
     >
       <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
-        <ButtonBase
-          component={Link}
-          href="/"
-          disableRipple
-          sx={{ lineHeight: 0, display: { xs: 'none', sm: 'block', lg: 'none' } }}
-        >
-          <Image src={LogoImg} alt="logo" height={54} width={54} />
-        </ButtonBase>
+        {/* Use programmatic navigation and guard with auth.loading */}
+        <LogoButtonSmall />
         <Toolbar sx={{ display: { xm: 'block', lg: 'none' } }}>
           <IconButton
             size="large"

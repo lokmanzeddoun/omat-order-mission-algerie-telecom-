@@ -32,23 +32,33 @@ const authSlice = createSlice({
       state.user = action.payload;
     },
     loginSuccess: (state, action: PayloadAction<ResLoginApi>) => {
-      localStorage.setItem('user', JSON.stringify(action.payload.user));
-      localStorage.setItem('token', JSON.stringify(action.payload.token));
+      // Persisting user is optional; avoid persisting tokens in localStorage for security
+      try {
+        localStorage.setItem('user', JSON.stringify(action.payload.user));
+      } catch {
+        /* ignore storage errors */
+      }
       state.isAuthenticated = true;
       state.loading = false;
       state.user = action.payload.user;
-      state.token = action.payload.token;
+      state.token = action.payload.token; // keep in-memory
     },
     authFailed: (state) => {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+      try {
+        localStorage.removeItem('user');
+      } catch {
+        /* ignore */
+      }
       state.token = null;
       state.isAuthenticated = false;
       state.loading = false;
     },
     logoutSuccess: (state) => {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
+      try {
+        localStorage.removeItem('user');
+      } catch {
+        /* ignore */
+      }
       state.token = null;
       state.isAuthenticated = false;
       state.loading = false;

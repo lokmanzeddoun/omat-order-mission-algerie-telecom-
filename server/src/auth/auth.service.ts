@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from 'nestjs-prisma';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
@@ -50,23 +54,63 @@ export class AuthService {
 
     delete user.password;
 
+    const accessToken = this.getJwtToken({
+      matricule: user.matricule,
+      role: user.role,
+    });
+    const refreshToken = this.getRefreshToken({
+      matricule: user.matricule,
+      role: user.role,
+    });
+
     return {
       user,
-      token: this.getJwtToken({
-        matricule: user.matricule,
-        role: user.role,
-      }),
+      accessToken,
+      refreshToken,
     };
   }
-  async refreshToken(user: User) {
-    return {
-      user: user,
-      token: this.getJwtToken({ matricule: user.matricule, role: user.role }),
-    };
+  async refreshTokenFromToken(token: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync(token, {
+        // use refresh token secret; fallback to default if not configured
+        secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      });
+      // payload should contain matricule and role
+      const { matricule, role } = payload as JwtPayload;
+      const user = await this.prisma.user.findUniqueOrThrow({
+        where: { matricule },
+        select: {
+          matricule: true,
+          nom: true,
+          prenom: true,
+          category: true,
+          role: true,
+          email: true,
+          grade: true,
+          createdAt: true,
+          status: true,
+        },
+      });
+
+      const accessToken = this.getJwtToken({ matricule, role });
+      const refreshToken = this.getRefreshToken({ matricule, role });
+
+      return { user, accessToken, refreshToken };
+    } catch (err) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 
   private getJwtToken(payload: JwtPayload) {
     const token = this.jwtService.sign(payload);
+    return token;
+  }
+
+  private getRefreshToken(payload: JwtPayload) {
+    const token = this.jwtService.sign(payload, {
+      secret: process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    });
     return token;
   }
 }

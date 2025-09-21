@@ -1,4 +1,4 @@
-import Link from '@mui/material/Link';
+// Link intentionally removed (we use programmatic navigation)
 import Stack from '@mui/material/Stack';
 import Badge from '@mui/material/Badge';
 import Toolbar from '@mui/material/Toolbar';
@@ -16,12 +16,39 @@ import { addOrder } from 'components/orders/orderthunk';
 import { AppDispatch } from 'store';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
+import { useNavigate } from 'react-router-dom';
+import paths, { rootPaths } from 'routes/paths';
 import SearchIcon from 'assets/icons/mynaui--search.svg?react';
 import SolarIcon from 'assets/icons/solar--bell-outline.svg?react';
 
 const Topbar = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { token } = useSelector((state: RootState) => state.auth);
+
+  const { isAuthenticated, loading, user } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    // If auth is still initializing, ignore clicks to avoid flashing login
+    if (loading) return;
+    if (isAuthenticated) {
+      // Redirect based on role similar to RedirectBasedOnRole
+      if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
+        navigate(`${rootPaths.dashboard}/admins`);
+        return;
+      }
+      if (user?.role === 'USER') {
+        navigate(`${rootPaths.dashboard}/users`);
+        return;
+      }
+      // default to dashboard
+      navigate(rootPaths.dashboard);
+      return;
+    }
+    // not authenticated -> go to sign-in
+    navigate(paths.signin);
+  };
 
   const [open, setOpen] = useState(false);
   const handleOpen = () => setOpen(true);
@@ -55,7 +82,7 @@ const Topbar = () => {
           bgcolor="info.lighter"
           zIndex={1000}
         >
-          <ButtonBase component={Link} href="/" disableRipple>
+          <ButtonBase onClick={handleLogoClick} disableRipple>
             <Image src={LogoImg} alt="logo" height={40} width={40} sx={{ mr: 1.25 }} />
             <Typography variant="h3" color="text.primary" letterSpacing={1}>
               OMAT
