@@ -67,14 +67,17 @@ export const addOrder =
     }
   };
 
-export const fetchUserOrders = (token: string | null) => async (dispatch: AppDispatch) => {
+export const fetchUserOrders = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {
   try {
     dispatch(fetchOrdersStart()); // Start loading
-
+    const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
     const res = await http.get(`/missions/user`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
+      },
+      params: {
+        exercice: selectedYear ?? undefined,
       },
     });
 
@@ -123,14 +126,17 @@ export const updateMission = (order: IMission) => async (dispatch: AppDispatch) 
     console.error('Error:', errorMessage);
   }
 };
-export const fetchAllOrders = (token: string | null) => async (dispatch: AppDispatch) => {
+export const fetchAllOrders = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {
   try {
     dispatch(fetchOrdersStart()); // Start loading
-
+    const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
     const res = await http.get(`/missions`, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
+      },
+      params: {
+        exercice: selectedYear ?? undefined,
       },
     });
 

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { DatabaseService } from 'src/database/database.service';
+import { ExercicesService } from 'src/exercices/exercices.service';
 import {
   DecompteStatus,
   Direction,
@@ -21,7 +22,18 @@ const templatePath = 'src/decompte/Template Decompte.docx';
 
 @Injectable()
 export class DecompteService {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly exercicesService: ExercicesService,
+  ) {}
+
+  private async getCurrentExerciceId(): Promise<number | null> {
+    await this.exercicesService.ensureCurrentForNow();
+    const ex = await this.databaseService['exercice'].findFirst({
+      where: { isCurrent: true },
+    });
+    return ex?.id ?? null;
+  }
 
   async create(createDecompteDto: CreateDecompteDto, id: number, user: User) {
     const mission = await this.databaseService.mission.findUnique({
@@ -39,10 +51,10 @@ export class DecompteService {
     );
     if (
       meals !==
-      createDecompteDto.repas_pec + createDecompteDto.repas_sans_pec ||
+        createDecompteDto.repas_pec + createDecompteDto.repas_sans_pec ||
       accommodations !==
-      createDecompteDto.hebergement_pec +
-      createDecompteDto.hebergement_sans_pec
+        createDecompteDto.hebergement_pec +
+          createDecompteDto.hebergement_sans_pec
     ) {
       throw new BadRequestException(
         'Le nombre de repas et hebergement non valid',
@@ -80,9 +92,9 @@ export class DecompteService {
       montant =
         (createDecompteDto.hebergement_sans_pec +
           createDecompteDto.hebergement_pec) *
-        categoryBarem.hebergement_nord +
+          categoryBarem.hebergement_nord +
         (createDecompteDto.repas_sans_pec + createDecompteDto.repas_pec) *
-        categoryBarem.repas_nord;
+          categoryBarem.repas_nord;
     } else {
       montant =
         createDecompteDto.hebergement_sans_pec * categoryBarem.hebergement_sud +
@@ -98,6 +110,7 @@ export class DecompteService {
     ) {
       montant = montant * 0.25;
     }
+    const exerciceId = await this.getCurrentExerciceId();
     const createDecomte = this.databaseService.decompte.create({
       data: {
         repas_pec: createDecompteDto.repas_pec,
@@ -111,12 +124,13 @@ export class DecompteService {
         mission: {
           connect: { n_mission: id },
         },
+        ...(exerciceId ? { exercice: { connect: { id: exerciceId } } } : {}),
       },
     });
     return this.databaseService.$transaction([updateMission, createDecomte]);
   }
 
-  findAll(status: string) {
+  async findAll(status: string, exercice?: string) {
     console.log(status);
     // convert status to DcompteStatus
     let sat: DecompteStatus;
@@ -127,10 +141,19 @@ export class DecompteService {
     } else {
       sat = DecompteStatus.PENDING;
     }
+    let year = exercice ? Number(exercice) : undefined;
+    if (!year) {
+      await this.exercicesService.ensureCurrentForNow();
+      const ex = await this.databaseService['exercice'].findFirst({
+        where: { isCurrent: true },
+      });
+      year = ex?.year;
+    }
     return this.databaseService.decompte.findMany({
       where: {
         soft_delete: false,
         status: sat,
+        ...(year ? { exercice: { year } } : {}),
       },
       orderBy: {
         updatedAt: 'desc',
@@ -229,10 +252,10 @@ export class DecompteService {
     );
     if (
       meals !==
-      updateDecompteDto.repas_pec + updateDecompteDto.repas_sans_pec ||
+        updateDecompteDto.repas_pec + updateDecompteDto.repas_sans_pec ||
       accommodations !==
-      updateDecompteDto.hebergement_pec +
-      updateDecompteDto.hebergement_sans_pec
+        updateDecompteDto.hebergement_pec +
+          updateDecompteDto.hebergement_sans_pec
     ) {
       throw new BadRequestException(
         'Le nombre de repas et hebergement non valid',
@@ -269,9 +292,9 @@ export class DecompteService {
       montant =
         (updateDecompteDto.hebergement_sans_pec +
           updateDecompteDto.hebergement_pec) *
-        categoryBarem.hebergement_nord +
+          categoryBarem.hebergement_nord +
         (updateDecompteDto.repas_sans_pec + updateDecompteDto.repas_pec) *
-        categoryBarem.repas_nord;
+          categoryBarem.repas_nord;
     } else {
       montant =
         updateDecompteDto.hebergement_sans_pec * categoryBarem.hebergement_sud +
@@ -395,13 +418,13 @@ export class DecompteService {
     const nbr_jour_val =
       mission?.date_sortie && mission?.date_retour
         ? Math.max(
-          0,
-          Math.ceil(
-            (new Date(mission.date_retour).getTime() -
-              new Date(mission.date_sortie).getTime()) /
-            (24 * 3600 * 1000),
-          ),
-        )
+            0,
+            Math.ceil(
+              (new Date(mission.date_retour).getTime() -
+                new Date(mission.date_sortie).getTime()) /
+                (24 * 3600 * 1000),
+            ),
+          )
         : null;
 
     // Map placeholders per instruction, null when not available

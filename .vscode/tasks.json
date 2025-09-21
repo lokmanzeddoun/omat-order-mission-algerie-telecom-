@@ -1,0 +1,27 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Prisma migrate and generate",
+			"type": "shell",
+			"command": "cd /home/lokmane-zed/clone_github_projects/omat-order-mission-algerie-telecom-/server && npx prisma generate && npx prisma migrate dev --name add-exercice && npm run build",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Build server",
+			"type": "shell",
+			"command": "cd /home/lokmane-zed/clone_github_projects/omat-order-mission-algerie-telecom-/server && npm run build",
+			"args": [],
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		}
+	]
+}

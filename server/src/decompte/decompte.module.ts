@@ -3,6 +3,7 @@ import { DecompteService } from './decompte.service';
 import { DecompteController } from './decompte.controller';
 import { DatabaseModule } from 'src/database/database.module';
 import { PassportModule } from '@nestjs/passport';
+import { ExercicesModule } from 'src/exercices/exercices.module';
 
 @Module({
   controllers: [DecompteController],
@@ -10,6 +11,7 @@ import { PassportModule } from '@nestjs/passport';
   imports: [
     DatabaseModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    ExercicesModule,
   ],
 })
 export class DecompteModule {}

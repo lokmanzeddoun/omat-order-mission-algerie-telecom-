@@ -20,7 +20,7 @@ import { Response } from 'express';
 
 @Controller('decompte')
 export class DecompteController {
-  constructor(private readonly decompteService: DecompteService) { }
+  constructor(private readonly decompteService: DecompteService) {}
 
   @Auth()
   @Post(':id')
@@ -34,8 +34,11 @@ export class DecompteController {
   }
 
   @Get()
-  findAll(@Query('status') status: string) {
-    return this.decompteService.findAll(status);
+  findAll(
+    @Query('status') status: string,
+    @Query('exercice') exercice?: string,
+  ) {
+    return this.decompteService.findAll(status, exercice);
   }
 
   @Get(':id')

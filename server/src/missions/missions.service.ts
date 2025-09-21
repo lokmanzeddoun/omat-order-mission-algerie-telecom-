@@ -4,6 +4,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
+import { ExercicesService } from 'src/exercices/exercices.service';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 // import { load } from '@ /nodejs';
@@ -20,9 +21,20 @@ import { Response as ExpressResponse } from 'express'; // Import Express respons
 const convertAsync = promisify(libre.convert);
 @Injectable()
 export class MissionsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly exercicesService: ExercicesService,
+  ) {}
+  private async getCurrentExerciceId(): Promise<number | null> {
+    await this.exercicesService.ensureCurrentForNow();
+    const ex = await this.databaseService['exercice'].findFirst({
+      where: { isCurrent: true },
+    });
+    return ex?.id ?? null;
+  }
   async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
     console.log(createMissionDto);
+    const exerciceId = await this.getCurrentExerciceId();
     const res = await this.databaseService.mission.create({
       data: {
         ...createMissionDto,
@@ -37,6 +49,7 @@ export class MissionsService {
         user: {
           connect: { matricule: user.matricule },
         },
+        ...(exerciceId ? { exercice: { connect: { id: exerciceId } } } : {}),
       },
     });
     const service = await this.databaseService.structure.findUnique({
@@ -98,14 +111,23 @@ export class MissionsService {
     }
   }
 
-  findAll(delete_status: string, status: string) {
+  async findAll(delete_status: string, status: string, exercice?: string) {
     let missionStatus: MissionStatus;
     if (status === 'completed') missionStatus = MissionStatus.COMPLETED;
     else missionStatus = MissionStatus.INPROGRESS;
+    let year = exercice ? Number(exercice) : undefined;
+    if (!year) {
+      await this.exercicesService.ensureCurrentForNow();
+      const ex = await this.databaseService['exercice'].findFirst({
+        where: { isCurrent: true },
+      });
+      year = ex?.year;
+    }
     return this.databaseService.mission.findMany({
       where: {
         soft_delete: delete_status === 'true',
         status: missionStatus,
+        ...(year ? { exercice: { year } } : {}),
       },
       orderBy: [
         {
@@ -146,16 +168,30 @@ export class MissionsService {
       },
     });
   }
-  findByUser(user: User, delete_status: string, status: string) {
+  async findByUser(
+    user: User,
+    delete_status: string,
+    status: string,
+    exercice?: string,
+  ) {
     // console.log()
     let missionStatus: MissionStatus;
     if (status === 'completed') missionStatus = MissionStatus.COMPLETED;
     else missionStatus = MissionStatus.INPROGRESS;
+    let year = exercice ? Number(exercice) : undefined;
+    if (!year) {
+      await this.exercicesService.ensureCurrentForNow();
+      const ex = await this.databaseService['exercice'].findFirst({
+        where: { isCurrent: true },
+      });
+      year = ex?.year;
+    }
     return this.databaseService.mission.findMany({
       where: {
         userId: user.matricule,
         soft_delete: delete_status === 'true',
         status: missionStatus,
+        ...(year ? { exercice: { year } } : {}),
       },
       orderBy: [
         {

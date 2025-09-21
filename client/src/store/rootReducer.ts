@@ -5,6 +5,7 @@ import usersReducer from 'components/users/users.reducers';
 import structureReducer from 'components/structures/structure.reducer';
 import orderReducer from 'components/orders/orderReducer';
 import decompteReducer from 'components/orders/decompte.reducer';
+import exerciceReducer from 'components/exercices/exercice.slice';
 const rootReducer = combineReducers({
   auth: authReducer,
   alerts: alertReducer,
@@ -12,6 +13,7 @@ const rootReducer = combineReducers({
   structures: structureReducer,
   orders: orderReducer,
   decompte: decompteReducer,
+  exercice: exerciceReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

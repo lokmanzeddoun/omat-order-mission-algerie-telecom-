@@ -51,6 +51,9 @@ model Mission {
   userId Int
   direction Direction @default(NORD)
   decompte Decompte[]
+  // Exercice relation
+  exercice   Exercice? @relation(fields: [exerciceId], references: [id])
+  exerciceId Int?
 }
 
 model Decompte {
@@ -68,6 +71,9 @@ model Decompte {
   mission Mission @relation(fields: [missionId],references: [n_mission])
   missionId Int
   messages Commentaire[]
+  // Exercice relation (denormalized for easier querying)
+  exercice   Exercice? @relation(fields: [exerciceId], references: [id])
+  exerciceId Int?
 }
 
 model Commentaire {
@@ -92,6 +98,19 @@ model Barem {
   repas_sud Float
   hebergement_sud Float
   montant_km Float 
+}
+
+model Exercice {
+  id        Int       @id @default(autoincrement())
+  // e.g., 2024
+  year      Int       @unique
+  start     DateTime?
+  end       DateTime?
+  isCurrent Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  missions  Mission[]
+  decomptes Decompte[]
 }
 
 
