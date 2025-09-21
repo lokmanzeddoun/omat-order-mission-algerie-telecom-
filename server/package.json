@@ -1,6 +1,6 @@
 {
-  "name": "server",
-  "version": "0.0.1",
+  "name": "@omat/server",
+  "version": "1.0.0",
   "description": "",
   "author": "",
   "private": true,
@@ -18,7 +18,8 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "db:seed": "ts-node prisma/seed.ts"
+    "db:seed": "ts-node prisma/seed.ts",
+    "setup:db": "./setup-db.sh"
   },
   "dependencies": {
     "@nestjs/common": "^10.0.0",

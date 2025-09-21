@@ -1,0 +1,44 @@
+{
+  "name": "omat-order-mission-algerie-telecom",
+  "version": "1.0.0",
+  "description": "OMAT - Order Mission Algeria Telecom - Monorepo",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "postinstall": "echo '✅ Workspace dependencies installed successfully!'",
+    "install:all": "npm install",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:client": "npm run dev --workspace=client",
+    "dev:server": "npm run start:dev --workspace=server",
+    "build": "npm run build --workspace=server && npm run build --workspace=client",
+    "build:client": "npm run build --workspace=client",
+    "build:server": "npm run build --workspace=server",
+    "test": "npm run test --workspace=server && npm run test:client",
+    "test:client": "npm run test --workspace=client",
+    "test:server": "npm run test --workspace=server",
+    "lint": "npm run lint --workspace=client && npm run lint --workspace=server",
+    "lint:client": "npm run lint --workspace=client",
+    "lint:server": "npm run lint --workspace=server",
+    "format": "npm run format --workspace=server",
+    "clean": "rm -rf node_modules client/node_modules server/node_modules client/dist server/dist",
+    "setup:db": "npm run setup:db --workspace=server",
+    "seed:db": "npm run db:seed --workspace=server",
+    "validate": "./validate-workspace.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lokmanzeddoun/omat-order-mission-algerie-telecom-.git"
+  },
+  "author": "Algeria Telecom",
+  "license": "UNLICENSED"
+}
