@@ -1,5 +1,7 @@
 import { PropsWithChildren } from "react";
-import Link from "@mui/material/Link";
+import { useSelector } from 'react-redux';
+import { RootState } from 'store/rootReducer';
+import { useNavigate } from 'react-router-dom';
 import Stack from "@mui/material/Stack";
 import Paper from "@mui/material/Paper";
 import ButtonBase from "@mui/material/ButtonBase";
@@ -8,8 +10,17 @@ import AppAlert from "components/alert";
 import LogoImg from "assets/Logo.png";
 import Image from "components/base/Image";
 const AuthLayout = ({ children }: PropsWithChildren) => {
+	const navigate = useNavigate();
+	const { loading } = useSelector((s: RootState) => s.auth);
+
+	const handleLogoClick = (e: any) => {
+		e.preventDefault();
+		if (loading) return; // ignore clicks while restoring session
+		navigate('/');
+	};
+
 	return (
-		<Stack
+			<Stack
 			component="main"
 			alignItems="center"
 			justifyContent="center"
@@ -20,12 +31,7 @@ const AuthLayout = ({ children }: PropsWithChildren) => {
 			position="relative"
 		>
 			<AppAlert />
-			<ButtonBase
-				component={Link}
-				href="/"
-				disableRipple
-				sx={{ position: "absolute", top: 28, left: 24 }}
-			>
+			<ButtonBase disableRipple sx={{ position: "absolute", top: 28, left: 24 }} onClick={handleLogoClick}>
 				<Image src={LogoImg} alt="logo" height={60} width={60} sx={{ mr: 1 }} />
 				<Typography variant="h3" color="text.primary" letterSpacing={1}>
 					OMAT

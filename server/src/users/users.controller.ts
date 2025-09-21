@@ -98,6 +98,12 @@ export class UsersController {
   remove(@Param('id') id: string) {
     return this.usersService.remove(+id);
   }
+  // Admin-only endpoint to reset a user's password (generate temporary password)
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Post(':id/reset-password')
+  async resetPassword(@Param('id') id: string) {
+    return this.usersService.resetPassword(+id);
+  }
   @Auth()
   @Post('/changePassword')
   changePassword(

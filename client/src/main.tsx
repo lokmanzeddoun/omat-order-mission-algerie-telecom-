@@ -8,6 +8,10 @@ import { ThemeProvider } from "@emotion/react";
 import { CssBaseline } from "@mui/material";
 import { store } from "store";
 // import { PersistGate } from "redux-persist/integration/react";
+import { restoreSession } from 'components/auth/auth.thunk';
+
+// Attempt to restore session from httpOnly refresh cookie on startup
+store.dispatch<any>(restoreSession());
 
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>

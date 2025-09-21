@@ -263,6 +263,22 @@ export class UsersService {
     });
   }
 
+  // Admin reset password: generate a temp password and set it for the user
+  async resetPassword(matricule: number) {
+    const user = await this.databaseService.user.findUnique({
+      where: { matricule },
+    });
+    if (!user) throw new BadRequestException('User not found');
+    // generate a simple temporary password - admin can copy it and communicate to user securely
+    const temp = `${user.nom.toLowerCase()}_${user.prenom.toLowerCase()}_reset_${Math.floor(Math.random() * 9000 + 1000)}`;
+    const hashed = await bcrypt.hash(temp, 10);
+    await this.databaseService.user.update({
+      where: { matricule },
+      data: { password: hashed },
+    });
+    return { matricule, tempPassword: temp };
+  }
+
   async exportUsers(res: Response) {
     try {
       // Fetch all users from database (server-side, not client-side)

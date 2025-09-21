@@ -1,5 +1,4 @@
 import sitemap from 'routes/sitemap';
-import Link from '@mui/material/Link';
 import List from '@mui/material/List';
 import Stack from '@mui/material/Stack';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -8,7 +7,19 @@ import CollapseListItem from './list-items/CollapseListItem';
 import ListItem from './list-items/ListItem';
 import Image from 'components/base/Image';
 import LogoImg from 'assets/Logo.png';
+import { useSelector } from 'react-redux';
+import { RootState } from 'store/rootReducer';
+import { useNavigate } from 'react-router-dom';
 const DrawerItems = () => {
+  const navigate = useNavigate();
+  const { loading } = useSelector((s: RootState) => s.auth);
+
+  const handleLogoClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    navigate('/');
+  };
+
   return (
     <>
       <Stack
@@ -20,7 +31,7 @@ const DrawerItems = () => {
         bgcolor="info.lighter"
         zIndex={1000}
       >
-        <ButtonBase component={Link} href="/" disableRipple>
+        <ButtonBase onClick={handleLogoClick} disableRipple>
           <Image src={LogoImg} alt="logo" height={40} width={40} sx={{ mr: 1.25 }} />
           <Typography variant="h3" color="text.primary" letterSpacing={1}>
             OMAT

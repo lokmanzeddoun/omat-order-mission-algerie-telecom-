@@ -135,6 +135,7 @@ npx prisma migrate status
 With the seeded data, you can test various endpoints:
 
 ### Authentication
+
 ```bash
 POST /auth/login
 {
@@ -144,18 +145,21 @@ POST /auth/login
 ```
 
 ### Users
+
 ```bash
 GET /users
 GET /users/1001
 ```
 
 ### Missions
+
 ```bash
 GET /missions
 GET /missions/1
 ```
 
 ### Decomptes
+
 ```bash
 GET /decompte
 GET /decompte/1
@@ -170,6 +174,18 @@ The application uses the following main entities:
 - **Mission**: Mission orders with travel details
 - **Decompte**: Expense reports for missions
 - **Commentaire**: Comments/messages on expense reports
+
+New: Password-reset flow (admin mediated)
+
+- Users can submit a forget-password request which creates a `Commentaire` of type `FORGET_PASSWORD` via `POST /comments`.
+- Admins can list these via `GET /comments/admin` and reset a user's password via `POST /users/:id/reset-password` which returns a temporary password.
+
+Database migration note:
+
+- We made the `Commentaire.decompteId` optional to allow generic support tickets. Run a prisma migration after pulling these changes:
+  1. npx prisma generate
+  2. npx prisma migrate dev --name make-comment-decompte-optional
+
 - **Barem**: Rate tables for different employee categories
 
 ## Development Tips
@@ -183,16 +199,19 @@ The application uses the following main entities:
 ## Troubleshooting
 
 ### Database Connection Issues
+
 - Check your DATABASE_URL in .env
 - Ensure PostgreSQL is running
 - Verify database credentials
 
 ### Seeding Fails
+
 - Ensure database is accessible
 - Check for existing data conflicts
 - Run `npx prisma migrate reset` to clean start
 
 ### Missing Dependencies
+
 ```bash
 npm install
 npx prisma generate

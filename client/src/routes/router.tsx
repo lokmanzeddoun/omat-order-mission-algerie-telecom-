@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { Suspense, lazy } from 'react';
 import { Navigate, Outlet, createBrowserRouter } from 'react-router-dom';
 import AuthLayout from 'layouts/auth-layout';
@@ -8,7 +7,8 @@ import MainLayout from 'layouts/main-layout';
 import paths, { rootPaths } from './paths';
 
 const App = lazy(() => import('App'));
-const Signin = lazy(() => import('pages/authentication/Signin'));
+import HomeOrSignin from './HomeOrSignin';
+import ForgotPassword from 'pages/authentication/ForgotPassword';
 import Users from 'pages/users';
 import ProtectedRoute from 'ProtectedRoute';
 import Structures from 'pages/structures';
@@ -21,6 +21,7 @@ import OrderDashboard from 'pages/ordres';
 import DataGridWithJson from 'pages/barem';
 import Archive from 'pages/archive';
 import DecomptesPage from 'pages/decomptes';
+import AdminComments from 'pages/admin/Comments';
 
 const router = createBrowserRouter(
   [
@@ -40,10 +41,14 @@ const router = createBrowserRouter(
               </Suspense>
             </AuthLayout>
           ),
-          children: [
+            children: [
             {
               index: true,
-              element: <Signin />,
+              element: <HomeOrSignin />,
+            },
+            {
+              path: 'authentication/forgot-password',
+              element: <ForgotPassword />,
             },
           ],
         },
@@ -86,6 +91,10 @@ const router = createBrowserRouter(
             {
               path: 'decomptes',
               element: <DecomptesPage />,
+            },
+            {
+              path: 'support',
+              element: <AdminComments />,
             },
             {
               path: 'archive',
