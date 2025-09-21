@@ -101,6 +101,53 @@ export const uploadStructure = (file: File) => async (dispatch: AppDispatch) => 
   }
 };
 
+export const exportStructures = () => async (dispatch: AppDispatch) => {
+  try {
+    const res = await http.get(`/structures/export`, {
+      responseType: 'blob', // Important for file downloads
+    });
+
+    if (res.data) {
+      // Create a blob from the response data
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      // Create a temporary download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Generate filename with current date
+      const filename = `structures_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.setAttribute('download', filename);
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      dispatch(setAlert({ msg: 'Structures exported successfully', type: AlertTypes.SUCCESS }));
+    } else {
+      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+    }
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+    console.error('Error:', errorMessage);
+  }
+};
+
 export const deleteStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   //
   try {

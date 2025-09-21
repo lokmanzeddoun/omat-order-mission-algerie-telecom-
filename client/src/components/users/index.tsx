@@ -1,8 +1,11 @@
 import { Box, Button, Card, Chip, Stack, Tab, Tabs, Typography } from '@mui/material';
-import { GridColDef, GridPaginationModel, GridRowsProp } from '@mui/x-data-grid';
-import SmartTable from 'components/common/SmartTable';
+import { GridColDef, GridRowsProp } from '@mui/x-data-grid';
+import SmartTable, { ContextMenuItem } from 'components/common/SmartTable';
+import IconifyIcon from 'components/base/IconifyIcon';
+import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
+import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
+import CreateIcon from 'assets/icons/solar--document-add-linear.svg?react';
 // removed: per SmartTable
-import CustomPagination from './customPagination';
 import MissionModal from 'components/orders/CreateOrder';
 import NoData from './NoData';
 import { dateFormatFromUTC } from 'helpers/utils';
@@ -14,7 +17,7 @@ import ConfirmDeletionModal from './modals/DeleteUser';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
-import { addUser, deleteUser, getAllUsers, updateUser, uploadUsers } from './users.thunk';
+import { addUser, deleteUser, getAllUsers, updateUser, uploadUsers, exportUsers } from './users.thunk';
 import { Role } from 'constants/role';
 import { Category } from 'constants/category';
 import Splash from 'components/loader/Splash';
@@ -156,6 +159,10 @@ const InvoiceOverviewTable: React.FC = () => {
       await dispatch(getAllUsers());
     }
   };
+
+  const handleExportUsers = async () => {
+    await dispatch(exportUsers());
+  };
   const handleOrderSubmit = async (data: any) => {
     if (!selectedUser) return;
     const userWithoutStructure = { ...(selectedUser as any) };
@@ -205,18 +212,9 @@ const InvoiceOverviewTable: React.FC = () => {
   const [value, setValue] = useState(0);
   // header search & context menu handled by SmartTable
 
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: 10,
-  });
-
   const handleChange = (_event: SyntheticEvent, newValue: number) => {
     setValue(newValue);
     filterData(newValue);
-  };
-
-  const handlePaginationModelChange = (model: GridPaginationModel) => {
-    setPaginationModel(model);
   };
 
   // handled by SmartTable
@@ -340,10 +338,27 @@ const InvoiceOverviewTable: React.FC = () => {
                 borderColor: 'secondary.light',
                 bgcolor: 'primary.light',
               },
+              mr: 3,
             }}
           >
             Importer
             <input type="file" hidden onChange={handleFileChange} />
+          </Button>
+          <Button
+            variant="outlined"
+            sx={{
+              textTransform: 'none',
+              fontWeight: 600,
+              color: 'primary.main',
+              borderColor: 'primary.main',
+              '&:hover': {
+                borderColor: 'primary.dark',
+                bgcolor: 'primary.light',
+              },
+            }}
+            onClick={handleExportUsers}
+          >
+            Exporter
           </Button>
         </Box>
       </Box>
@@ -373,14 +388,9 @@ const InvoiceOverviewTable: React.FC = () => {
       >
         <SmartTable<RowData>
           columns={columns}
-          rows={items.slice(
-            paginationModel.page * paginationModel.pageSize,
-            (paginationModel.page + 1) * paginationModel.pageSize,
-          )}
+          rows={[...items]}
           rowCount={items.length}
           getRowId={(row) => row.matricule}
-          paginationModel={paginationModel}
-          onPaginationModelChange={handlePaginationModelChange}
           loading={loading}
           noRowsOverlay={NoData as any}
           onViewDetails={(row) => {
@@ -388,7 +398,32 @@ const InvoiceOverviewTable: React.FC = () => {
             setViewOnly(true);
             setEditModalOpen(true);
           }}
-          contextMenuItems={[]}
+          contextMenuItems={(
+            // provide contextual actions for right-click menu
+            [
+              {
+                key: 'add-mission',
+                label: 'Ajouter Mission',
+                color: 'primary',
+                icon: <IconifyIcon icon={CreateIcon} color="primary" />, 
+                onClick: (row: RowData) => handleOpen1(row),
+              },
+              {
+                key: 'edit',
+                label: 'Editer',
+                color: 'inherit',
+                icon: <IconifyIcon icon={EditIcon} />, 
+                onClick: (row: RowData) => handleEdit(row),
+              },
+              {
+                key: 'delete',
+                label: 'Supprimer',
+                color: 'error',
+                icon: <IconifyIcon icon={DeleteIcon} color="error" />, 
+                onClick: (row: RowData) => handleDelete(row),
+              },
+            ] as ContextMenuItem<RowData>[]
+          )}
         />
       </Card>
       {/* Context menu is handled inside SmartTable via contextMenuItems if provided */}
@@ -411,16 +446,6 @@ const InvoiceOverviewTable: React.FC = () => {
           />
         </>
       ) : null}
-
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: { xs: 'center', md: 'flex-end' } }}>
-        <CustomPagination
-          page={paginationModel.page + 1}
-          pageCount={Math.ceil(items.length / paginationModel.pageSize)}
-          onPageChange={(_event, value) =>
-            setPaginationModel((prev) => ({ ...prev, page: value - 1 }))
-          }
-        />
-      </Box>
     </Stack>
   );
 };

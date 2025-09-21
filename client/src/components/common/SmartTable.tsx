@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, Menu, MenuItem, ListItemIcon, ListItemText, TextField } from '@mui/material';
+import { Box, Menu, MenuItem, ListItemIcon, ListItemText, TextField, Typography } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import {
     DataGrid,
     GridColDef,
@@ -13,8 +14,9 @@ import {
 
 export type ContextMenuItem<Row = any> = {
     key: string;
-    label: React.ReactNode;
+    label: React.ReactNode | string;
     icon?: React.ReactNode;
+    color?: 'primary' | 'error' | 'inherit' | string; // optional color for label
     onClick: (row: Row) => void;
 };
 
@@ -139,31 +141,36 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                                 sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
                             />
                         ) : (
-                            <>{col.headerName || col.field}</>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                <SearchIcon
+                                    sx={{
+                                        fontSize: '1rem',
+                                        color: 'text.secondary',
+                                        cursor: 'pointer',
+                                        '&:hover': { color: 'primary.main' }
+                                    }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        const field = col.field as string;
+                                        if (!field) return;
+                                        setHeaderSearchField(field);
+                                        const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
+                                        setHeaderSearchValue((existing?.value as string) || '');
+                                    }}
+                                />
+                                <span>{col.headerName || col.field}</span>
+                            </Box>
                         )
                     : col.renderHeader,
         }));
-    }, [columns, enableHeaderSearch, headerSearchField, headerSearchValue, isDateField, enableDateClear, closeHeaderSearch]);
+    }, [columns, enableHeaderSearch, headerSearchField, headerSearchValue, isDateField, enableDateClear, closeHeaderSearch, filterModel.items]);
 
-    const handleContextMenu: React.MouseEventHandler<HTMLDivElement> = (event) => {
-        event.preventDefault();
-        const target = event.target as HTMLElement;
-        const rowEl = target.closest('[data-id]') as HTMLElement | null;
-        const idAttr = rowEl?.getAttribute('data-id');
-        if (!idAttr) return;
-        const row = rows.find((r) => String(getRowId(r)) === idAttr) || null;
-        if (!row) return;
-        setCtxRow(row);
-        const rid = getRowId(row);
-        setRowSelectionModel([rid]);
-        setHighlightRowId(rid);
-        if (contextMenuItems.length) {
-            setCtx({ mouseX: event.clientX + 2, mouseY: event.clientY - 6 });
-        }
-    };
+    // NOTE: we rely on DataGrid's own context menu events (onCellContextMenu / onRowContextMenu)
+    // to reliably determine the row under the pointer. The old DOM-based lookup was brittle
+    // because DataGrid renders complex wrappers and virtualized nodes.
 
     return (
-        <Box ref={gridRef} onContextMenu={handleContextMenu}>
+        <Box ref={gridRef}>
             <DataGrid
                 getRowId={getRowId}
                 rows={rows}
@@ -185,6 +192,52 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                     const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
                     setHeaderSearchValue((existing?.value as string) || '');
                 }}
+                slotProps={{
+                    row: {
+                        onContextMenu: (event: React.MouseEvent<HTMLElement>) => {
+                            event.preventDefault();
+                            // Walk up to find the data-id attribute on the row element
+                            let el: HTMLElement | null = event.currentTarget as HTMLElement;
+                            let idAttr: string | null = null;
+                            while (el && !idAttr) {
+                                idAttr = el.getAttribute('data-id');
+                                if (idAttr) break;
+                                el = el.parentElement;
+                            }
+                            if (!idAttr) return;
+                            const row = rows.find((r) => String(getRowId(r)) === idAttr) as Row | undefined;
+                            if (!row) return;
+                            setCtxRow(row);
+                            const rid = getRowId(row as Row);
+                            setRowSelectionModel([rid]);
+                            setHighlightRowId(rid);
+                            if (contextMenuItems.length) {
+                                const mouseEvent = event as React.MouseEvent;
+                                setCtx({ mouseX: mouseEvent.clientX + 2, mouseY: mouseEvent.clientY - 6 });
+                            }
+                        },
+                    },
+                    cell: {
+                        onContextMenu: (event: React.MouseEvent<HTMLElement>) => {
+                            event.preventDefault();
+                            const cellEl = event.currentTarget as HTMLElement;
+                            // cell elements may not have data-id; check parent
+                            const rowEl = cellEl.parentElement as HTMLElement | null;
+                            const idAttr = rowEl?.getAttribute('data-id') || null;
+                            if (!idAttr) return;
+                            const row = rows.find((r) => String(getRowId(r)) === idAttr) as Row | undefined;
+                            if (!row) return;
+                            setCtxRow(row);
+                            const rid = getRowId(row as Row);
+                            setRowSelectionModel([rid]);
+                            setHighlightRowId(rid);
+                            if (contextMenuItems.length) {
+                                const mouseEvent = event as React.MouseEvent;
+                                setCtx({ mouseX: mouseEvent.clientX + 2, mouseY: mouseEvent.clientY - 6 });
+                            }
+                        },
+                    },
+                }}
                 onCellDoubleClick={(params) => {
                     if (onViewDetails) {
                         onViewDetails(params.row as Row);
@@ -193,15 +246,52 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                     setRowSelectionModel([rid]);
                     setHighlightRowId(rid);
                 }}
-                getRowClassName={(params: GridRowClassNameParams) =>
-                    highlightRowId != null && String(params.id) === String(highlightRowId)
-                        ? 'action-highlight'
-                        : ''
-                }
+                onRowClick={(params, event) => {
+                    // Prevent row selection if clicking on action menu or buttons
+                    const target = event?.target as HTMLElement;
+                    if (target && (
+                        target.closest('[role="button"]') ||
+                        target.closest('.MuiIconButton-root') ||
+                        target.closest('.MuiMenu-root') ||
+                        target.closest('[data-testid*="action"]')
+                    )) {
+                        return;
+                    }
+
+                    const rid = getRowId(params.row as Row);
+                    setRowSelectionModel([rid]);
+                    setHighlightRowId(rid);
+                }}
+                onCellClick={(params, event) => {
+                    // Also handle cell clicks for better coverage
+                    const target = event?.target as HTMLElement;
+                    if (target && (
+                        target.closest('[role="button"]') ||
+                        target.closest('.MuiIconButton-root') ||
+                        target.closest('.MuiMenu-root') ||
+                        target.closest('[data-testid*="action"]')
+                    )) {
+                        return;
+                    }
+
+                    const rid = getRowId(params.row as Row);
+                    setRowSelectionModel([rid]);
+                    setHighlightRowId(rid);
+                }}
+                getRowClassName={(params: GridRowClassNameParams) => {
+                    const isHighlighted = highlightRowId != null && String(params.id) === String(highlightRowId);
+                    return isHighlighted ? 'action-highlight' : '';
+                }}
                 disableColumnMenu
                 disableColumnFilter
                 disableColumnSelector
                 disableDensitySelector
+                initialState={{
+                    pagination: {
+                        paginationModel: { pageSize: 10 },
+                    },
+                }}
+                pageSizeOptions={[10]}
                 slots={{
                     noRowsOverlay: noRowsOverlay,
                 }}
@@ -213,14 +303,30 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                     '& .MuiDataGrid-columnHeader .MuiInputBase-input': { userSelect: 'text' },
                     '& .MuiDataGrid-cell': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },
                     '& .MuiTypography-root': { fontSize: { xs: 13, lg: 16 } },
-                    '& .MuiDataGrid-row': { userSelect: 'none' },
+                    '& .MuiDataGrid-row': { userSelect: 'none', cursor: 'pointer' },
                     // Disable default selection highlight
                     '& .MuiDataGrid-row.Mui-selected': { backgroundColor: 'transparent !important' },
                     '& .MuiDataGrid-row.Mui-selected:hover': { backgroundColor: 'transparent !important' },
                     '& .MuiDataGrid-cell--selected': { backgroundColor: 'transparent !important' },
                     '& .MuiDataGrid-cell--selected:hover': { backgroundColor: 'transparent !important' },
-                    // Our action-based highlight
-                    '& .action-highlight': { backgroundColor: 'primary.light !important' },
+                    // Our action-based highlight with more visible light grey
+                    '& .action-highlight': {
+                        backgroundColor: '#e8e8e8 !important', // Darker light grey for better visibility
+                        color: 'inherit !important', // Keep original text color
+                        border: '1px solid #d0d0d0 !important', // More visible border
+                        '&:hover': { backgroundColor: '#dcdcdc !important' }, // Darker grey on hover
+                        '& .MuiDataGrid-cell': {
+                            backgroundColor: '#e8e8e8 !important',
+                            color: 'inherit !important',
+                            borderColor: '#d0d0d0 !important',
+                        }
+                    },
+                    // Ensure all cells in highlighted row have the same background
+                    '& .MuiDataGrid-row.action-highlight .MuiDataGrid-cell': {
+                        backgroundColor: '#e8e8e8 !important',
+                        color: 'inherit !important',
+                        borderColor: '#d0d0d0 !important',
+                    },
                 }}
             />
 
@@ -240,7 +346,15 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                         }}
                     >
                         {mi.icon ? <ListItemIcon sx={{ mr: 1 }}>{mi.icon}</ListItemIcon> : null}
-                        <ListItemText>{mi.label}</ListItemText>
+                        <ListItemText
+                            primary={
+                                typeof mi.label === 'string' ? (
+                                    <Typography color={mi.color || 'text.primary'}>{mi.label}</Typography>
+                                ) : (
+                                    mi.label
+                                )
+                            }
+                        />
                     </MenuItem>
                 ))}
             </Menu>

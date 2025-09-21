@@ -78,16 +78,18 @@ const StructureModal: React.FC<StructureModalProps> = ({
                   <IconifyIcon icon={MatriculeIcon} />
                 </InputAdornment>
               ),
-              readOnly: viewOnly,
+              readOnly: viewOnly || isEdit, // Disable when editing or viewing
             }}
             value={formData.code}
             onChange={handleChange}
+            disabled={isEdit || viewOnly} // Also disable the field when editing
           />
           <TextField
             name="name"
             fullWidth
             variant="filled"
             placeholder="Entrez Le nom De Service"
+            required
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">

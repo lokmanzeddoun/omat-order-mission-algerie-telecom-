@@ -9,6 +9,7 @@ import {
   UploadedFile,
   UseInterceptors,
   HttpException,
+  Res,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { Prisma } from '@prisma/client';
@@ -21,6 +22,7 @@ import { ImportExcel } from './dtos/import-Excel.dto';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
+import { Response } from 'express';
 
 @ApiTags('User')
 @Controller('users')
@@ -55,6 +57,19 @@ export class UsersController {
     };
     // file is the uploaded file
     this.usersService.uploadUsers(file);
+  }
+
+  @Get('export')
+  @ApiOperation({
+    summary: 'EXPORT USERS TO EXCEL',
+    description: 'Export all users from database to Excel file',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Excel file downloaded successfully',
+  })
+  async exportUsers(@Res() res: Response) {
+    return this.usersService.exportUsers(res);
   }
 
   @Get()

@@ -12,6 +12,7 @@ import { WorkBook, WorkSheet } from 'xlsx';
 import * as bcrypt from 'bcryptjs';
 import { ImportExcel } from './dtos/import-Excel.dto';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
+import { Response } from 'express';
 
 @Injectable()
 export class UsersService {
@@ -136,16 +137,11 @@ export class UsersService {
     });
   }
 
-  update(matricule: number, @Body() updateUserDto: Prisma.UserUpdateInput) {
+  async update(
+    matricule: number,
+    @Body() updateUserDto: Prisma.UserUpdateInput,
+  ) {
     // Prevent changing immutable identifiers
-    if (
-      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'serviceId') &&
-      (updateUserDto as any).serviceId !== undefined
-    ) {
-      throw new BadRequestException(
-        "You can't modify serviceId via update endpoint",
-      );
-    }
     if (
       Object.prototype.hasOwnProperty.call(updateUserDto as any, 'matricule') &&
       (updateUserDto as any).matricule !== undefined &&
@@ -154,9 +150,28 @@ export class UsersService {
       throw new BadRequestException("You can't modify user's matricule");
     }
 
+    // Validate serviceId if it's being updated
+    if (
+      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'serviceId') &&
+      (updateUserDto as any).serviceId !== undefined &&
+      (updateUserDto as any).serviceId !== null
+    ) {
+      const structureExists = await this.databaseService.structure.findUnique({
+        where: { code: (updateUserDto as any).serviceId },
+      });
+
+      if (!structureExists) {
+        throw new BadRequestException(
+          `Structure with code '${(updateUserDto as any).serviceId}' does not exist`,
+        );
+      }
+    }
+
     const data = { ...(updateUserDto as any) };
-    delete (data as any).serviceId;
     delete (data as any).matricule;
+    delete (data as any).structure; // Remove relation field, only serviceId should be updated
+    delete (data as any).id; // Remove any client-side ID fields
+    delete (data as any).service; // Remove computed service field if present
 
     return this.databaseService.user.update({
       where: { matricule },
@@ -246,5 +261,77 @@ export class UsersService {
       where: { matricule },
       data: { password: hashedPassword },
     });
+  }
+
+  async exportUsers(res: Response) {
+    try {
+      // Fetch all users from database (server-side, not client-side)
+      const users = await this.databaseService.user.findMany({
+        where: {
+          soft_delete: false,
+        },
+        include: {
+          structure: {
+            select: {
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          {
+            updatedAt: 'desc',
+          },
+        ],
+      });
+
+      // Create workbook and worksheet
+      const workbook = xlsx.utils.book_new();
+
+      // Prepare data for Excel export
+      const usersData = users.map((user) => ({
+        Matricule: user.matricule,
+        Nom: user.nom,
+        Prenom: user.prenom,
+        Email: user.email,
+        Role: user.role,
+        Category: user.category,
+        Grade: user.grade,
+        ServiceId: user.serviceId,
+        Service: user.structure?.name || '',
+        Status: user.status,
+        'User Since': user.userSince
+          ? user.userSince.toISOString().split('T')[0]
+          : '',
+        'Created At': user.createdAt.toISOString().split('T')[0],
+        'Updated At': user.updatedAt.toISOString().split('T')[0],
+      }));
+
+      // Convert data to worksheet
+      const worksheet = xlsx.utils.json_to_sheet(usersData);
+
+      // Add worksheet to workbook
+      xlsx.utils.book_append_sheet(workbook, worksheet, 'Users');
+
+      // Generate Excel buffer
+      const excelBuffer = xlsx.write(workbook, {
+        type: 'buffer',
+        bookType: 'xlsx',
+      });
+
+      // Set response headers for file download
+      const filename = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      res.setHeader(
+        'Content-Type',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      );
+      res.setHeader('Content-Disposition', `attachment; filename=${filename}`);
+      res.setHeader('Content-Length', excelBuffer.length);
+
+      // Send the Excel file
+      res.end(excelBuffer);
+    } catch (error) {
+      console.error('Error exporting users to Excel:', error);
+      throw new InternalServerErrorException('Failed to export users to Excel');
+    }
   }
 }
