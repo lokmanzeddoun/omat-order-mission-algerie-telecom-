@@ -15,7 +15,7 @@ import { ChangePasswordDto } from './dtos/changePassword.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly databaseService: DatabaseService) { }
+  constructor(private readonly databaseService: DatabaseService) {}
   async create(createUserDto: createUserDto) {
     let userSince: Date;
     // check if the user exist

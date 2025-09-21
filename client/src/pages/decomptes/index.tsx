@@ -8,18 +8,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchAllDecompte } from 'components/orders/decompte.thunk';
 import moment from 'moment';
 import RenderDecompteDownload from 'components/orders/RenderDecompteDownload';
-import AdvancedTable, { AdvancedTableColumn, AdvancedTableAction } from 'components/common/AdvancedTable';
+import AdvancedTable, { AdvancedTableColumn, TableAction } from 'components/common/AdvancedTable';
 
 const DecomptesPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { token, user } = useSelector((s: RootState) => s.auth);
+  const selectedYear = useSelector((s: RootState) => (s as any).exercice?.selectedYear ?? null);
   const { decomptes, loading } = useSelector((s: RootState) => s.decompte);
   const pageSize = 10; // unified with AdvancedTable
   const [tab, setTab] = useState(0);
 
   useEffect(() => {
     if (token) dispatch(fetchAllDecompte(token));
-  }, [dispatch, token]);
+  }, [dispatch, token, selectedYear]);
 
   const allRows: any[] = useMemo(() => decomptes as any, [decomptes]);
   const filteredRows: any[] = useMemo(() => {
@@ -115,7 +116,7 @@ const DecomptesPage = () => {
   ];
 
   // Actions (example: download) - already visible via column button but added for context menu / extensibility
-  const actions: AdvancedTableAction[] = [
+  const actions: TableAction[] = [
     {
       id: 'download',
       label: 'Télécharger',
@@ -128,7 +129,6 @@ const DecomptesPage = () => {
           window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
         }
       },
-      roles: ['ADMIN', 'SUPER_ADMIN'],
     },
   ];
 
@@ -150,15 +150,15 @@ const DecomptesPage = () => {
       ) : (
         <AdvancedTable
           rows={filteredRows}
-            columns={columns}
-            actions={actions}
-            getRowId={(row: any) => row.n_decompte ?? row?.mission?.n_mission}
-            userRole={user?.role}
-            enableHeaderSearch
-            autoHeight
-            pageSize={pageSize}
-            onDoubleClickRow={() => {}}
-          />
+          columns={columns}
+          actions={actions}
+          getRowId={(row: any) => row.n_decompte ?? row?.mission?.n_mission}
+          userRole={user?.role}
+          enableHeaderSearch
+          autoHeight
+          pageSize={pageSize}
+          onDoubleClickRow={() => { }}
+        />
       )}
     </Stack>
   );

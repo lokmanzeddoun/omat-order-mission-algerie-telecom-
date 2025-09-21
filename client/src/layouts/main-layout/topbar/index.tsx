@@ -18,6 +18,7 @@ import MenuIcon from 'assets/icons/clarity--menu-line.svg?react';
 import SolarIcon from 'assets/icons/solar--bell-outline.svg?react';
 import { useState } from 'react';
 import { RootState } from 'store/rootReducer';
+import ExerciceSelector from 'components/exercices/ExerciceSelector';
 
 interface TopbarProps {
   isClosing: boolean;
@@ -80,6 +81,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       <AppAlert />
 
       <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
+        <ExerciceSelector />
         <Button variant="contained" color="primary" onClick={handleOpen}>
           Ajouter Mission
         </Button>

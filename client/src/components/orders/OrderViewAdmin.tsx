@@ -273,6 +273,7 @@ const a11yProps = (index: number) => ({
 const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   const { orders, loading } = useSelector((state: RootState) => state.orders);
   const { token, user } = useSelector((state: RootState) => state.auth);
+  const selectedYear = useSelector((s: RootState) => (s as any).exercice?.selectedYear ?? null);
   const dispatch = useDispatch<AppDispatch>();
   // const [open, setOpen] = useState(false);
   const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
@@ -530,10 +531,10 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   }, [items, searchText]);
   useEffect(() => {
     if (token) {
-      // Fetch the data only when the token changes
+      // Refetch when token or selected exercice year changes
       dispatch(fetchAllOrders(token));
     }
-  }, [dispatch, token]);
+  }, [dispatch, token, selectedYear]);
 
   useEffect(() => {
     // Apply filtering when orders or selected tab changes

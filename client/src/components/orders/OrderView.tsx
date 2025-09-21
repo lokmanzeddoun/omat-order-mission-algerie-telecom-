@@ -296,6 +296,7 @@ interface TaskOverviewTableProps {
 const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   const { orders, loading } = useSelector((state: RootState) => state.orders);
   const { token } = useSelector((state: RootState) => state.auth);
+  const selectedYear = useSelector((s: RootState) => (s as any).exercice?.selectedYear ?? null);
   const dispatch = useDispatch<AppDispatch>();
 
   const [isEditModalOpen, setEditModalOpen] = useState(false);
@@ -339,7 +340,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
 
   useEffect(() => {
     if (token) dispatch(fetchUserOrders(token));
-  }, [dispatch, token]);
+  }, [dispatch, token, selectedYear]);
 
   const filteredRows = useMemo(() => {
     if (!searchText) return orders;

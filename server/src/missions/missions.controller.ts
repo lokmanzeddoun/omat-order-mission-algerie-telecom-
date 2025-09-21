@@ -36,8 +36,9 @@ export class MissionsController {
   findAll(
     @Query('archive') soft_delete: string,
     @Query('status') status: string,
+    @Query('exercice') exercice?: string,
   ) {
-    return this.missionsService.findAll(soft_delete, status);
+    return this.missionsService.findAll(soft_delete, status, exercice);
   }
   @Get('user')
   @Auth()
@@ -45,8 +46,9 @@ export class MissionsController {
     @GetUser() user: User,
     @Query('archive') soft_delete: string,
     @Query('status') status: string,
+    @Query('exercice') exercice?: string,
   ) {
-    return this.missionsService.findByUser(user, soft_delete, status);
+    return this.missionsService.findByUser(user, soft_delete, status, exercice);
   }
 
   @Get(':id')
