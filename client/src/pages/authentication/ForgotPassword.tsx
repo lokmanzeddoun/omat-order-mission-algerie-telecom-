@@ -64,9 +64,17 @@ const ForgotPassword = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
-        <FormHelperText id="forgot-email-helper">Nous créerons un ticket pour les administrateurs — ils vous contacteront.</FormHelperText>
+        {/* <FormHelperText id="forgot-email-helper">Nous créerons un ticket pour les administrateurs — ils vous contacteront.</FormHelperText> */}
       </FormControl>
-  <Button type="submit" variant="contained" fullWidth disabled={loading || submittedOnce || !email.trim()}>Envoyer la demande</Button>
+      <Button type="submit" variant="contained" fullWidth disabled={loading || submittedOnce || !email.trim()}>Envoyer la demande</Button>
+      <Button
+        variant="text"
+        fullWidth
+        onClick={() => navigate(rootPaths.root)}
+        sx={{ textTransform: 'none' }}
+      >
+        Retour à la connexion
+      </Button>
     </Stack>
   );
 };

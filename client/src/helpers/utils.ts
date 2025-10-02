@@ -25,6 +25,33 @@ export const numberFormat = (number: number, notation: 'standard' | 'compact' = 
     notation,
   }).format(number);
 
+/**
+ * Normalize email by converting punycode domain to Unicode.
+ * Simple mapping for known internationalized domains.
+ *
+ * @param email - Email address that may contain punycode domain
+ * @returns Email with Unicode domain
+ */
+export const normalizeEmail = (email: string): string => {
+  if (!email || !email.includes('@')) return email;
+
+  // Map known punycode domains to their Unicode equivalents
+  const punycodeMap: Record<string, string> = {
+    'xn--algrietelecom-dhb.dz': 'algérietelecom.dz',
+  };
+
+  // Replace any punycode domain with Unicode version
+  for (const [punycode, unicode] of Object.entries(punycodeMap)) {
+    if (email.includes(punycode)) {
+      const normalized = email.replace(punycode, unicode);
+      console.log('[normalizeEmail]', email, '→', normalized);
+      return normalized;
+    }
+  }
+
+  return email;
+};
+
 // Calculate available meals and accommodations between two date-times
 // startDate: YYYY-MM-DD (mission date_sortie UTC-based)
 // startTime: HH:mm

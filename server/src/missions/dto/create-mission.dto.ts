@@ -1,18 +1,18 @@
-import { IsString, IsInt, IsDate, IsOptional, IsNumber } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsString, IsInt, IsOptional, IsDateString } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { TransportType, User } from '@prisma/client';
 
 export class CreateMissionDto {
-  @IsDate()
-  @Type(() => Date)
-  date_sortie: Date;
+  @IsDateString()
+  date_sortie: string;
 
   @IsString()
   heure_sortie: string;
 
-  @IsDate()
-  @Type(() => Date)
-  date_retour: Date;
+  @IsOptional()
+  @Transform(({ value }) => (value === '' ? undefined : value))
+  @IsDateString()
+  date_retour?: string;
 
   @IsString()
   heure_retour: string;

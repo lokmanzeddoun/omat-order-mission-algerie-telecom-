@@ -15,6 +15,7 @@ import { RootState } from 'store/rootReducer';
 import { login } from 'components/auth/auth.thunk';
 import { useNavigate } from 'react-router-dom';
 import Splash from 'components/loader/Splash';
+import { normalizeEmail } from 'helpers/utils';
 import MailIcon from 'assets/icons/hugeicons--mail-at-sign-02.svg?react';
 import LockIcon from 'assets/icons/hugeicons--lock-key.svg?react';
 import ViewIcon from 'assets/icons/fluent-mdl2--view.svg?react';
@@ -43,8 +44,14 @@ const Signin = () => {
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.info('[signin] submitting login', userData);
-    await dispatch(login(userData));
+    // Normalize email to convert punycode domains (e.g., xn--algrietelecom-dhb.dz)
+    // back to Unicode (algérietelecom.dz) for Chrome compatibility
+    const normalizedData = {
+      ...userData,
+      email: normalizeEmail(userData.email),
+    };
+    console.info('[signin] submitting login', normalizedData);
+    await dispatch(login(normalizedData));
   };
   if (isLoading) {
     return <Splash />; // Fallback UI while checking authentication
@@ -62,7 +69,8 @@ const Signin = () => {
         <TextField
           id="email"
           name="email"
-          type="email"
+          type="text"
+          inputMode="email"
           value={userData.email}
           onChange={handleInputChange}
           variant="filled"
@@ -117,12 +125,12 @@ const Signin = () => {
           }}
         />
 
-        <Stack mt={-2} alignItems="center" justifyContent="space-between">
-          <FormControlLabel
+        <Stack  alignItems="center" justifyContent="space-between">
+          {/* <FormControlLabel
             control={<Checkbox id="checkbox" name="checkbox" size="small" color="primary" />}
             label="Se souvenir de moi"
             sx={{ ml: -1 }}
-          />
+          /> */}
                   <Link component="button" type="button" onClick={() => navigate('/authentication/forgot-password')} fontSize="body2.fontSize">
                     Mot de pass oublié?
                   </Link>

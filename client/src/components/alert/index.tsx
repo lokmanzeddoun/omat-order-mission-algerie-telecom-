@@ -9,13 +9,12 @@ const AppAlert = () => {
   return (
     alerts !== null &&
     alerts.length > 0 &&
-    alerts.map((alert: IAlert, index: number) => {
+    alerts.map((alert: IAlert) => {
       return (
-        <div className="container" style={{ zIndex: 100 }}>
+        <div className="container" style={{ zIndex: 100 }} key={alert.id}>
           <Alert
             variant="filled"
             severity={alert.type}
-            key={index}
             sx={{
               position: 'fixed',
               top: 20,

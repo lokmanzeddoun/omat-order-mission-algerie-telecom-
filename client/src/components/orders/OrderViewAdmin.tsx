@@ -105,7 +105,7 @@ const initialColumns: GridColDef<IMission>[] = [
     minWidth: 150,
     filterable: true,
     valueGetter: (params: any) => {
-      const v = params.value;
+      const v = params?.value;
       return v ? moment(v).format('YYYY-MM-DD') : '';
     },
     renderCell: (params: any) => {
@@ -149,7 +149,7 @@ const initialColumns: GridColDef<IMission>[] = [
     minWidth: 150,
     filterable: true,
     valueGetter: (params: any) => {
-      const v = params.value;
+      const v = params?.value;
       return v ? moment(v).format('YYYY-MM-DD') : '';
     },
     renderCell: (params: any) => {
@@ -179,15 +179,15 @@ const initialColumns: GridColDef<IMission>[] = [
       };
 
       // Get the translated label based on the value
-      const translatedLabel = statusTranslations[params.value] || 'Inconnu';
+      const translatedLabel = statusTranslations[params?.value as string] || 'Inconnu';
 
       // Determine color based on status value
       const color =
-        params.value === 'PENDING'
+        params?.value === 'PENDING'
           ? 'primary'
-          : params.value === 'COMPLETED'
+          : params?.value === 'COMPLETED'
             ? 'success'
-            : params.value === 'INPROGRESS'
+            : params?.value === 'INPROGRESS'
               ? 'warning'
               : 'info';
 
@@ -239,7 +239,8 @@ const initialColumns: GridColDef<IMission>[] = [
       };
 
       // Get the mapped transport type, or fallback to the original value if not found
-      const translatedLabel = transportMapping[params.value] || params.value;
+      const raw = (params?.value as string) ?? '';
+      const translatedLabel = transportMapping[raw] || raw;
 
       return (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
@@ -359,7 +360,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           minWidth: 150,
           filterable: true,
           valueGetter: (params: any) => {
-            const u = params.value;
+            const u = params?.value;
             return u ? `${u.nom ?? ''} ${u.prenom ?? ''}`.trim() : '';
           },
           renderHeader: () =>
@@ -389,7 +390,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
               <>Utilisateur</>
             ),
           renderCell: (params: any) => {
-            const u = (params.row && (params.row as any).user) || params.value;
+            const u = (params?.row && (params.row as any).user) || params?.value;
             if (!u) {
               return (
                 <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
@@ -622,7 +623,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             filterModel={filterModel}
             onFilterModelChange={setFilterModel}
             onColumnHeaderDoubleClick={(params: any) => {
-              const field = params.field as string;
+              const field = params?.field as string;
               if (!field) return;
               setHeaderSearchField(field);
               const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
@@ -634,7 +635,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
               setEditModalOpen(true);
               setViewOnly(true);
             }}
-            onRowDoubleClick={(params) => setHighlightRowId(params.id as GridRowId)}
+            onRowDoubleClick={(params) => params && setHighlightRowId(params.id as GridRowId)}
             localeText={localizedTextsMap}
             onRowSelectionModelChange={(ids) => {
               const selectedRows = orders.filter(

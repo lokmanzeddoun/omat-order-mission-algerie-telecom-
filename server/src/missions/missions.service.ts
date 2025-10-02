@@ -225,24 +225,72 @@ export class MissionsService {
   }
 
   update(id: number, updateMissionDto: Prisma.MissionUpdateInput) {
+    // Normalize possible Prisma update inputs for date fields.
+    console.log(updateMissionDto);
+    const normalizeDateInput = (input: any): Date | null | undefined => {
+      if (input === undefined) return undefined; // do not touch field
+      if (input === null) return null; // explicit null
+      if (typeof input === 'string') {
+        const s = input.trim();
+        if (!s) return null; // empty string means clear the date
+        const m = moment.utc(s, 'YYYY-MM-DD', true);
+        return m.isValid() ? m.toDate() : null; // invalid string clears field
+      }
+      if (input instanceof Date) {
+        return isNaN(input.getTime()) ? null : input;
+      }
+      if (typeof input === 'object' && 'set' in input) {
+        // Handle Prisma DateTimeFieldUpdateOperationsInput
+        return normalizeDateInput((input as any).set);
+      }
+      return undefined;
+    };
+
+    const dateSortie = normalizeDateInput(
+      (updateMissionDto as any).date_sortie,
+    );
+    const dateRetour = normalizeDateInput(
+      (updateMissionDto as any).date_retour,
+    );
+    const labelToEnum: Record<string, string> = {
+      'véhicule de service': 'SERVICE_CAR',
+      'vehicule de service': 'SERVICE_CAR',
+      'autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise':
+        'TRANSPORT_ENTREPRISE',
+      'moyens de transport   dont les dépenses sont prises en charge par le travailleur':
+        'TRANSPORT_EMPLOYEE',
+      'utilisation exceptionnel du véhicule personnel, à la demande de la hiérarchie':
+        'PERSONAL_CAR',
+      'utilisation exceptionnelle du véhicule personnel, à la demande de la hiérarchie':
+        'PERSONAL_CAR',
+    };
+
+    const mapTransport = (t: any): any => {
+      if (t == null) return t;
+      if (typeof t === 'string') {
+        const key = t.trim().toLowerCase();
+        return (labelToEnum[key] as any) || t;
+      }
+      if (typeof t === 'object' && 'set' in t)
+        return { set: mapTransport((t as any).set) } as any;
+      return t;
+    };
+
+    const {
+      date_sortie: _ds,
+      date_retour: _dr,
+      ...rest
+    } = updateMissionDto as any;
+
     return this.databaseService.mission.update({
-      where: {
-        n_mission: id,
-      },
+      where: { n_mission: id },
       data: {
-        ...updateMissionDto,
-        date_sortie:
-          typeof updateMissionDto.date_sortie === 'string'
-            ? moment.utc(updateMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
-            : updateMissionDto.date_sortie instanceof Date
-              ? updateMissionDto.date_sortie
-              : null,
-        date_retour:
-          typeof updateMissionDto.date_retour === 'string'
-            ? moment.utc(updateMissionDto.date_retour, 'YYYY-MM-DD').toDate()
-            : updateMissionDto.date_retour instanceof Date
-              ? updateMissionDto.date_retour
-              : null,
+        ...rest,
+        ...(rest.transport !== undefined
+          ? { transport: mapTransport(rest.transport) }
+          : {}),
+        ...(dateSortie !== undefined ? { date_sortie: dateSortie } : {}),
+        ...(dateRetour !== undefined ? { date_retour: dateRetour } : {}),
       },
     });
   }

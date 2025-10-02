@@ -101,11 +101,18 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
   }
 };
 
-export const updateMission = (order: IMission) => async (dispatch: AppDispatch) => {
-  //
+export const updateMission = (order: IMission) => async (dispatch: AppDispatch, getState: any) => {
   try {
-    const res = await http.patch(`/missions/${order.n_mission}`, order);
-    if (res) {
+    const token: string | null = getState()?.auth?.token ?? null;
+    // Do not send primary key in the body; only send changed fields
+    const { n_mission, ...body } = (order as any) || {};
+    const res = await http.patch(`/missions/${n_mission}`, body, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+    if (res && res.data) {
       await dispatch(setAlert({ msg: 'Order Updated Successfully', type: AlertTypes.SUCCESS }));
       dispatch(editMission(res.data));
     } else {
@@ -115,10 +122,8 @@ export const updateMission = (order: IMission) => async (dispatch: AppDispatch) 
     let errorMessage = 'An error occurred';
 
     if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
       errorMessage = error.response?.data?.message || error.message;
     } else if (error instanceof Error) {
-      // Handle other errors
       errorMessage = error.message;
     }
 
@@ -160,9 +165,14 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
   }
 };
 
-export const deleteOrder = (n_mission: number | null) => async (dispatch: AppDispatch) => {
+export const deleteOrder = (n_mission: number | null) => async (dispatch: AppDispatch, getState: any) => {
   try {
-    const res = await http.delete(`/missions/${n_mission}`);
+    const token: string | null = getState()?.auth?.token ?? null;
+    const res = await http.delete(`/missions/${n_mission}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
     if (res) {
       await dispatch(setAlert({ msg: 'Order Deleted Successfully', type: AlertTypes.SUCCESS }));
       dispatch(removeOrder(res.data));

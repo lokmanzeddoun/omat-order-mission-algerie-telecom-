@@ -91,11 +91,11 @@ const initialColumns: GridColDef<IMission>[] = [
     minWidth: 150,
     filterable: true,
     valueGetter: (params: any) => {
-      const v = params.value;
+      const v = params?.value;
       return v ? moment(v).format('YYYY-MM-DD') : '';
     },
     renderCell: (params: any) => {
-      const value = (params.row as any)?.date_sortie;
+      const value = (params?.row as any)?.date_sortie;
       return value ? (
         moment(value).format('YYYY/MM/DD')
       ) : (
@@ -134,11 +134,11 @@ const initialColumns: GridColDef<IMission>[] = [
     minWidth: 150,
     filterable: true,
     valueGetter: (params: any) => {
-      const v = params.value;
+      const v = params?.value;
       return v ? moment(v).format('YYYY-MM-DD') : '';
     },
     renderCell: (params: any) => {
-      const value = (params.row as any)?.date_retour;
+      const value = (params?.row as any)?.date_retour;
       return value ? (
         moment(value).format('YYYY/MM/DD')
       ) : (
@@ -180,13 +180,13 @@ const initialColumns: GridColDef<IMission>[] = [
         COMPLETED: 'Terminé',
         INPROGRESS: 'En cours',
       };
-      const translatedLabel = statusTranslations[params.value] || 'Inconnu';
+      const translatedLabel = statusTranslations[(params?.value as string) || ''] || 'Inconnu';
       const color =
-        params.value === 'PENDING'
+        params?.value === 'PENDING'
           ? 'primary'
-          : params.value === 'COMPLETED'
+          : params?.value === 'COMPLETED'
             ? 'success'
-            : params.value === 'INPROGRESS'
+            : params?.value === 'INPROGRESS'
               ? 'warning'
               : 'info';
 
@@ -235,7 +235,8 @@ const initialColumns: GridColDef<IMission>[] = [
           'Utilisation exceptionnelle du véhicule personnel, à la demande de la hiérarchie',
       };
 
-      const translatedLabel = transportMapping[params.value] || params.value;
+      const raw = (params?.value as string) ?? '';
+      const translatedLabel = transportMapping[raw] || raw;
 
       return (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
@@ -254,7 +255,8 @@ const initialColumns: GridColDef<IMission>[] = [
     flex: 1,
     minWidth: 150,
     renderCell: (params) => {
-      const { date_sortie, heure_sortie, date_retour, heure_retour } = params.row;
+      const row: any = (params?.row as any) || {};
+      const { date_sortie, heure_sortie, date_retour, heure_retour } = row;
       if (!date_sortie || !heure_sortie || !date_retour || !heure_retour) {
         return (
           <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
@@ -285,7 +287,11 @@ const initialColumns: GridColDef<IMission>[] = [
     flex: 1,
     minWidth: 150,
     filterable: false,
-    renderCell: (params) => <RenderCellDownload params={params} />,
+    renderCell: (params) => (params ? <RenderCellDownload params={params} /> : (
+      <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
+        <Chip label={null} size="small" color="default" />
+      </Stack>
+    )),
   },
 ];
 
@@ -458,7 +464,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           filterModel={filterModel}
           onFilterModelChange={setFilterModel}
           onColumnHeaderDoubleClick={(params: any) => {
-            const field = params.field as string;
+            const field = params?.field as string;
             if (!field) return;
             setHeaderSearchField(field);
             const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
@@ -466,6 +472,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           }}
           localeText={localizedTextsMap}
           onRowDoubleClick={(params) => {
+            if (!params) return;
             setHighlightRowId(params.id as GridRowId);
             handleViewDetails(params.row as IMission);
           }}
