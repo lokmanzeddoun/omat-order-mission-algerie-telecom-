@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useState } from 'react';
+import React, { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,18 +8,12 @@ import {
   TextField,
   Stack,
   Chip,
-  // InputAdornment,
-  // MenuItem,
 } from '@mui/material';
-// import IconifyIcon from 'components/base/IconifyIcon';
-// import { useDispatch } from 'react-redux';
-// import { setAlert } from 'components/alert/alert.reducer';
-// import { AlertTypes } from 'constants/alert';
-// import { AppDispatch } from 'store';
 import moment from 'moment';
 import { IMission } from './orderReducer';
 import { calculateMealsAndAccommodation } from 'helpers/utils';
-interface IDecompte {
+
+export interface IDecompte {
   heure_sortie: string;
   date_retour: string;
   heure_retour: string;
@@ -35,11 +29,54 @@ interface DecompteModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: IDecompte) => void;
-  isEdit?: boolean; // To identify if it's edit mode
-  initialData?: IDecompte; // Initial data for edit mode
-  readOnly?: boolean; // New prop to determine if fields should be read-only
+  isEdit?: boolean;
+  initialData?: IDecompte;
+  readOnly?: boolean;
   order: IMission;
 }
+
+const normalizeDateValue = (value: unknown): string => {
+  if (value == null) return '';
+  const raw = String(value).trim();
+  if (!raw) return '';
+  const parsed = moment(raw, ['YYYY-MM-DD', moment.ISO_8601], true);
+  if (parsed.isValid()) return parsed.format('YYYY-MM-DD');
+  const fallback = moment(raw);
+  return fallback.isValid() ? fallback.format('YYYY-MM-DD') : '';
+};
+
+const normalizeTimeValue = (value: unknown): string => {
+  if (value == null) return '';
+  const raw = String(value).trim();
+  if (!raw) return '';
+  const [hours = '', minutes = '', seconds = ''] = raw.split(':');
+  if (!hours) return '';
+  const paddedHours = hours.padStart(2, '0');
+  const paddedMinutes = (minutes || '00').padStart(2, '0');
+  return seconds
+    ? `${paddedHours}:${paddedMinutes}:${seconds.padStart(2, '0')}`
+    : `${paddedHours}:${paddedMinutes}`;
+};
+
+const buildDecompteFormData = (order: IMission, base?: IDecompte): IDecompte => ({
+  heure_sortie: normalizeTimeValue(
+    base?.heure_sortie ??
+      order?.heure_sortie ??
+      (order?.date_sortie ? moment(order.date_sortie).format('HH:mm') : ''),
+  ),
+  date_retour: normalizeDateValue(base?.date_retour ?? order?.date_retour),
+  heure_retour: normalizeTimeValue(
+    base?.heure_retour ??
+      order?.heure_retour ??
+      (order?.date_retour ? moment(order.date_retour).format('HH:mm') : ''),
+  ),
+  hebergement_sans_pec: base?.hebergement_sans_pec,
+  repas_sans_pec: base?.repas_sans_pec,
+  repas_pec: base?.repas_pec,
+  hebergement_pec: base?.hebergement_pec,
+  distance_km: base?.distance_km,
+  transport_cost: base?.transport_cost,
+});
 
 const DecompteModal: React.FC<DecompteModalProps> = ({
   open,
@@ -48,22 +85,9 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
   isEdit = false,
   initialData,
   order,
-  readOnly = false, // Default to false
+  readOnly = false,
 }) => {
-  // const dispatch = useDispatch<AppDispatch>();
-  const initialFormData: IDecompte = initialData || {
-    heure_sortie: '',
-    date_retour: '',
-    heure_retour: '',
-    hebergement_sans_pec: undefined,
-    repas_sans_pec: undefined,
-    repas_pec: undefined,
-    hebergement_pec: undefined,
-    distance_km: undefined,
-    transport_cost: undefined,
-  };
-
-  const [formData, setFormData] = useState<IDecompte>(initialFormData);
+  const [formData, setFormData] = useState<IDecompte>(() => buildDecompteFormData(order, initialData));
   const [hebergement, setHebergement] = useState(0);
   const [repas, setRepas] = useState(0);
   const [errors, setErrors] = useState({
@@ -74,15 +98,14 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
     repas: false,
   });
 
+  const missionDepartureDate = useMemo(
+    () => normalizeDateValue(order?.date_sortie),
+    [order?.date_sortie],
+  );
+
   useEffect(() => {
-    const updatedFormData = {
-      ...initialData,
-      date_retour: moment(order.date_retour).format('YYYY-MM-DD'),
-      heure_retour: order.heure_retour,
-      heure_sortie: order.heure_sortie,
-    };
+    const updatedFormData = buildDecompteFormData(order, initialData);
     setFormData(updatedFormData);
-    console.log(updatedFormData);
     setErrors({
       date_retour: false,
       heure_sortie: false,
@@ -90,65 +113,88 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
       hebergement: false,
       repas: false,
     });
-    console.log(order.date_sortie);
 
-    const result = calculateMealsAndAccommodation(
-      moment.utc(order.date_sortie).format('YYYY-MM-DD'),
-      updatedFormData.heure_sortie,
-      updatedFormData.date_retour,
-      updatedFormData.heure_retour,
-    );
-
-    setHebergement(result.accommodations);
-    setRepas(result.meals);
-  }, [isEdit, order, initialData]);
+    if (
+      missionDepartureDate &&
+      updatedFormData.date_retour &&
+      updatedFormData.heure_sortie &&
+      updatedFormData.heure_retour
+    ) {
+      const result = calculateMealsAndAccommodation(
+        missionDepartureDate,
+        normalizeTimeValue(updatedFormData.heure_sortie),
+        normalizeDateValue(updatedFormData.date_retour),
+        normalizeTimeValue(updatedFormData.heure_retour),
+      );
+      setHebergement(result.accommodations);
+      setRepas(result.meals);
+    } else {
+      setHebergement(0);
+      setRepas(0);
+    }
+  }, [isEdit, order, initialData, missionDepartureDate, open]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    const numericFields = [
+    const numericFields = new Set([
       'hebergement_sans_pec',
       'repas_sans_pec',
       'repas_pec',
       'hebergement_pec',
       'distance_km',
       'transport_cost',
-    ];
+    ]);
 
-    // Update formData
     const updatedFormData = {
       ...formData,
-      [name]: numericFields.includes(name) ? Number(value) : value, // Convert to number if it's a numeric field
-    };
+      [name]: numericFields.has(name)
+        ? value === ''
+          ? undefined
+          : Number(value)
+        : value,
+    } as IDecompte;
 
-    // Update state
     setFormData(updatedFormData);
-    setErrors((prevErrors) => ({
-      ...prevErrors,
-      [name]: false, // Clear the error when field is modified
+    setErrors((prev) => ({
+      ...prev,
+      [name]: false,
     }));
-    if (['heure_sortie', 'heure_retour', 'date_retour'].includes(name)) {
-      const result = calculateMealsAndAccommodation(
-        moment.utc(order.date_sortie).format('YYYY-MM-DD'), // Assuming this is fixed
-        updatedFormData.heure_sortie,
-        updatedFormData.date_retour,
-        updatedFormData.heure_retour,
-      );
 
-      // Update hebergement and repas state
-      setHebergement(result.accommodations);
-      setRepas(result.meals);
+    if (['heure_sortie', 'heure_retour', 'date_retour'].includes(name)) {
+      if (
+        missionDepartureDate &&
+        updatedFormData.heure_sortie &&
+        updatedFormData.date_retour &&
+        updatedFormData.heure_retour
+      ) {
+        const result = calculateMealsAndAccommodation(
+          missionDepartureDate,
+          normalizeTimeValue(updatedFormData.heure_sortie),
+          normalizeDateValue(updatedFormData.date_retour),
+          normalizeTimeValue(updatedFormData.heure_retour),
+        );
+        setHebergement(result.accommodations);
+        setRepas(result.meals);
+      } else {
+        setHebergement(0);
+        setRepas(0);
+      }
     }
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log(moment(formData.date_retour).isBefore(order.date_sortie.split('T')[0]));
-    // Error handling logic
+
+    const retourMoment = moment(formData.date_retour, 'YYYY-MM-DD', true);
+    const sortieMoment = missionDepartureDate
+      ? moment(missionDepartureDate, 'YYYY-MM-DD', true)
+      : null;
+
     const newErrors = {
       date_retour:
         !formData.date_retour ||
-        formData.date_retour === 'Invalid date' ||
-        moment(formData.date_retour).isBefore(order.date_sortie.split('T')[0]),
+        !retourMoment.isValid() ||
+        (sortieMoment?.isValid() ? retourMoment.isBefore(sortieMoment) : false),
       heure_sortie: !formData.heure_sortie,
       heure_retour: !formData.heure_retour,
       hebergement:
@@ -156,7 +202,7 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
       repas: (formData.repas_sans_pec || 0) + (formData.repas_pec || 0) !== repas,
     };
 
-    if (Object.values(newErrors).some((err) => err)) {
+    if (Object.values(newErrors).some(Boolean)) {
       setErrors(newErrors);
       return;
     }
@@ -179,7 +225,7 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
       hebergement: false,
       repas: false,
     });
-    // setFormData(initialFormData);
+    setFormData(buildDecompteFormData(order, initialData));
   };
 
   return (
@@ -194,23 +240,20 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
           onSubmit={handleSubmit}
           gap={2}
         >
-          {/* Date de Sortie */}
           <TextField
             name="date_retour"
             label="Date Retour"
             type="date"
             fullWidth
-            // required
             variant="outlined"
             InputLabelProps={{ shrink: true }}
             value={formData.date_retour}
-            onChange={readOnly ? undefined : handleChange} // Prevent change if read-only
-            InputProps={{ readOnly }} // Make field read-only
+            onChange={readOnly ? undefined : handleChange}
+            InputProps={{ readOnly }}
             error={errors.date_retour}
             helperText={errors.date_retour ? 'Date est obligatoire' : ''}
           />
 
-          {/* Heure de Sortie */}
           <TextField
             name="heure_sortie"
             label="Heure Depart"
@@ -225,7 +268,6 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
             helperText={errors.heure_sortie ? 'Heure de sortie est obligatoire' : ''}
           />
 
-          {/* Heure de Retour */}
           <TextField
             name="heure_retour"
             label="Heure Retour"
@@ -239,16 +281,17 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
             error={errors.heure_retour}
             helperText={errors.heure_retour ? 'Heure de retour est obligatoire' : ''}
           />
+
           <Stack direction="row" gap={2}>
             <TextField
               name="hebergement_sans_pec"
               placeholder="Hébergement sans PEC"
-              type="number" // Change to number
+              type="number"
               fullWidth
               variant="outlined"
-              value={formData.hebergement_sans_pec || ''} // Ensure it's treated as a number
-              onChange={handleChange}
-              InputProps={{ readOnly }} // Maintain readOnly functionality
+              value={formData.hebergement_sans_pec ?? ''}
+              onChange={readOnly ? undefined : handleChange}
+              InputProps={{ readOnly }}
               error={errors.hebergement}
               helperText={errors.hebergement ? `Total hébergement doit être ${hebergement}` : ''}
             />
@@ -256,11 +299,11 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
             <TextField
               name="repas_sans_pec"
               placeholder="Repas sans PEC"
-              type="number" // Change to number
+              type="number"
               fullWidth
               variant="outlined"
-              value={formData.repas_sans_pec || ''} // Ensure it's treated as a number
-              onChange={handleChange}
+              value={formData.repas_sans_pec ?? ''}
+              onChange={readOnly ? undefined : handleChange}
               InputProps={{ readOnly }}
               error={errors.repas}
               helperText={errors.repas ? `Total repas doit être ${repas}` : ''}
@@ -271,11 +314,11 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
             <TextField
               name="repas_pec"
               placeholder="Repas avec PEC"
-              type="number" // Change to number
+              type="number"
               fullWidth
               variant="outlined"
-              value={formData.repas_pec || ''} // Ensure it's treated as a number
-              onChange={handleChange}
+              value={formData.repas_pec ?? ''}
+              onChange={readOnly ? undefined : handleChange}
               InputProps={{ readOnly }}
               error={errors.repas}
               helperText={errors.repas ? `Total repas doit être ${repas}` : ''}
@@ -284,16 +327,17 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
             <TextField
               name="hebergement_pec"
               placeholder="Hébergement avec PEC"
-              type="number" // Change to number
+              type="number"
               fullWidth
               variant="outlined"
-              value={formData.hebergement_pec || ''} // Ensure it's treated as a number
-              onChange={handleChange}
+              value={formData.hebergement_pec ?? ''}
+              onChange={readOnly ? undefined : handleChange}
               InputProps={{ readOnly }}
               error={errors.hebergement}
               helperText={errors.hebergement ? `Total hébergement doit être ${hebergement}` : ''}
             />
           </Stack>
+
           <Stack direction="row" gap={2}>
             <TextField
               name="distance_km"
@@ -301,8 +345,8 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
               type="number"
               fullWidth
               variant="outlined"
-              value={formData.distance_km || ''}
-              onChange={handleChange}
+              value={formData.distance_km ?? ''}
+              onChange={readOnly ? undefined : handleChange}
               InputProps={{ readOnly }}
             />
             <TextField
@@ -311,28 +355,18 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
               type="number"
               fullWidth
               variant="outlined"
-              value={formData.transport_cost || ''}
-              onChange={handleChange}
+              value={formData.transport_cost ?? ''}
+              onChange={readOnly ? undefined : handleChange}
               InputProps={{ readOnly }}
             />
           </Stack>
-          {/* Display calculated chips */}
-          <Stack
-            direction="row"
-            spacing={2}
-            mt={2}
-            alignItems="center" // Centers vertically
-            justifyContent="center"
-          >
-            <Chip
-              label={`Repas disponibles: ${repas}`}
-              color="primary"
-              sx={{ width: '160px' }} // Set custom width here
-            />
+
+          <Stack direction="row" spacing={2} mt={2} alignItems="center" justifyContent="center">
+            <Chip label={`Repas disponibles: ${repas}`} color="primary" sx={{ width: '160px' }} />
             <Chip
               label={`Hébergement disponibles: ${hebergement}`}
               color="secondary"
-              sx={{ width: '230px' }} // Set custom width here
+              sx={{ width: '230px' }}
             />
           </Stack>
         </Stack>

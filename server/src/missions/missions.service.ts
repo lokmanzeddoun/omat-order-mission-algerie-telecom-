@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   StreamableFile,
 } from '@nestjs/common';
@@ -35,26 +36,69 @@ export class MissionsService {
   async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
     console.log(createMissionDto);
     const exerciceId = await this.getCurrentExerciceId();
+    // Drop any legacy heure_* fields if present in request body (backward compatibility)
+    const {
+      heure_sortie: _h1,
+      heure_retour: _h2,
+      userMatricule: requestedMatricule,
+      user: requestedUser,
+      ...cleanDto
+    } = (createMissionDto as any) || {};
+    // Determine target user: default to requester; allow override for admins
+    let targetMatricule: number = user.matricule;
+    const candidateMatricule: number | null =
+      typeof requestedMatricule === 'number'
+        ? requestedMatricule
+        : requestedUser && typeof requestedUser.matricule === 'number'
+          ? requestedUser.matricule
+          : null;
+
+    if (candidateMatricule && candidateMatricule !== user.matricule) {
+      if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+        throw new ForbiddenException(
+          `${user.nom} is not authorized to create missions for other users`,
+        );
+      }
+      // Optionally, ensure the target user exists
+      const exists = await this.databaseService.user.findUnique({
+        where: { matricule: candidateMatricule },
+        select: { matricule: true },
+      });
+      if (!exists) {
+        throw new BadRequestException(
+          `Target user with matricule ${candidateMatricule} not found`,
+        );
+      }
+      targetMatricule = candidateMatricule;
+    }
     const res = await this.databaseService.mission.create({
       data: {
-        ...createMissionDto,
+        ...cleanDto,
         // userId: userData.matricule,
-        date_sortie: createMissionDto.date_sortie
-          ? moment.utc(createMissionDto.date_sortie, 'YYYY-MM-DD').toDate()
+        // Expect full ISO datetime strings; store as Date
+        date_sortie: (cleanDto as any).date_sortie
+          ? new Date((cleanDto as any).date_sortie as any)
           : null,
-        date_retour: createMissionDto.date_retour
-          ? moment.utc(createMissionDto.date_retour, 'YYYY-MM-DD').toDate()
+        date_retour: (cleanDto as any).date_retour
+          ? new Date((cleanDto as any).date_retour as any)
           : null,
-        transport: createMissionDto.transport || null, // Set transport to null if empty
+        transport: (cleanDto as any).transport || null, // Set transport to null if empty
         user: {
-          connect: { matricule: user.matricule },
+          connect: { matricule: targetMatricule },
         },
         ...(exerciceId ? { exercice: { connect: { id: exerciceId } } } : {}),
       },
     });
+    // Use the target user's information for document generation
+    const pdfUser =
+      targetMatricule === user.matricule
+        ? user
+        : await this.databaseService.user.findUnique({
+            where: { matricule: targetMatricule },
+          });
     const service = await this.databaseService.structure.findUnique({
       where: {
-        code: user.serviceId,
+        code: pdfUser?.serviceId,
       },
       select: {
         name: true,
@@ -66,10 +110,10 @@ export class MissionsService {
     const replacements = {
       id: res.n_mission,
       date: moment().format('DD/MM/YYYY'), // e.g., "25-Jul-2024"
-      fullname: `${user.nom} ${user.prenom}`, // Assuming male employee for the dummy data
-      ref: user.grade,
-      service: service.name,
-      matricule: user.matricule,
+      fullname: `${pdfUser?.nom ?? ''} ${pdfUser?.prenom ?? ''}`,
+      ref: pdfUser?.grade,
+      service: service?.name,
+      matricule: pdfUser?.matricule,
       destination: res.destination || '',
       date_depart: res.date_sortie
         ? moment(res.date_sortie).format('DD/MM/YYYY')
@@ -77,10 +121,10 @@ export class MissionsService {
       date_retour: res.date_retour
         ? moment(res.date_retour).format('DD/MM/YYYY')
         : '',
-      h_r: res.heure_retour ? res.heure_retour.split(':')[0] : '',
-      h_d: res.heure_sortie ? res.heure_sortie.split(':')[0] : '',
-      m_r: res.heure_retour ? res.heure_retour.split(':')[1] : '',
-      m_d: res.heure_sortie ? res.heure_sortie.split(':')[1] : '',
+      h_r: res.date_retour ? moment(res.date_retour).format('HH') : '',
+      h_d: res.date_sortie ? moment(res.date_sortie).format('HH') : '',
+      m_r: res.date_retour ? moment(res.date_retour).format('mm') : '',
+      m_d: res.date_sortie ? moment(res.date_sortie).format('mm') : '',
     };
     // Set the template variables
     doc.setData(replacements);
@@ -137,9 +181,7 @@ export class MissionsService {
       select: {
         n_mission: true,
         date_sortie: true,
-        heure_sortie: true,
         date_retour: true,
-        heure_retour: true,
         motif: true,
         transport: true,
         destination: true,
@@ -201,9 +243,7 @@ export class MissionsService {
       select: {
         n_mission: true,
         date_sortie: true,
-        heure_sortie: true,
         date_retour: true,
-        heure_retour: true,
         motif: true,
         transport: true,
         destination: true,
@@ -233,6 +273,9 @@ export class MissionsService {
       if (typeof input === 'string') {
         const s = input.trim();
         if (!s) return null; // empty string means clear the date
+        // Accept full ISO datetime; fall back to strict YYYY-MM-DD
+        const mIso = moment(s, moment.ISO_8601, true);
+        if (mIso.isValid()) return mIso.toDate();
         const m = moment.utc(s, 'YYYY-MM-DD', true);
         return m.isValid() ? m.toDate() : null; // invalid string clears field
       }
@@ -279,6 +322,8 @@ export class MissionsService {
     const {
       date_sortie: _ds,
       date_retour: _dr,
+      heure_sortie: _hs, // legacy - drop
+      heure_retour: _hr, // legacy - drop
       ...rest
     } = updateMissionDto as any;
 
@@ -340,10 +385,10 @@ export class MissionsService {
       date_retour: mission.date_retour
         ? moment(mission.date_retour).format('DD/MM/YYYY')
         : '',
-      h_r: mission.heure_retour ? mission.heure_retour.split(':')[0] : '',
-      h_d: mission.heure_sortie ? mission.heure_sortie.split(':')[0] : '',
-      m_r: mission.heure_retour ? mission.heure_retour.split(':')[1] : '',
-      m_d: mission.heure_sortie ? mission.heure_sortie.split(':')[1] : '',
+      h_r: mission.date_retour ? moment(mission.date_retour).format('HH') : '',
+      h_d: mission.date_sortie ? moment(mission.date_sortie).format('HH') : '',
+      m_r: mission.date_retour ? moment(mission.date_retour).format('mm') : '',
+      m_d: mission.date_sortie ? moment(mission.date_sortie).format('mm') : '',
       wilaya: 'Tlemcen',
     };
     // Set the template variables

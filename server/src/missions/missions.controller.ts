@@ -24,22 +24,20 @@ export class MissionsController {
   @Auth()
   @Post()
   create(@Body() createMissionDto: CreateMissionDto, @GetUser() user: User) {
-    // Cross-field validation: date_retour must be less than date_sortie (strictly earlier)
+    // Cross-field validation: date_retour must be strictly after date_sortie
     if (
       createMissionDto.date_retour &&
       createMissionDto.date_retour.trim() !== ''
     ) {
-      const retourStr = `${createMissionDto.date_retour}T${(createMissionDto.heure_retour || '00:00').trim()}:00`;
-      const sortieStr = `${createMissionDto.date_sortie}T${(createMissionDto.heure_sortie || '00:00').trim()}:00`;
-      const dRetour = new Date(retourStr);
-      const dSortie = new Date(sortieStr);
+      const dRetour = new Date(createMissionDto.date_retour);
+      const dSortie = new Date(createMissionDto.date_sortie);
       if (isNaN(dRetour.getTime()) || isNaN(dSortie.getTime())) {
         throw new BadRequestException('Invalid date/time format');
       }
       // Option B: return must be strictly after depart
       if (!(dRetour.getTime() > dSortie.getTime())) {
         throw new BadRequestException(
-          'date_retour + heure_retour must be strictly after date_sortie + heure_sortie',
+          'date_retour must be strictly after date_sortie',
         );
       }
     }
@@ -87,23 +85,62 @@ export class MissionsController {
 
   @Patch(':id')
   @Auth()
-  update(@Param('id') id: string, @Body() updateMissionDto: UpdateMissionDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateMissionDto: UpdateMissionDto,
+  ) {
     // Optional cross-field checks only for provided fields
-    if (
-      (updateMissionDto.date_retour &&
-        updateMissionDto.date_retour.trim() !== '') ||
-      updateMissionDto.heure_retour ||
-      updateMissionDto.date_sortie ||
-      updateMissionDto.heure_sortie
-    ) {
-      const retourStr = `${updateMissionDto.date_retour ?? ''}T${(updateMissionDto.heure_retour || '00:00').trim()}:00`;
-      const sortieStr = `${updateMissionDto.date_sortie ?? ''}T${(updateMissionDto.heure_sortie || '00:00').trim()}:00`;
-      const dRetour = new Date(retourStr);
-      const dSortie = new Date(sortieStr);
-      if (!isNaN(dRetour.getTime()) && !isNaN(dSortie.getTime())) {
+    console.log('Update DTO received:', updateMissionDto);
+
+    // Only validate dates if we're updating date/time fields
+    // We need to fetch the existing mission to get complete data for validation
+    const hasDateTimeUpdate =
+      updateMissionDto.date_retour !== undefined ||
+      updateMissionDto.date_sortie !== undefined;
+
+    if (hasDateTimeUpdate) {
+      // Fetch existing mission to get complete date/time data
+      const existingMission = await this.missionsService.findOne(+id);
+
+      // Merge existing data with updates
+      const finalDateSortie =
+        updateMissionDto.date_sortie ?? (existingMission.date_sortie as any);
+      const finalDateRetour =
+        updateMissionDto.date_retour ?? (existingMission.date_retour as any);
+
+      // Convert dates to strings if needed
+      const dateSortieStr =
+        finalDateSortie instanceof Date
+          ? finalDateSortie.toISOString()
+          : finalDateSortie;
+      const dateRetourStr =
+        finalDateRetour instanceof Date
+          ? finalDateRetour.toISOString()
+          : finalDateRetour;
+
+      // Only validate if we have both return date and departure date
+      if (
+        dateRetourStr &&
+        typeof dateRetourStr === 'string' &&
+        dateRetourStr.trim() !== ''
+      ) {
+        const dRetour = new Date(dateRetourStr);
+        const dSortie = new Date(dateSortieStr);
+
+        console.log('Validating dates:', {
+          dateSortieStr,
+          dateRetourStr,
+          dSortie,
+          dRetour,
+        });
+
+        if (isNaN(dRetour.getTime()) || isNaN(dSortie.getTime())) {
+          throw new BadRequestException('Invalid date/time format');
+        }
+
         if (!(dRetour.getTime() > dSortie.getTime())) {
           throw new BadRequestException(
-            'date_retour + heure_retour must be strictly after date_sortie + heure_sortie',
+            'date_retour must be strictly after date_sortie',
           );
         }
       }

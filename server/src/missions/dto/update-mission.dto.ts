@@ -16,22 +16,8 @@ export class UpdateMissionDto extends PartialType(CreateMissionDto) {
   @Transform(({ value }) =>
     typeof value === 'string' && value.trim() === '' ? undefined : value,
   )
-  @IsString()
-  heure_sortie?: string;
-
-  @IsOptional()
-  @Transform(({ value }) =>
-    typeof value === 'string' && value.trim() === '' ? undefined : value,
-  )
   @IsDateString()
   date_retour?: string;
-
-  @IsOptional()
-  @Transform(({ value }) =>
-    typeof value === 'string' && value.trim() === '' ? undefined : value,
-  )
-  @IsString()
-  heure_retour?: string;
 
   @IsOptional()
   @Transform(({ value }) =>

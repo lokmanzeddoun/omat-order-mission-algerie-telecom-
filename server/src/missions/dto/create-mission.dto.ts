@@ -3,19 +3,14 @@ import { Transform } from 'class-transformer';
 import { TransportType, User } from '@prisma/client';
 
 export class CreateMissionDto {
+  // Full ISO datetime string (e.g., 2025-10-30T14:30:00Z or local ISO)
   @IsDateString()
   date_sortie: string;
-
-  @IsString()
-  heure_sortie: string;
 
   @IsOptional()
   @Transform(({ value }) => (value === '' ? undefined : value))
   @IsDateString()
   date_retour?: string;
-
-  @IsString()
-  heure_retour: string;
 
   @IsString()
   motif: string;

@@ -66,12 +66,10 @@ export class DecompteService {
       },
       data: {
         status: MissionStatus.COMPLETED,
-        date_retour: moment(
-          createDecompteDto.date_retour,
-          'YYYY-MM-DD',
+        // Combine provided date_retour and heure_retour into a single DateTime
+        date_retour: new Date(
+          `${createDecompteDto.date_retour}T${createDecompteDto.heure_retour}:00`,
         ).toISOString(),
-        heure_sortie: createDecompteDto.heure_sortie,
-        heure_retour: createDecompteDto.heure_retour,
       },
     });
     // calculate the montant
@@ -170,8 +168,6 @@ export class DecompteService {
           select: {
             date_retour: true,
             date_sortie: true,
-            heure_retour: true,
-            heure_sortie: true,
             transport: true,
             motif: true,
             destination: true,
@@ -209,8 +205,6 @@ export class DecompteService {
           select: {
             date_retour: true,
             date_sortie: true,
-            heure_retour: true,
-            heure_sortie: true,
             transport: true,
             motif: true,
             destination: true,
@@ -266,12 +260,10 @@ export class DecompteService {
         n_mission: decompte.missionId,
       },
       data: {
-        date_retour: moment(
-          updateDecompteDto.date_retour,
-          'YYYY-MM-DD',
+        // Combine provided date_retour and heure_retour into a single DateTime
+        date_retour: new Date(
+          `${updateDecompteDto.date_retour}T${updateDecompteDto.heure_retour}:00`,
         ).toISOString(),
-        heure_retour: updateDecompteDto.heure_retour,
-        heure_sortie: updateDecompteDto.heure_sortie,
       },
     });
     // calculate the montant
@@ -403,18 +395,10 @@ export class DecompteService {
     const fullanmeVal = user
       ? `${user.nom ?? ''} ${user.prenom ?? ''}`.trim() || null
       : null;
-    const h_d_val = mission?.heure_sortie
-      ? mission.heure_sortie.split(':')[0]
-      : this.getHour(mission?.date_sortie);
-    const h_r_val = mission?.heure_retour
-      ? mission.heure_retour.split(':')[0]
-      : this.getHour(mission?.date_retour);
-    const m_d_val = mission?.heure_sortie
-      ? mission.heure_sortie.split(':')[1]
-      : this.getMinute(mission?.date_sortie);
-    const m_r_val = mission?.heure_retour
-      ? mission.heure_retour.split(':')[1]
-      : this.getMinute(mission?.date_retour);
+    const h_d_val = this.getHour(mission?.date_sortie);
+    const h_r_val = this.getHour(mission?.date_retour);
+    const m_d_val = this.getMinute(mission?.date_sortie);
+    const m_r_val = this.getMinute(mission?.date_retour);
     const nbr_jour_val =
       mission?.date_sortie && mission?.date_retour
         ? Math.max(

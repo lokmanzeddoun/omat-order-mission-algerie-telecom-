@@ -50,6 +50,13 @@
 			"command": "cd /home/lokmane-zed/clone_github_projects/omat-order-mission-algerie-telecom-/server && npm run build",
 			"isBackground": false,
 			"group": "build"
+		},
+		{
+			"label": "Build server",
+			"type": "shell",
+			"command": "cd /home/lokmane-zed/clone_github_projects/omat-order-mission-algerie-telecom-/server && npm run build",
+			"isBackground": false,
+			"group": "build"
 		}
 	]
 }

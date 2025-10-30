@@ -3,10 +3,12 @@ import { Direction } from 'constants/direction';
 
 export interface IMission {
   n_mission?: number; // The unique identifier for the mission
-  date_sortie: string; // The departure date
-  heure_sortie: string; // The departure time
-  date_retour: string; // The return date
-  heure_retour: string; // The return time
+  // ISO datetime strings from API; UI may keep separate time inputs locally
+  date_sortie: string; // Full datetime (e.g., 2025-10-30T14:30:00Z)
+  date_retour?: string; // Full datetime or undefined when not set yet
+  // Optional UI-only fields when editing/creating
+  heure_sortie?: string; // e.g., '14:30'
+  heure_retour?: string; // e.g., '16:00'
   motif: string; // The reason or purpose of the mission
   transport: string; // Mode of transport (e.g., 'Car', 'Plane', etc.)
   destination: string; // The destination of the mission

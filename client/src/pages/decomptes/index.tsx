@@ -97,8 +97,24 @@ const DecomptesPage = () => {
       },
     },
     { field: 'motif', headerName: 'Motif de Déplacement', minWidth: 260, valueGetter: (p: any) => p?.row?.mission?.motif ?? '', headerSearchable: true },
-    { field: 'heure_sortie', headerName: 'Heure Sortie', minWidth: 130, valueGetter: (p: any) => p?.row?.mission?.heure_sortie ?? '' },
-    { field: 'heure_retour', headerName: 'Heure Retour', minWidth: 130, valueGetter: (p: any) => p?.row?.mission?.heure_retour ?? '' },
+    {
+      field: 'heure_sortie',
+      headerName: 'Heure Sortie',
+      minWidth: 130,
+      renderCell: (p: any) => {
+        const v = p?.row?.mission?.date_sortie;
+        return v ? moment(v).format('HH:mm') : <Chip label={null} size="small" color="default" />;
+      },
+    },
+    {
+      field: 'heure_retour',
+      headerName: 'Heure Retour',
+      minWidth: 130,
+      renderCell: (p: any) => {
+        const v = p?.row?.mission?.date_retour;
+        return v ? moment(v).format('HH:mm') : <Chip label={null} size="small" color="default" />;
+      },
+    },
     { field: 'repas_pec', headerName: 'Nbr Repas PEC', type: 'number', minWidth: 150 },
     { field: 'hebergement_pec', headerName: 'Nbr Hébergement PEC', type: 'number', minWidth: 190 },
     { field: 'repas_sans_pec', headerName: 'Nbr Repas non PEC', type: 'number', minWidth: 190 },

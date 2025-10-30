@@ -13,7 +13,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
 import { AppDispatch } from 'store';
 import { logout } from 'components/auth/auth.thunk';
-import image from 'assets/photo-1535713875002-d1d0cf377fde.jpeg';
 import AccountIcon from 'assets/icons/hugeicons--account-setting-02.svg?react';
 import LogoutIcon from 'assets/icons/hugeicons--logout-03.svg?react';
 import ProfileIcon from 'assets/icons/hugeicons--user-circle-02.svg?react';
@@ -77,13 +76,15 @@ const ProfileMenu = () => {
         disableRipple
       >
         <Avatar
-          src={image}
           sx={{
             height: 48,
             width: 48,
             bgcolor: 'primary.main',
+            fontWeight: 600,
           }}
-        />
+        >
+          {user?.nom?.charAt(0) || 'U'}
+        </Avatar>
       </ButtonBase>
 
       <Menu

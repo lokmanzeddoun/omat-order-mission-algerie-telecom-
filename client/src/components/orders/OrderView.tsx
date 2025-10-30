@@ -115,8 +115,11 @@ const initialColumns: GridColDef<IMission>[] = [
     filterable: false,
     minWidth: 150,
     renderCell: (params: any) => {
-      return params?.value ? (
-        params?.value
+      const row: any = params?.row || {};
+      const ds = row.date_sortie;
+      const label = ds ? moment(ds).format('HH:mm') : '';
+      return label ? (
+        label
       ) : (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
           <Chip label={null} size="small" color="default" />
@@ -158,8 +161,11 @@ const initialColumns: GridColDef<IMission>[] = [
     filterable: false,
     minWidth: 150,
     renderCell: (params: any) => {
-      return params?.value ? (
-        params?.value
+      const row: any = params?.row || {};
+      const dr = row.date_retour;
+      const label = dr ? moment(dr).format('HH:mm') : '';
+      return label ? (
+        label
       ) : (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
           <Chip label={null} size="small" color="default" />
@@ -256,22 +262,16 @@ const initialColumns: GridColDef<IMission>[] = [
     minWidth: 150,
     renderCell: (params) => {
       const row: any = (params?.row as any) || {};
-      const { date_sortie, heure_sortie, date_retour, heure_retour } = row;
-      if (!date_sortie || !heure_sortie || !date_retour || !heure_retour) {
+      const { date_sortie, date_retour } = row;
+      if (!date_sortie || !date_retour) {
         return (
           <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
             <Chip label={null} size="small" color="default" />
           </Stack>
         );
       }
-      const startDate = moment(date_sortie).set({
-        hour: parseInt(heure_sortie.split(':')[0]),
-        minute: parseInt(heure_sortie.split(':')[1]),
-      });
-      const endDate = moment(date_retour).set({
-        hour: parseInt(heure_retour.split(':')[0]),
-        minute: parseInt(heure_retour.split(':')[1]),
-      });
+      const startDate = moment(date_sortie);
+      const endDate = moment(date_retour);
       const duration = moment.duration(endDate.diff(startDate));
       const hoursLeft = Math.floor(duration.asHours());
       const daysLeft = Math.floor(duration.asDays());
@@ -327,11 +327,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
     setViewOnly(false);
     setEditModalOpen(true);
   };
-  const handleViewDetails = (order: IMission) => {
-    setselectedOrder(order);
-    setViewOnly(true);
-    setEditModalOpen(true);
-  };
+  // Removed view-only open on double click; users can still toggle read-only later if needed
   const ConfirmationDelete = async () => {
     if (!selectedOrder) return;
     await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
@@ -474,7 +470,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           onRowDoubleClick={(params) => {
             if (!params) return;
             setHighlightRowId(params.id as GridRowId);
-            handleViewDetails(params.row as IMission);
+            handleEdit(params.row as IMission);
           }}
           onRowSelectionModelChange={(ids) => {
             const selectedRows = orders.filter(

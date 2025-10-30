@@ -35,10 +35,10 @@ model Structure {
 }
 model Mission {
   n_mission Int @default(autoincrement()) @id
+  // Store full datetime (date + time) in a single field
   date_sortie DateTime?
-  heure_sortie String?
+  // Return datetime (date + time) stored in a single field
   date_retour DateTime?
-  heure_retour String?
   motif String?
   status MissionStatus? @default(INPROGRESS)
   transport TransportType?

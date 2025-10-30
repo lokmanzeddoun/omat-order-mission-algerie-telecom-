@@ -18,8 +18,21 @@ import { saveAs } from 'file-saver';
 export const addOrder =
   (order: IMission, token: string | null) => async (dispatch: AppDispatch) => {
     try {
+      // Build payload: combine date + time into ISO datetimes; remove UI-only heure_* fields
+      const payload: any = { ...order };
+      if (order.date_sortie) {
+        const time = order.heure_sortie || '00:00';
+        payload.date_sortie = new Date(`${order.date_sortie}T${time}:00`).toISOString();
+      }
+      if (order.date_retour) {
+        const time = order.heure_retour || '00:00';
+        payload.date_retour = new Date(`${order.date_retour}T${time}:00`).toISOString();
+      }
+      delete payload.heure_sortie;
+      delete payload.heure_retour;
+
       // Set responseType to blob to handle file downloads
-      const res = await http.post<Blob>(`/missions`, order, {
+      const res = await http.post<Blob>(`/missions`, payload, {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
@@ -105,13 +118,38 @@ export const updateMission = (order: IMission) => async (dispatch: AppDispatch, 
   try {
     const token: string | null = getState()?.auth?.token ?? null;
     // Do not send primary key in the body; only send changed fields
-    const { n_mission, ...body } = (order as any) || {};
+    const { n_mission, ...rawBody } = (order as any) || {};
+
+    // Map date/time into ISO datetimes; only include provided fields
+    const body: any = { ...rawBody };
+    if (rawBody.date_sortie) {
+      const d = rawBody.date_sortie;
+      // If provided value looks like YYYY-MM-DD, combine with heure_sortie (if any)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        const t = rawBody.heure_sortie || '00:00';
+        body.date_sortie = new Date(`${d}T${t}:00`).toISOString();
+      }
+    }
+    if (rawBody.date_retour) {
+      const d = rawBody.date_retour;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        const t = rawBody.heure_retour || '00:00';
+        body.date_retour = new Date(`${d}T${t}:00`).toISOString();
+      }
+    }
+    delete body.heure_sortie;
+    delete body.heure_retour;
+
+    console.log('Updating mission:', { n_mission, body });
+
     const res = await http.patch(`/missions/${n_mission}`, body, {
       headers: {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
+
+
     if (res && res.data) {
       await dispatch(setAlert({ msg: 'Order Updated Successfully', type: AlertTypes.SUCCESS }));
       dispatch(editMission(res.data));
@@ -128,7 +166,6 @@ export const updateMission = (order: IMission) => async (dispatch: AppDispatch, 
     }
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
-    console.error('Error:', errorMessage);
   }
 };
 export const fetchAllOrders = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {

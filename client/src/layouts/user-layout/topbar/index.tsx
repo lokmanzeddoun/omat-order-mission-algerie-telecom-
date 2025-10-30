@@ -1,6 +1,5 @@
 // Link intentionally removed (we use programmatic navigation)
 import Stack from '@mui/material/Stack';
-import Badge from '@mui/material/Badge';
 import Toolbar from '@mui/material/Toolbar';
 import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
@@ -19,7 +18,6 @@ import { RootState } from 'store/rootReducer';
 import { useNavigate } from 'react-router-dom';
 import paths, { rootPaths } from 'routes/paths';
 import SearchIcon from 'assets/icons/mynaui--search.svg?react';
-import SolarIcon from 'assets/icons/solar--bell-outline.svg?react';
 
 const Topbar = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -116,11 +114,6 @@ const Topbar = () => {
         <Button variant="contained" color="primary" onClick={handleOpen}>
           Ajouter Mission
         </Button>
-        <IconButton size="large">
-          <Badge color="error" variant="dot">
-            <IconifyIcon icon={SolarIcon} />
-          </Badge>
-        </IconButton>
         <ProfileMenu />
       </Stack>
     </Stack>

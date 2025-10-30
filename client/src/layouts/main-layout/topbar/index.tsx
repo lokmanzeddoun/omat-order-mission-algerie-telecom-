@@ -2,7 +2,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from 'store/rootReducer';
 import { useNavigate } from 'react-router-dom';
 import Stack from '@mui/material/Stack';
-import Badge from '@mui/material/Badge';
 import Toolbar from '@mui/material/Toolbar';
 import ButtonBase from '@mui/material/ButtonBase';
 import IconButton from '@mui/material/IconButton';
@@ -17,7 +16,6 @@ import MissionModal from 'components/orders/CreateOrder';
 import AppAlert from 'components/alert';
 import { Button } from '@mui/material';
 import MenuIcon from 'assets/icons/clarity--menu-line.svg?react';
-import SolarIcon from 'assets/icons/solar--bell-outline.svg?react';
 import { useState } from 'react';
 import ExerciceSelector from 'components/exercices/ExerciceSelector';
 
@@ -97,11 +95,6 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
         <Button variant="contained" color="primary" onClick={handleOpen}>
           Ajouter Mission
         </Button>
-        <IconButton size="large">
-          <Badge color="error" variant="dot">
-            <IconifyIcon icon={SolarIcon} />
-          </Badge>
-        </IconButton>
         <ProfileMenu />
       </Stack>
     </Stack>

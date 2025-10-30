@@ -165,10 +165,9 @@ const InvoiceOverviewTable: React.FC = () => {
   };
   const handleOrderSubmit = async (data: any) => {
     if (!selectedUser) return;
-    const userWithoutStructure = { ...(selectedUser as any) };
-    delete (userWithoutStructure as any).structure;
-    data.user = userWithoutStructure;
-    await dispatch(addOrder(data, token));
+    // Attach target user matricule for backend to create mission for that user
+    const payload = { ...data, userMatricule: selectedUser.matricule };
+    await dispatch(addOrder(payload, token));
     // await dispatch(getAllUsers());
     setOpen(false);
     // Handle the submission (e.g., send data to a backend)
@@ -427,7 +426,16 @@ const InvoiceOverviewTable: React.FC = () => {
         />
       </Card>
       {/* Context menu is handled inside SmartTable via contextMenuItems if provided */}
-      <MissionModal open={open1} onClose={handleClose1} onSubmit={handleOrderSubmit} />
+      <MissionModal
+        open={open1}
+        onClose={handleClose1}
+        onSubmit={handleOrderSubmit}
+        targetUser={
+          selectedUser
+            ? { matricule: selectedUser.matricule, nom: selectedUser.nom, prenom: selectedUser.prenom }
+            : undefined
+        }
+      />
       <CreateUserModal open={open} onClose={handleClose} onSubmit={handleUserSubmit} />
       {selectedUser ? (
         <>

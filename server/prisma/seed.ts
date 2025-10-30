@@ -225,10 +225,8 @@ async function main() {
         // Completed mission
         prisma.mission.create({
             data: {
-                date_sortie: new Date('2024-08-01T08:00:00Z'),
-                heure_sortie: '08:00',
-                date_retour: new Date('2024-08-03T18:00:00Z'),
-                heure_retour: '18:00',
+                date_sortie: new Date('2024-08-01T08:08:00Z'),
+                date_retour: new Date('2024-08-03T18:18:00Z'),
                 motif: 'Installation équipements réseau à Oran',
                 status: 'COMPLETED',
                 transport: 'SERVICE_CAR',
@@ -241,10 +239,8 @@ async function main() {
         // Ongoing mission
         prisma.mission.create({
             data: {
-                date_sortie: new Date('2024-08-15T09:00:00Z'),
-                heure_sortie: '09:00',
-                date_retour: new Date('2024-08-17T17:00:00Z'),
-                heure_retour: '17:00',
+                date_sortie: new Date('2024-08-15T09:09:00Z'),
+                date_retour: new Date('2024-08-17T17:17:00Z'),
                 motif: 'Maintenance serveurs Tamanrasset',
                 status: 'INPROGRESS',
                 transport: 'PERSONAL_CAR',
@@ -258,9 +254,7 @@ async function main() {
         prisma.mission.create({
             data: {
                 date_sortie: new Date('2024-08-20T07:30:00Z'),
-                heure_sortie: '07:30',
                 date_retour: new Date('2024-08-20T19:00:00Z'),
-                heure_retour: '19:00',
                 motif: 'Réunion commerciale Constantine',
                 status: 'COMPLETED',
                 transport: 'TRANSPORT_ENTREPRISE',
@@ -274,9 +268,7 @@ async function main() {
         prisma.mission.create({
             data: {
                 date_sortie: new Date('2024-08-25T10:00:00Z'),
-                heure_sortie: '10:00',
                 date_retour: new Date('2024-08-27T16:00:00Z'),
-                heure_retour: '16:00',
                 motif: 'Formation équipe développement Ouargla',
                 status: 'INPROGRESS',
                 transport: 'SERVICE_CAR',

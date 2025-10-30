@@ -83,6 +83,8 @@ pids
 
 # Documentation
 docs/build/
+## Local component READMEs (ignore if not intended for version control)
+docs/components/topbar/README.md
 
 # Optional npm cache directory
 .npm

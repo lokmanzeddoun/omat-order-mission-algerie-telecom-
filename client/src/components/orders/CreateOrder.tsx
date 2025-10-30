@@ -1,4 +1,4 @@
-import React, { FormEvent, useEffect, useState } from 'react';
+import React, { FormEvent, useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -9,14 +9,16 @@ import {
   Stack,
   InputAdornment,
   MenuItem,
+  Typography,
 } from '@mui/material';
 import { Direction } from 'constants/direction';
 import IconifyIcon from 'components/base/IconifyIcon';
 import { TransportType } from 'constants/transport';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
+import { RootState } from 'store/rootReducer';
 import moment from 'moment';
 import { IMission } from './orderReducer';
 import DirectionIcon from 'assets/icons/ri--direction-line.svg?react';
@@ -29,23 +31,23 @@ interface MissionModalProps {
   open: boolean;
   onClose: () => void;
   onSubmit: (data: IMission) => void;
-  isEdit?: boolean; // To identify if it's edit mode
-  initialData?: IMission; // Initial data for edit mode
-  readOnly?: boolean; // New prop to determine if fields should be read-only
+  isEdit?: boolean;
+  initialData?: IMission;
+  readOnly?: boolean;
+  // Optional target user context when creating/editing on behalf of a user from Users page
+  targetUser?: { matricule: number; nom?: string; prenom?: string };
 }
 
-// Transport labels used in UI
 const transports = [
   'Véhicule de service',
-  "Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise",
+  'Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise',
   'Moyens de transport   dont les dépenses sont prises en charge par le travailleur',
   'Utilisation exceptionnel du véhicule Personnel, à la demande de la hiérarchie',
 ];
 
-// Map UI label -> API enum
-const transportLabelToEnum: Record<string, TransportType> = {
+const transportMapping = {
   'Véhicule de service': TransportType.service,
-  "Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise":
+  'Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise':
     TransportType.entreprise,
   'Moyens de transport   dont les dépenses sont prises en charge par le travailleur':
     TransportType.employee,
@@ -53,11 +55,11 @@ const transportLabelToEnum: Record<string, TransportType> = {
     TransportType.personal,
 };
 
-// Map API enum -> UI label
-const transportEnumToLabel: Record<TransportType | string, string> = {
+// Reverse mapping: enum value -> human-readable label
+const transportLabelByEnum: Record<string, string> = {
   [TransportType.service]: 'Véhicule de service',
   [TransportType.entreprise]:
-    "Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise",
+    'Autre moyens de transport  dont les dépenses sont prises en charge par l’entreprise',
   [TransportType.employee]:
     'Moyens de transport   dont les dépenses sont prises en charge par le travailleur',
   [TransportType.personal]:
@@ -71,8 +73,10 @@ const MissionModal: React.FC<MissionModalProps> = ({
   isEdit = false,
   initialData,
   readOnly = false, // Default to false
+  targetUser,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
+  const authUser = useSelector((s: RootState) => (s as any).auth?.user);
   const initialFormData: IMission = initialData || {
     date_sortie: '',
     heure_sortie: '',
@@ -85,38 +89,56 @@ const MissionModal: React.FC<MissionModalProps> = ({
   };
 
   const [formData, setFormData] = useState<IMission>(initialFormData);
-  const [destinationError, setDestinationError] = useState<string | null>(null);
-  const [returnDateError, setReturnDateError] = useState<string | null>(null);
-
-  const normalize = (s: string) =>
-    s
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim()
-      .replace(/\s+/g, ' ');
-
-  // Keep a reference to the normalized initial data for comparison
-  const [normalizedInitialData, setNormalizedInitialData] = useState<IMission | null>(null);
+  // Determine banner target user (prefer explicit prop, else missionData.user if present, else auth user)
+  const bannerTarget = useMemo(() => {
+    const missionUser = (initialData as any)?.user as
+      | { matricule?: number; nom?: string; prenom?: string }
+      | undefined;
+    return (
+      targetUser ||
+      (missionUser && missionUser.matricule
+        ? {
+            matricule: missionUser.matricule as number,
+            nom: missionUser.nom,
+            prenom: missionUser.prenom,
+          }
+        : authUser)
+    );
+  }, [targetUser, initialData, authUser]);
+  const bannerLabel = useMemo(() => {
+    if (!bannerTarget) return '';
+    const isSelf = authUser && bannerTarget?.matricule === authUser?.matricule;
+    if (isSelf) return 'Vous';
+    const n = `${bannerTarget?.nom ?? ''} ${bannerTarget?.prenom ?? ''}`.trim();
+    return n || `#${bannerTarget?.matricule}`;
+  }, [bannerTarget, authUser]);
 
   useEffect(() => {
     if (isEdit && initialData) {
-      const normalized = {
+      // Determine transport label for display if value is an enum
+      const incomingTransport = initialData.transport;
+      const asLabel = transports.includes(incomingTransport as any)
+        ? (incomingTransport as string)
+        : transportLabelByEnum[incomingTransport as keyof typeof transportLabelByEnum] || '';
+
+      setFormData({
         ...initialData,
-        // Ensure dates are in input-friendly format
+        // Use human-readable label for the select
+        transport: asLabel,
         date_sortie: initialData.date_sortie
           ? moment(initialData.date_sortie).format('YYYY-MM-DD')
           : '',
         date_retour: initialData.date_retour
           ? moment(initialData.date_retour).format('YYYY-MM-DD')
           : '',
-        // Show transport label in the select if backend stores enum
-        transport:
-          transportEnumToLabel[(initialData.transport as any) || ''] ||
-          (initialData.transport || ''),
-      };
-      setFormData(normalized);
-      setNormalizedInitialData(normalized);
+        // Prefill time fields from DateTime if legacy heure_* not present
+        heure_sortie:
+          initialData.heure_sortie ??
+          (initialData.date_sortie ? moment(initialData.date_sortie).format('HH:mm') : ''),
+        heure_retour:
+          initialData.heure_retour ??
+          (initialData.date_retour ? moment(initialData.date_retour).format('HH:mm') : ''),
+      });
     }
   }, [isEdit, initialData]);
 
@@ -128,94 +150,38 @@ const MissionModal: React.FC<MissionModalProps> = ({
       ...formData,
       [name]: value,
     });
-
-    if (name === 'destination') {
-      setDestinationError(null);
-    }
-    if (name === 'date_retour' || name === 'heure_retour' || name === 'date_sortie' || name === 'heure_sortie') {
-      setReturnDateError(null);
-    }
   };
 
-  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+    console.log('Form Data on Submit:', formData);
     e.preventDefault();
-    const departStr = `${formData.date_sortie}T${formData.heure_sortie || '00:00'}:00`;
-    const dateDepart = new Date(departStr);
-    if (formData.date_retour != null && String(formData.date_retour).trim() !== '') {
-      const retourStr = `${formData.date_retour}T${formData.heure_retour || '00:00'}:00`;
-      const dateRetour = new Date(retourStr);
-      // Business rule (Option B): return must be strictly after depart
-      if (!(dateRetour.getTime() > dateDepart.getTime())) {
-        const msg =
-          'La date/heure de retour doit être strictement postérieure à la date/heure de départ.';
-        setReturnDateError(msg);
-        dispatch(setAlert({ msg, type: AlertTypes.ERROR }));
-        return; // Prevent submission
-      }
-    }
-
-    // Frontend destination validation (hyphen-separated communes, case-insensitive)
-    try {
-      const citiesModule = await import('data/algeria_cities.json');
-      const cities: Array<{ commune_name_ascii?: string }> = citiesModule.default;
-      const set = new Set<string>();
-      for (const c of cities) {
-        if (c && c.commune_name_ascii) set.add(normalize(c.commune_name_ascii));
-      }
-      const parts = formData.destination
-        .split(/[-–—]/)
-        .map((p) => normalize(p))
-        .filter((p) => p.length > 0);
-      const allValid = parts.length > 0 && parts.every((p) => set.has(p));
-      if (!allValid) {
-        const msg =
-          "Destination invalide. Utilisez des communes valides (commune_name_ascii), séparées par '-'.";
-        setDestinationError(msg);
-        dispatch(setAlert({ msg, type: AlertTypes.ERROR }));
-        return;
-      }
-    } catch {
-      const msg = "Impossible de valider la destination côté client.";
-      setDestinationError(msg);
-      dispatch(setAlert({ msg, type: AlertTypes.ERROR }));
+    const retourStr = formData.date_retour
+      ? `${formData.date_retour}T${(formData.heure_retour || '00:00').trim()}:00`
+      : '';
+    const sortieStr = `${formData.date_sortie}T${(formData.heure_sortie || '00:00').trim()}:00`;
+    const date1 = formData.date_retour ? new Date(retourStr) : null;
+    const date2 = new Date(sortieStr);
+    // Ensure return date/time is not before departure date/time
+    if (date1 && date1.getTime() < date2.getTime()) {
+      dispatch(
+        setAlert({
+          msg: 'La date de retour doit être postérieure à la date de départ',
+          type: AlertTypes.ERROR,
+        }),
+      );
       return;
     }
-    // Normalize transport to API enum value if label is used
-    const mappedValue =
-      transportLabelToEnum[formData.transport as keyof typeof transportLabelToEnum] || formData.transport;
-    const newFormData = { ...formData, transport: mappedValue };
+    const mappedValue = transportMapping[formData.transport as keyof typeof transportMapping];
+    const newFormData: IMission = { ...formData, transport: mappedValue };
 
     if (isEdit) {
-      const updatedData: Partial<IMission> = {};
-      // Use normalizedInitialData instead of initialData for comparison
-      const baseline: IMission = normalizedInitialData || initialFormData;
-
-      // Map the baseline transport to enum as well for accurate comparison
-      const baselineTransport = transportLabelToEnum[baseline.transport as keyof typeof transportLabelToEnum] || baseline.transport;
-
-      (Object.keys(newFormData) as Array<keyof IMission>).forEach((key) => {
-        const newValue = newFormData[key];
-        const oldValue = key === 'transport' ? baselineTransport : baseline[key];
-
-        // Compare values, treating empty strings and null/undefined as equivalent
-        const isChanged = (newValue || '') !== (oldValue || '');
-
-        if (isChanged) {
-          updatedData[key] = newFormData[key] as any;
-        }
-      });
-
+      const updatedEntries = (Object.keys(newFormData) as Array<keyof IMission>)
+        .filter((key) => newFormData[key] !== initialFormData[key])
+        .map((key) => [key, newFormData[key]] as const);
+      const updatedData = Object.fromEntries(updatedEntries) as Partial<IMission>;
       updatedData.n_mission = formData.n_mission;
-
-      if (Object.keys(updatedData).length > 1 || (Object.keys(updatedData).length === 1 && 'n_mission' in updatedData)) {
-        // Ensure we send at least some updatable field; if only n_mission changed, do nothing
-        if (Object.keys(updatedData).some((k) => k !== 'n_mission')) {
-          onSubmit(updatedData as IMission);
-        } else {
-          dispatch(setAlert({ msg: 'Aucune modification détectée', type: AlertTypes.SUCCESS }));
-        }
-      } else {
-        dispatch(setAlert({ msg: 'Aucune modification détectée', type: AlertTypes.SUCCESS }));
+      if (Object.keys(updatedData).length > 0) {
+        onSubmit(updatedData as IMission);
       }
     } else {
       onSubmit(newFormData);
@@ -228,6 +194,17 @@ const MissionModal: React.FC<MissionModalProps> = ({
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle>{isEdit ? 'Editer Mission' : 'Ajouter Nouvelle Mission'}</DialogTitle>
       <DialogContent>
+        {/* Target user banner */}
+        {bannerLabel ? (
+          <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Mission pour:
+            </Typography>
+            <Typography variant="body2" color="primary" fontWeight={600}>
+              {bannerLabel}
+            </Typography>
+          </Stack>
+        ) : null}
         <Stack
           component="form"
           mt={3}
@@ -274,8 +251,6 @@ const MissionModal: React.FC<MissionModalProps> = ({
             value={formData.date_retour}
             onChange={readOnly ? undefined : handleChange}
             InputProps={{ readOnly }}
-            error={Boolean(returnDateError)}
-            helperText={returnDateError ?? undefined}
           />
 
           {/* Heure de Retour */}
@@ -315,7 +290,7 @@ const MissionModal: React.FC<MissionModalProps> = ({
             variant="filled"
             fullWidth
             select
-            value={formData.transport} // Default value to empty string for placeholder
+            value={formData.transport} // value is the human-readable label
             onChange={readOnly ? undefined : handleChange}
             disabled={readOnly}
             sx={{
@@ -349,8 +324,6 @@ const MissionModal: React.FC<MissionModalProps> = ({
             }}
             value={formData.destination}
             onChange={readOnly ? undefined : handleChange}
-            error={Boolean(destinationError)}
-            helperText={destinationError ?? undefined}
           />
 
           <TextField

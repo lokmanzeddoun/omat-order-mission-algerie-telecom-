@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Menu from '@mui/material/Menu';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
@@ -70,13 +70,15 @@ const ProfileMenu = () => {
         disableRipple
       >
         <Avatar
-          src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=286"
           sx={{
             height: 48,
             width: 48,
             bgcolor: 'primary.main',
+            fontWeight: 600,
           }}
-        />
+        >
+          {user?.nom?.charAt(0) || 'U'}
+        </Avatar>
       </ButtonBase>
 
       <Menu

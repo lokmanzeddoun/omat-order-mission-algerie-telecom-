@@ -308,6 +308,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   // const handleClose = () => setOpen(false);
   const handleEdit = (order: any) => {
     setselectedOrder(order);
+    setViewOnly(false);
     setEditModalOpen(true);
   };
   const handleValidate = (order: any) => {
@@ -567,23 +568,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           <Tab label="Mes Ordres" {...a11yProps(1)} />
         </Tabs>
       </Box>
-      {selectedOrder ? (
-        <>
-          <EditMissionModal
-            open={isEditModalOpen}
-            onClose={() => setEditModalOpen(false)}
-            missionData={selectedOrder}
-            onSubmit={EditSumbission}
-            viewOnly={viewOnly}
-          />
-          <ConfirmDeletionModal
-            open={isDeleteModalOpen}
-            onClose={() => setDeleteModalOpen(false)}
-            itemName={selectedOrder}
-            onConfirm={ConfirmationDelete}
-          />
-        </>
-      ) : null}
+      {null}
       <Card
         sx={{
           flexGrow: { md: 1 },
@@ -631,11 +616,12 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             }}
             paginationMode="server"
             paginationModel={paginationModel}
-            onCellDoubleClick={() => {
-              setEditModalOpen(true);
-              setViewOnly(true);
+            onRowDoubleClick={(params) => {
+              if (params && params.row) {
+                handleEdit(params.row);
+                setHighlightRowId(params.id as GridRowId);
+              }
             }}
-            onRowDoubleClick={(params) => params && setHighlightRowId(params.id as GridRowId)}
             localeText={localizedTextsMap}
             onRowSelectionModelChange={(ids) => {
               const selectedRows = orders.filter(
