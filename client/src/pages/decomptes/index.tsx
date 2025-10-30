@@ -1,4 +1,4 @@
-import { Box, Stack, Typography, Chip, Tab, Tabs } from '@mui/material';
+import { Box, Stack, Typography, Chip, Tab, Tabs, IconButton, Menu, MenuItem } from '@mui/material';
 import NoData from 'components/users/NoData';
 import Splash from 'components/loader/Splash';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,9 +7,9 @@ import { RootState } from 'store/rootReducer';
 import { useEffect, useMemo, useState } from 'react';
 import { fetchAllDecompte } from 'components/orders/decompte.thunk';
 import moment from 'moment';
+import SmartTable, { SmartTableColumn } from 'components/common/SmartTable';
+import MenuIcon from 'assets/icons/iconamoon--menu-kebab-horizontal-fill.svg?react';
 import RenderDecompteDownload from 'components/orders/RenderDecompteDownload';
-import SmartTable, { ContextMenuItem } from 'components/common/SmartTable';
-import { GridColDef } from '@mui/x-data-grid';
 
 const DecomptesPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -39,25 +39,27 @@ const DecomptesPage = () => {
     PERSONAL_CAR: "Utilisation exceptionnelle du véhicule personnel",
   };
 
-  const columns: GridColDef[] = [
+  const columns: SmartTableColumn[] = [
     { field: 'n_decompte', headerName: 'N Décompte', minWidth: 120, valueGetter: (p: any) => p?.row?.n_decompte ?? '' },
     {
       field: 'date_decompte',
       headerName: 'Date Décompte',
-      minWidth: 140,
+      minWidth: 160,
+      flex: 1,
       renderCell: () => <Chip label={null} size="small" color="default" />, // not in payload
     },
-  { field: 'n_mission', headerName: 'Numéro Mission', minWidth: 140, valueGetter: (p: any) => p?.row?.mission?.n_mission ?? '' },
+    { field: 'n_mission', headerName: 'N Mission', minWidth: 140, valueGetter: (p: any) => p?.row?.mission?.n_mission ?? '' },
     {
       field: 'date_mission',
       headerName: 'Date Mission',
-      minWidth: 140,
+      minWidth: 160,
+      flex: 1,
       renderCell: (p: any) => {
         const v = p?.row?.mission?.date_sortie;
         return v ? moment(v).format('YYYY/MM/DD') : <Chip label={null} size="small" color="default" />;
       },
     },
-  { field: 'matricule', headerName: 'Matricule Missionnaire', minWidth: 180, valueGetter: (p: any) => p?.row?.mission?.user?.matricule ?? '' },
+    { field: 'matricule', headerName: 'Matricule', minWidth: 140, valueGetter: (p: any) => p?.row?.mission?.user?.matricule ?? '' },
     {
       field: 'nom_prenom',
       headerName: 'Nom Prénom',
@@ -120,6 +122,7 @@ const DecomptesPage = () => {
     { field: 'hebergement_pec', headerName: 'Nbr Hébergement PEC', type: 'number', minWidth: 190 },
     { field: 'repas_sans_pec', headerName: 'Nbr Repas non PEC', type: 'number', minWidth: 190 },
     { field: 'hebergement_sans_pec', headerName: 'Nbr Hébergement non PEC', type: 'number', minWidth: 230 },
+    // Download button column like Orders (empty header)
     {
       field: 'download',
       headerName: '',
@@ -128,23 +131,53 @@ const DecomptesPage = () => {
       align: 'right',
       headerAlign: 'right',
       minWidth: 140,
-      renderCell: (params) => <RenderDecompteDownload params={params as any} />,
+      headerSearchable: false,
+      renderCell: (params: any) => <RenderDecompteDownload params={params as any} />,
+    },
+    // Kebab actions column (empty header)
+    {
+      field: 'actions',
+      headerName: '',
+      sortable: false,
+      filterable: false,
+      align: 'right',
+      headerAlign: 'right',
+      minWidth: 80,
+      headerSearchable: false,
+      renderCell: (params: any) => <DecompteActionMenu row={params.row} />,
     },
   ];
 
   // Actions (example: download) - already visible via column button but added for context menu / extensibility
-  const contextMenuItems: ContextMenuItem<any>[] = [
-    {
-      key: 'download',
-      label: 'Télécharger',
-      icon: <span>📄</span>,
-      color: 'primary',
-      onClick: (row: any) => {
-        const id = row?.n_decompte ?? row?.mission?.n_mission;
-        if (id) window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
-      },
-    },
-  ];
+  // Inline action menu component for kebab menu per row
+  const DecompteActionMenu = ({ row }: { row: any }) => {
+    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+    const open = Boolean(anchorEl);
+    const handleOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
+    const handleClose = () => setAnchorEl(null);
+    const handleDownload = () => {
+      const id = row?.n_decompte ?? row?.mission?.n_mission;
+      if (id) window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
+      handleClose();
+    };
+    return (
+      <Box>
+        <IconButton onClick={handleOpen} size="small">
+          <MenuIcon />
+        </IconButton>
+        <Menu
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleClose}
+          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+          sx={{ '& .MuiList-root': { width: 160 } }}
+        >
+          <MenuItem onClick={handleDownload}>Télécharger</MenuItem>
+        </Menu>
+      </Box>
+    );
+  };
 
   if (loading) return <Splash />;
 
@@ -162,18 +195,26 @@ const DecomptesPage = () => {
       {filteredRows.length === 0 ? (
         <NoData />
       ) : (
-        <SmartTable
-          columns={columns}
-          rows={filteredRows}
-          getRowId={(row: any) => row.n_decompte ?? row?.mission?.n_mission}
-          loading={loading}
-          noRowsOverlay={NoData as any}
-          // Enable header search with the same icon UX as Users/Services
-          enableHeaderSearch
-          // Treat these as date fields for date input in header search (if used)
-          dateFields={['date_mission', 'date_sortie', 'date_retour']}
-          contextMenuItems={contextMenuItems}
-        />
+        <Box
+          sx={{
+            // Decompte-specific header spacing adjustments to avoid overlap
+            '& .MuiDataGrid-columnHeaders': { minHeight: 56 },
+            '& .MuiDataGrid-columnHeader': { py: 1 },
+            '& .MuiDataGrid-columnHeaderTitleContainer': { gap: 1 },
+            '& .MuiDataGrid-columnHeadersInner': { px: 1 },
+            '& .MuiDataGrid-columnHeader .MuiSvgIcon-root': { mr: 0.5 },
+          }}
+        >
+          <SmartTable
+            columns={columns}
+            rows={filteredRows}
+            getRowId={(row: any) => row.n_decompte ?? row?.mission?.n_mission}
+            loading={loading}
+            noRowsOverlay={NoData as any}
+            enableHeaderSearch
+            dateFields={['date_mission', 'date_sortie', 'date_retour']}
+          />
+        </Box>
       )}
     </Stack>
   );

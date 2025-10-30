@@ -12,6 +12,14 @@ import {
     GridValidRowModel,
 } from '@mui/x-data-grid';
 
+export type SmartTableColumn<Row extends GridValidRowModel = GridValidRowModel> = GridColDef<Row> & {
+    /**
+     * When false, hides the header search icon and inline filter for this column.
+     * Defaults to true when enableHeaderSearch is on.
+     */
+    headerSearchable?: boolean;
+};
+
 export type ContextMenuItem<Row = any> = {
     key: string;
     label: React.ReactNode | string;
@@ -21,7 +29,7 @@ export type ContextMenuItem<Row = any> = {
 };
 
 type SmartTableProps<Row extends GridValidRowModel = GridValidRowModel> = {
-    columns: GridColDef<Row>[];
+    columns: SmartTableColumn<Row>[];
     rows: Row[];
     getRowId: (row: Row) => GridRowId;
     rowCount?: number;
@@ -92,77 +100,79 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
 
     const enhancedColumns: GridColDef<Row>[] = useMemo(() => {
         if (!enableHeaderSearch) return columns;
-        return columns.map((col) => ({
-            ...col,
-            renderHeader:
-                col.field && (col.headerName || col.field)
-                    ? () =>
-                        headerSearchField === col.field ? (
-                            <TextField
-                                autoFocus
-                                size="small"
-                                type={isDateField(col.field as string) ? 'date' : 'text'}
-                                placeholder={isDateField(col.field as string) ? undefined : `Rechercher ${col.headerName || col.field}`}
-                                value={headerSearchValue}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Escape') {
-                                        e.stopPropagation();
-                                        closeHeaderSearch(col.field as string);
-                                    }
-                                }}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    setHeaderSearchValue(val);
-                                    const field = col.field as string;
-                                    const operator = isDateField(field) ? 'equals' : 'contains';
-                                    setFilterModel((prev) => {
-                                        const others = prev.items.filter((it: any) => it.field !== field);
-                                        const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
-                                        return { items: nextItems } as GridFilterModel;
-                                    });
-                                }}
-                                onBlur={() => {
-                                    if (!headerSearchValue) setHeaderSearchField(null);
-                                }}
-                                InputProps={
-                                    enableDateClear && isDateField(col.field as string) && headerSearchValue
-                                        ? {
-                                            endAdornment: (
-                                                <Box component="span" sx={{ cursor: 'pointer', fontWeight: 600 }}
-                                                    onMouseDown={(e) => e.preventDefault()}
-                                                    onClick={() => closeHeaderSearch(col.field as string)}
-                                                >
-                                                    ✕
-                                                </Box>
-                                            ),
-                                        }
-                                        : undefined
-                                }
-                                sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
-                            />
-                        ) : (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                <SearchIcon
-                                    sx={{
-                                        fontSize: '1rem',
-                                        color: 'text.secondary',
-                                        cursor: 'pointer',
-                                        '&:hover': { color: 'primary.main' }
-                                    }}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        const field = col.field as string;
-                                        if (!field) return;
-                                        setHeaderSearchField(field);
-                                        const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
-                                        setHeaderSearchValue((existing?.value as string) || '');
-                                    }}
-                                />
-                                <span>{col.headerName || col.field}</span>
-                            </Box>
-                        )
-                    : col.renderHeader,
-        }));
+        return columns.map((col) => {
+            const searchable = col.headerSearchable !== false; // default true
+            return {
+                ...col,
+                renderHeader:
+                    col.field && (col.headerName || col.field)
+                        ? () =>
+                              !searchable
+                                  ? (
+                                      <>{col.headerName || ''}</>
+                                  )
+                                  : headerSearchField === col.field ? (
+                                      <TextField
+                                          autoFocus
+                                          size="small"
+                                          type={isDateField(col.field as string) ? 'date' : 'text'}
+                                          placeholder={isDateField(col.field as string) ? undefined : `Rechercher ${col.headerName || col.field}`}
+                                          value={headerSearchValue}
+                                          onKeyDown={(e) => {
+                                              if (e.key === 'Escape') {
+                                                  e.stopPropagation();
+                                                  closeHeaderSearch(col.field as string);
+                                              }
+                                          }}
+                                          onChange={(e) => {
+                                              const val = e.target.value;
+                                              setHeaderSearchValue(val);
+                                              const field = col.field as string;
+                                              const operator = isDateField(field) ? 'equals' : 'contains';
+                                              setFilterModel((prev) => {
+                                                  const others = prev.items.filter((it: any) => it.field !== field);
+                                                  const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
+                                                  return { items: nextItems } as GridFilterModel;
+                                              });
+                                          }}
+                                          onBlur={() => {
+                                              if (!headerSearchValue) setHeaderSearchField(null);
+                                          }}
+                                          InputProps={
+                                              enableDateClear && isDateField(col.field as string) && headerSearchValue
+                                                  ? {
+                                                      endAdornment: (
+                                                          <Box component="span" sx={{ cursor: 'pointer', fontWeight: 600 }}
+                                                              onMouseDown={(e) => e.preventDefault()}
+                                                              onClick={() => closeHeaderSearch(col.field as string)}
+                                                          >
+                                                              ✕
+                                                          </Box>
+                                                      ),
+                                                  }
+                                                  : undefined
+                                          }
+                                          sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+                                      />
+                                  ) : (
+                                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                          <SearchIcon
+                                              sx={{ fontSize: '1rem', color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                                              onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  const field = col.field as string;
+                                                  if (!field) return;
+                                                  setHeaderSearchField(field);
+                                                  const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
+                                                  setHeaderSearchValue((existing?.value as string) || '');
+                                              }}
+                                          />
+                                          <span>{col.headerName || col.field}</span>
+                                      </Box>
+                                  )
+                        : col.renderHeader,
+            } as GridColDef<Row>;
+        });
     }, [columns, enableHeaderSearch, headerSearchField, headerSearchValue, isDateField, enableDateClear, closeHeaderSearch, filterModel.items]);
 
     // NOTE: we rely on DataGrid's own context menu events (onCellContextMenu / onRowContextMenu)
