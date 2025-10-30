@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import { DataGrid, GridColDef, useGridApiRef, GridApi, GridToolbar, GridFilterModel, GridRowId, GridRowClassNameParams } from '@mui/x-data-grid';
-import { TextField } from '@mui/material';
+import { Box, TextField } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import DataGridFooter from 'components/common/DataGridFooter';
 import ActionMenu from './ActionMenu';
 import moment from 'moment';
@@ -359,36 +360,45 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
       renderHeader:
         col.field && col.headerName
           ? () =>
-            headerSearchField === col.field ? (
-              <TextField
-                autoFocus
-                size="small"
-                type={col.field === 'date_sortie' || col.field === 'date_retour' ? 'date' : 'text'}
-                placeholder={
-                  col.field === 'date_sortie' || col.field === 'date_retour'
-                    ? undefined
-                    : `Rechercher ${col.headerName}`
-                }
-                value={headerSearchValue}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setHeaderSearchValue(val);
-                  const field = col.field as string;
-                  const operator = field === 'date_sortie' || field === 'date_retour' ? 'equals' : 'contains';
-                  setFilterModel((prev) => {
-                    const others = prev.items.filter((it: any) => it.field !== field);
-                    const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
-                    return { items: nextItems } as GridFilterModel;
-                  });
-                }}
-                onBlur={() => {
-                  if (!headerSearchValue) setHeaderSearchField(null);
-                }}
-                sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
-              />
-            ) : (
-              <>{col.headerName}</>
-            )
+              headerSearchField === col.field ? (
+                <TextField
+                  autoFocus
+                  size="small"
+                  type={col.field === 'date_sortie' || col.field === 'date_retour' ? 'date' : 'text'}
+                  placeholder={col.headerName ? `Rechercher ${col.headerName}` : 'Recherche'}
+                  value={headerSearchValue}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setHeaderSearchValue(val);
+                    const field = col.field as string;
+                    const operator = field === 'date_sortie' || field === 'date_retour' ? 'equals' : 'contains';
+                    setFilterModel((prev) => {
+                      const others = prev.items.filter((it: any) => it.field !== field);
+                      const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
+                      return { items: nextItems } as GridFilterModel;
+                    });
+                  }}
+                  onBlur={() => {
+                    if (!headerSearchValue) setHeaderSearchField(null);
+                  }}
+                  sx={{ '& .MuiInputBase-input': { py: 0.2 } }}
+                />
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <SearchIcon
+                    sx={{ fontSize: '1rem', color: 'text.secondary', cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const field = col.field as string;
+                      if (!field) return;
+                      setHeaderSearchField(field);
+                      const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
+                      setHeaderSearchValue((existing?.value as string) || '');
+                    }}
+                  />
+                  <span>{col.headerName}</span>
+                </Box>
+              )
           : col.renderHeader,
     })),
     {
@@ -509,19 +519,6 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             '& .MuiDataGrid-cell': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },
             '& .MuiTypography-root': { fontSize: { xs: 13, lg: 16 } },
             '& .MuiDataGrid-row': { userSelect: 'none' },
-            // Keep selection logic but remove visual highlight
-            '& .MuiDataGrid-row.Mui-selected': {
-              backgroundColor: 'transparent !important',
-            },
-            '& .MuiDataGrid-row.Mui-selected:hover': {
-              backgroundColor: 'transparent !important',
-            },
-            '& .MuiDataGrid-cell--selected': {
-              backgroundColor: 'transparent !important',
-            },
-            '& .MuiDataGrid-cell--selected:hover': {
-              backgroundColor: 'transparent !important',
-            },
             // Action-based highlight
             '& .action-highlight': { backgroundColor: 'primary.light !important' },
           }}

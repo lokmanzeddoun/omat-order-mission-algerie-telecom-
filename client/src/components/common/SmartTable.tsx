@@ -304,28 +304,10 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                     '& .MuiDataGrid-cell': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },
                     '& .MuiTypography-root': { fontSize: { xs: 13, lg: 16 } },
                     '& .MuiDataGrid-row': { userSelect: 'none', cursor: 'pointer' },
-                    // Disable default selection highlight
-                    '& .MuiDataGrid-row.Mui-selected': { backgroundColor: 'transparent !important' },
-                    '& .MuiDataGrid-row.Mui-selected:hover': { backgroundColor: 'transparent !important' },
-                    '& .MuiDataGrid-cell--selected': { backgroundColor: 'transparent !important' },
-                    '& .MuiDataGrid-cell--selected:hover': { backgroundColor: 'transparent !important' },
-                    // Our action-based highlight with more visible light grey
+                    // Use default selection highlight like Orders/Decomptes
+                    // Keep our action-based highlight consistent across all tables
                     '& .action-highlight': {
-                        backgroundColor: '#e8e8e8 !important', // Darker light grey for better visibility
-                        color: 'inherit !important', // Keep original text color
-                        border: '1px solid #d0d0d0 !important', // More visible border
-                        '&:hover': { backgroundColor: '#dcdcdc !important' }, // Darker grey on hover
-                        '& .MuiDataGrid-cell': {
-                            backgroundColor: '#e8e8e8 !important',
-                            color: 'inherit !important',
-                            borderColor: '#d0d0d0 !important',
-                        }
-                    },
-                    // Ensure all cells in highlighted row have the same background
-                    '& .MuiDataGrid-row.action-highlight .MuiDataGrid-cell': {
-                        backgroundColor: '#e8e8e8 !important',
-                        color: 'inherit !important',
-                        borderColor: '#d0d0d0 !important',
+                        backgroundColor: 'primary.light !important',
                     },
                 }}
             />

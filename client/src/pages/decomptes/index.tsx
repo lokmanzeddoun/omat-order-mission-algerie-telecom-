@@ -8,14 +8,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchAllDecompte } from 'components/orders/decompte.thunk';
 import moment from 'moment';
 import RenderDecompteDownload from 'components/orders/RenderDecompteDownload';
-import AdvancedTable, { AdvancedTableColumn, TableAction } from 'components/common/AdvancedTable';
+import SmartTable, { ContextMenuItem } from 'components/common/SmartTable';
+import { GridColDef } from '@mui/x-data-grid';
 
 const DecomptesPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { token, user } = useSelector((s: RootState) => s.auth);
   const selectedYear = useSelector((s: RootState) => (s as any).exercice?.selectedYear ?? null);
   const { decomptes, loading } = useSelector((s: RootState) => s.decompte);
-  const pageSize = 10; // unified with AdvancedTable
+  // const pageSize = 10; // pagination handled internally by SmartTable
   const [tab, setTab] = useState(0);
 
   useEffect(() => {
@@ -38,15 +39,15 @@ const DecomptesPage = () => {
     PERSONAL_CAR: "Utilisation exceptionnelle du véhicule personnel",
   };
 
-  const columns: AdvancedTableColumn[] = [
-    { field: 'n_decompte', headerName: 'N Décompte', minWidth: 120, valueGetter: (p: any) => p?.row?.n_decompte ?? '', headerSearchable: true },
+  const columns: GridColDef[] = [
+    { field: 'n_decompte', headerName: 'N Décompte', minWidth: 120, valueGetter: (p: any) => p?.row?.n_decompte ?? '' },
     {
       field: 'date_decompte',
       headerName: 'Date Décompte',
       minWidth: 140,
       renderCell: () => <Chip label={null} size="small" color="default" />, // not in payload
     },
-    { field: 'n_mission', headerName: 'Numéro Mission', minWidth: 140, valueGetter: (p: any) => p?.row?.mission?.n_mission ?? '', headerSearchable: true },
+  { field: 'n_mission', headerName: 'Numéro Mission', minWidth: 140, valueGetter: (p: any) => p?.row?.mission?.n_mission ?? '' },
     {
       field: 'date_mission',
       headerName: 'Date Mission',
@@ -56,7 +57,7 @@ const DecomptesPage = () => {
         return v ? moment(v).format('YYYY/MM/DD') : <Chip label={null} size="small" color="default" />;
       },
     },
-    { field: 'matricule', headerName: 'Matricule Missionnaire', minWidth: 180, valueGetter: (p: any) => p?.row?.mission?.user?.matricule ?? '', headerSearchable: true },
+  { field: 'matricule', headerName: 'Matricule Missionnaire', minWidth: 180, valueGetter: (p: any) => p?.row?.mission?.user?.matricule ?? '' },
     {
       field: 'nom_prenom',
       headerName: 'Nom Prénom',
@@ -65,7 +66,7 @@ const DecomptesPage = () => {
         const u = p?.row?.mission?.user;
         return u ? `${u.nom ?? ''} ${u.prenom ?? ''}`.trim() : '';
       },
-      headerSearchable: true,
+
     },
     {
       field: 'date_sortie',
@@ -85,7 +86,7 @@ const DecomptesPage = () => {
         return v ? moment(v).format('YYYY/MM/DD') : <Chip label={null} size="small" color="default" />;
       },
     },
-    { field: 'destination', headerName: 'Destination', minWidth: 160, valueGetter: (p: any) => p?.row?.mission?.destination ?? '', headerSearchable: true },
+  { field: 'destination', headerName: 'Destination', minWidth: 160, valueGetter: (p: any) => p?.row?.mission?.destination ?? '' },
     {
       field: 'transport',
       headerName: 'Moyen Transport',
@@ -96,7 +97,7 @@ const DecomptesPage = () => {
         return label ? <Chip label={label} size="small" color="default" /> : <Chip label={null} size="small" color="default" />;
       },
     },
-    { field: 'motif', headerName: 'Motif de Déplacement', minWidth: 260, valueGetter: (p: any) => p?.row?.mission?.motif ?? '', headerSearchable: true },
+  { field: 'motif', headerName: 'Motif de Déplacement', minWidth: 260, valueGetter: (p: any) => p?.row?.mission?.motif ?? '' },
     {
       field: 'heure_sortie',
       headerName: 'Heure Sortie',
@@ -132,18 +133,15 @@ const DecomptesPage = () => {
   ];
 
   // Actions (example: download) - already visible via column button but added for context menu / extensibility
-  const actions: TableAction[] = [
+  const contextMenuItems: ContextMenuItem<any>[] = [
     {
-      id: 'download',
+      key: 'download',
       label: 'Télécharger',
-      icon: '📄',
+      icon: <span>📄</span>,
+      color: 'primary',
       onClick: (row: any) => {
-        // We rely on existing inline button; here we could programmatically trigger or navigate.
-        // Placeholder: open the PDF endpoint in new tab if id exists.
         const id = row?.n_decompte ?? row?.mission?.n_mission;
-        if (id) {
-          window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
-        }
+        if (id) window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
       },
     },
   ];
@@ -164,16 +162,17 @@ const DecomptesPage = () => {
       {filteredRows.length === 0 ? (
         <NoData />
       ) : (
-        <AdvancedTable
-          rows={filteredRows}
+        <SmartTable
           columns={columns}
-          actions={actions}
+          rows={filteredRows}
           getRowId={(row: any) => row.n_decompte ?? row?.mission?.n_mission}
-          userRole={user?.role}
+          loading={loading}
+          noRowsOverlay={NoData as any}
+          // Enable header search with the same icon UX as Users/Services
           enableHeaderSearch
-          autoHeight
-          pageSize={pageSize}
-          onDoubleClickRow={() => { }}
+          // Treat these as date fields for date input in header search (if used)
+          dateFields={['date_mission', 'date_sortie', 'date_retour']}
+          contextMenuItems={contextMenuItems}
         />
       )}
     </Stack>
