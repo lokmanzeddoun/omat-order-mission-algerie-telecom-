@@ -42,7 +42,7 @@ export const addDecompte =
       }
     };
 
-export const fetchAllDecompte = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {
+export const fetchAllDecompte = (token: string | null, status?: string) => async (dispatch: AppDispatch, getState: any) => {
   try {
     dispatch(fetchDecompteStart()); // Start loading
 
@@ -54,6 +54,7 @@ export const fetchAllDecompte = (token: string | null) => async (dispatch: AppDi
       },
       params: {
         exercice: selectedYear ?? undefined,
+        status: status ?? 'pending',
       },
     });
 
@@ -62,7 +63,7 @@ export const fetchAllDecompte = (token: string | null) => async (dispatch: AppDi
       return;
     }
 
-    dispatch(fetchDecompteFailure('Problem in getting orders'));
+    dispatch(fetchDecompteFailure('Problem in getting decomptes'));
   } catch (error) {
     let errorMessage = 'An error occurred';
 
@@ -76,3 +77,73 @@ export const fetchAllDecompte = (token: string | null) => async (dispatch: AppDi
     console.error('Error:', errorMessage);
   }
 };
+
+export const acceptDecompte =
+  (id: number, token: string | null, message?: string) =>
+    async (dispatch: AppDispatch) => {
+      try {
+        const res = await http.patch(
+          `/decompte/${id}/accept`,
+          { message },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (res && res.data) {
+          dispatch(setAlert({ msg: 'Décompte accepté avec succès', type: AlertTypes.SUCCESS }));
+          return dispatch(fetchAllDecompte(token, 'pending'));
+        } else {
+          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+        }
+      } catch (error) {
+        let errorMessage = 'An error occurred';
+
+        if (axios.isAxiosError(error)) {
+          errorMessage = error.response?.data?.message || error.message;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+        console.error('Error:', errorMessage);
+      }
+    };
+
+export const rejectDecompte =
+  (id: number, token: string | null, message: string) =>
+    async (dispatch: AppDispatch) => {
+      try {
+        const res = await http.patch(
+          `/decompte/${id}/reject`,
+          { message },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (res && res.data) {
+          dispatch(setAlert({ msg: 'Décompte rejeté avec succès', type: AlertTypes.SUCCESS }));
+          return dispatch(fetchAllDecompte(token, 'pending'));
+        } else {
+          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+        }
+      } catch (error) {
+        let errorMessage = 'An error occurred';
+
+        if (axios.isAxiosError(error)) {
+          errorMessage = error.response?.data?.message || error.message;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+        console.error('Error:', errorMessage);
+      }
+    };

@@ -1,27 +1,34 @@
-import { Box, Stack, Typography, Chip, Tab, Tabs, IconButton, Menu, MenuItem } from '@mui/material';
+import { Box, Stack, Typography, Chip, Tab, Tabs, IconButton, Menu, MenuItem, Badge } from '@mui/material';
 import NoData from 'components/users/NoData';
 import Splash from 'components/loader/Splash';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
 import { useEffect, useMemo, useState } from 'react';
-import { fetchAllDecompte } from 'components/orders/decompte.thunk';
+import { fetchAllDecompte, acceptDecompte, rejectDecompte } from 'components/orders/decompte.thunk';
 import moment from 'moment';
 import SmartTable, { SmartTableColumn } from 'components/common/SmartTable';
 import MenuIcon from 'assets/icons/iconamoon--menu-kebab-horizontal-fill.svg?react';
 import RenderDecompteDownload from 'components/orders/RenderDecompteDownload';
+import AcceptDecompteDialog from 'components/orders/AcceptDecompteDialog';
+import RejectDecompteDialog from 'components/orders/RejectDecompteDialog';
+import ViewCommentsDialog from 'components/orders/ViewCommentsDialog';
 
 const DecomptesPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { token, user } = useSelector((s: RootState) => s.auth);
   const selectedYear = useSelector((s: RootState) => (s as any).exercice?.selectedYear ?? null);
   const { decomptes, loading } = useSelector((s: RootState) => s.decompte);
-  // const pageSize = 10; // pagination handled internally by SmartTable
   const [tab, setTab] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<'pending' | 'accepted' | 'rejected'>('pending');
+  const [selectedDecompte, setSelectedDecompte] = useState<any>(null);
+  const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
 
   useEffect(() => {
-    if (token) dispatch(fetchAllDecompte(token));
-  }, [dispatch, token, selectedYear]);
+    if (token) dispatch(fetchAllDecompte(token, statusFilter));
+  }, [dispatch, token, selectedYear, statusFilter]);
 
   const allRows: any[] = useMemo(() => decomptes as any, [decomptes]);
   const filteredRows: any[] = useMemo(() => {
@@ -122,6 +129,36 @@ const DecomptesPage = () => {
     { field: 'hebergement_pec', headerName: 'Nbr Hébergement PEC', type: 'number', minWidth: 190 },
     { field: 'repas_sans_pec', headerName: 'Nbr Repas non PEC', type: 'number', minWidth: 190 },
     { field: 'hebergement_sans_pec', headerName: 'Nbr Hébergement non PEC', type: 'number', minWidth: 230 },
+    {
+      field: 'montant',
+      headerName: 'Montant (DA)',
+      type: 'number',
+      minWidth: 150,
+      renderCell: (p: any) => {
+        const val = p?.value;
+        return val != null ? `${val.toFixed(2)} DA` : <Chip label={null} size="small" color="default" />;
+      },
+    },
+    {
+      field: 'status',
+      headerName: 'Statut',
+      minWidth: 140,
+      renderCell: (p: any) => {
+        const status = p?.value;
+        const messagesCount = p?.row?.messages?.length || 0;
+        const statusMap: Record<string, { label: string; color: 'success' | 'error' | 'warning' | 'default' }> = {
+          PENDING: { label: 'En attente', color: 'warning' },
+          ACCEPTED: { label: 'Accepté', color: 'success' },
+          REGECTED: { label: 'Rejeté', color: 'error' },
+        };
+        const config = statusMap[status] || { label: status, color: 'default' };
+        return (
+          <Badge badgeContent={messagesCount} color="info" max={9}>
+            <Chip label={config.label} size="small" color={config.color} />
+          </Badge>
+        );
+      },
+    },
     // Download button column like Orders (empty header)
     {
       field: 'download',
@@ -155,11 +192,35 @@ const DecomptesPage = () => {
     const open = Boolean(anchorEl);
     const handleOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
     const handleClose = () => setAnchorEl(null);
+
     const handleDownload = () => {
       const id = row?.n_decompte ?? row?.mission?.n_mission;
       if (id) window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
       handleClose();
     };
+
+    const handleAccept = () => {
+      setSelectedDecompte(row);
+      setAcceptDialogOpen(true);
+      handleClose();
+    };
+
+    const handleReject = () => {
+      setSelectedDecompte(row);
+      setRejectDialogOpen(true);
+      handleClose();
+    };
+
+    const handleViewComments = () => {
+      setSelectedDecompte(row);
+      setCommentsDialogOpen(true);
+      handleClose();
+    };
+
+    const isPending = row?.status === 'PENDING';
+    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    const hasComments = row?.messages && row.messages.length > 0;
+
     return (
       <Box>
         <IconButton onClick={handleOpen} size="small">
@@ -174,9 +235,38 @@ const DecomptesPage = () => {
           sx={{ '& .MuiList-root': { width: 160 } }}
         >
           <MenuItem onClick={handleDownload}>Télécharger</MenuItem>
+          {hasComments && (
+            <MenuItem onClick={handleViewComments}>
+              Voir Commentaires ({row.messages.length})
+            </MenuItem>
+          )}
+          {isPending && isAdmin && (
+            <>
+              <MenuItem onClick={handleAccept} sx={{ color: 'success.main' }}>
+                Accepter
+              </MenuItem>
+              <MenuItem onClick={handleReject} sx={{ color: 'error.main' }}>
+                Rejeter
+              </MenuItem>
+            </>
+          )}
         </Menu>
       </Box>
     );
+  };
+
+  const handleAcceptConfirm = async (message?: string) => {
+    if (selectedDecompte?.n_decompte) {
+      await dispatch(acceptDecompte(selectedDecompte.n_decompte, token, message));
+      setSelectedDecompte(null);
+    }
+  };
+
+  const handleRejectConfirm = async (message: string) => {
+    if (selectedDecompte?.n_decompte) {
+      await dispatch(rejectDecompte(selectedDecompte.n_decompte, token, message));
+      setSelectedDecompte(null);
+    }
   };
 
   if (loading) return <Splash />;
@@ -190,6 +280,18 @@ const DecomptesPage = () => {
         <Tabs value={tab} onChange={(_e, v) => { setTab(v); }} aria-label="decompte tabs">
           <Tab label="Tous Les Décomptes" />
           <Tab label="Mes Décomptes" />
+        </Tabs>
+      </Box>
+
+      <Box sx={{ mb: 2, mr: 2 }}>
+        <Tabs
+          value={statusFilter}
+          onChange={(_e, v) => setStatusFilter(v)}
+          aria-label="status filter tabs"
+        >
+          <Tab label="En attente" value="pending" />
+          <Tab label="Acceptés" value="accepted" />
+          <Tab label="Rejetés" value="rejected" />
         </Tabs>
       </Box>
       {filteredRows.length === 0 ? (
@@ -216,6 +318,38 @@ const DecomptesPage = () => {
           />
         </Box>
       )}
+
+      {/* Accept Dialog */}
+      <AcceptDecompteDialog
+        open={acceptDialogOpen}
+        onClose={() => {
+          setAcceptDialogOpen(false);
+          setSelectedDecompte(null);
+        }}
+        onConfirm={handleAcceptConfirm}
+        decompte={selectedDecompte}
+      />
+
+      {/* Reject Dialog */}
+      <RejectDecompteDialog
+        open={rejectDialogOpen}
+        onClose={() => {
+          setRejectDialogOpen(false);
+          setSelectedDecompte(null);
+        }}
+        onConfirm={handleRejectConfirm}
+        decompte={selectedDecompte}
+      />
+
+      {/* Comments Dialog */}
+      <ViewCommentsDialog
+        open={commentsDialogOpen}
+        onClose={() => {
+          setCommentsDialogOpen(false);
+          setSelectedDecompte(null);
+        }}
+        decompte={selectedDecompte}
+      />
     </Stack>
   );
 };

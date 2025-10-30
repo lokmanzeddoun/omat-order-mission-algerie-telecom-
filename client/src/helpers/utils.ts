@@ -53,40 +53,68 @@ export const normalizeEmail = (email: string): string => {
 };
 
 // Calculate available meals and accommodations between two date-times
-// startDate: YYYY-MM-DD (mission date_sortie UTC-based)
-// startTime: HH:mm
-// endDate: YYYY-MM-DD
-// endTime: HH:mm
+// This matches the backend logic exactly
+// Meals: Lunch (11:00-14:00) and Dinner (18:00-21:00)
+// Accommodation: Overnight (00:00-06:00)
 export const calculateMealsAndAccommodation = (
-  startDate: string,
-  startTime: string,
-  endDate: string,
-  endTime: string,
+  date_sortie: string,
+  heure_sortie: string,
+  date_retour: string,
+  heure_retour: string,
 ) => {
   try {
-    const start = dayjs.utc(`${startDate}T${startTime}:00Z`);
-    const end = dayjs.utc(`${endDate}T${endTime}:00Z`);
-    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+    const start = new Date(`${date_sortie}T${heure_sortie}:00`);
+    const end = new Date(`${date_retour}T${heure_retour}:00`);
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
       return { meals: 0, accommodations: 0 };
     }
 
-    const totalHours = end.diff(start, 'hour');
-    const fullDays = Math.floor(totalHours / 24);
-    const remainingHours = totalHours % 24;
+    let meals = 0;
+    let accommodations = 0;
+    const currentDate = new Date(start);
 
-    // Simple policy: 2 meals per full day
-    // Remaining hours grant meals: 0 (<4h), 1 (4-12h), 2 (>12h)
-    let partialMeals = 0;
-    if (remainingHours >= 4 && remainingHours <= 12) partialMeals = 1;
-    else if (remainingHours > 12) partialMeals = 2;
+    while (currentDate <= end) {
+      // Check for lunch (11:00 to 14:00)
+      if (isWithinTimeRange(currentDate, 11, 0, 14, 0, start, end)) {
+        meals++;
+      }
 
-    const meals = fullDays * 2 + partialMeals;
+      // Check for dinner (18:00 to 21:00)
+      if (isWithinTimeRange(currentDate, 18, 0, 21, 0, start, end)) {
+        meals++;
+      }
 
-    // Nights = number of midnights crossed ~ difference in calendar days
-    const accommodations = end.startOf('day').diff(start.startOf('day'), 'day');
+      // Check for accommodation (00:00 to 06:00)
+      if (isWithinTimeRange(currentDate, 0, 0, 6, 0, start, end)) {
+        accommodations++;
+      }
 
-    return { meals, accommodations: Math.max(0, accommodations) };
+      // Move to the next day
+      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setHours(0, 0, 0, 0);
+    }
+
+    return { meals, accommodations };
   } catch {
     return { meals: 0, accommodations: 0 };
   }
 };
+
+function isWithinTimeRange(
+  date: Date,
+  startHour: number,
+  startMinute: number,
+  endHour: number,
+  endMinute: number,
+  tripStart: Date,
+  tripEnd: Date,
+): boolean {
+  const rangeStart = new Date(date);
+  rangeStart.setHours(startHour, startMinute, 0, 0);
+
+  const rangeEnd = new Date(date);
+  rangeEnd.setHours(endHour, endMinute, 0, 0);
+
+  return rangeStart >= tripStart && rangeEnd <= tripEnd;
+}

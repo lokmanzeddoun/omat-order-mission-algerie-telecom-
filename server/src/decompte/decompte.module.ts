@@ -4,6 +4,7 @@ import { DecompteController } from './decompte.controller';
 import { DatabaseModule } from 'src/database/database.module';
 import { PassportModule } from '@nestjs/passport';
 import { ExercicesModule } from 'src/exercices/exercices.module';
+import { CommentsModule } from 'src/comments/comments.module';
 
 @Module({
   controllers: [DecompteController],
@@ -12,6 +13,7 @@ import { ExercicesModule } from 'src/exercices/exercices.module';
     DatabaseModule,
     PassportModule.register({ defaultStrategy: 'jwt' }),
     ExercicesModule,
+    CommentsModule,
   ],
 })
 export class DecompteModule {}

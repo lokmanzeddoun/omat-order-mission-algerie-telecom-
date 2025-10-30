@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { ExercicesService } from 'src/exercices/exercices.service';
+import { CommentsService } from 'src/comments/comments.service';
 import {
   DecompteStatus,
   Direction,
@@ -25,6 +26,7 @@ export class DecompteService {
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly exercicesService: ExercicesService,
+    private readonly commentsService: CommentsService,
   ) {}
 
   private async getCurrentExerciceId(): Promise<number | null> {
@@ -49,6 +51,8 @@ export class DecompteService {
       date_retour,
       createDecompteDto.heure_retour,
     );
+    console.log(meals, accommodations, 'meals accommodations');
+    console.log(createDecompteDto);
     if (
       meals !==
         createDecompteDto.repas_pec + createDecompteDto.repas_sans_pec ||
@@ -164,6 +168,9 @@ export class DecompteService {
         hebergement_sans_pec: true,
         montant: true,
         parcours: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
         mission: {
           select: {
             date_retour: true,
@@ -181,6 +188,17 @@ export class DecompteService {
                 email: true,
               },
             },
+          },
+        },
+        messages: {
+          where: { soft_delete: false },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            status: true,
+            createdAt: true,
           },
         },
       },
@@ -201,6 +219,9 @@ export class DecompteService {
         hebergement_sans_pec: true,
         montant: true,
         parcours: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
         mission: {
           select: {
             date_retour: true,
@@ -216,6 +237,33 @@ export class DecompteService {
                 prenom: true,
                 nom: true,
                 email: true,
+                grade: true,
+                category: true,
+                structure: {
+                  select: {
+                    code: true,
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        messages: {
+          where: { soft_delete: false },
+          orderBy: { createdAt: 'desc' },
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            status: true,
+            createdAt: true,
+            user: {
+              select: {
+                matricule: true,
+                nom: true,
+                prenom: true,
+                role: true,
               },
             },
           },
@@ -332,7 +380,16 @@ export class DecompteService {
     });
   }
 
-  getUserDecompte(user: User) {
+  getUserDecompte(user: User, status?: string, exercice?: string) {
+    let sat: DecompteStatus | undefined;
+    if (status === 'accepted') {
+      sat = DecompteStatus.ACCEPTED;
+    } else if (status === 'rejected') {
+      sat = DecompteStatus.REGECTED;
+    } else if (status === 'pending') {
+      sat = DecompteStatus.PENDING;
+    }
+
     return this.databaseService.decompte.findMany({
       where: {
         mission: {
@@ -341,6 +398,28 @@ export class DecompteService {
           },
         },
         soft_delete: false,
+        ...(sat ? { status: sat } : {}),
+        ...(exercice ? { exercice: { year: Number(exercice) } } : {}),
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      include: {
+        mission: {
+          select: {
+            n_mission: true,
+            destination: true,
+            motif: true,
+            date_sortie: true,
+            date_retour: true,
+            direction: true,
+            transport: true,
+          },
+        },
+        messages: {
+          where: { soft_delete: false },
+          orderBy: { createdAt: 'desc' },
+        },
       },
     });
   }
@@ -484,6 +563,90 @@ export class DecompteService {
         `Failed to render Template Decompte.docx: ${(e as Error).message}`,
       );
     }
+  }
+
+  /**
+   * Accept a decompte (Admin only)
+   * Changes status to ACCEPTED
+   */
+  async acceptDecompte(id: number, user: User, message?: string): Promise<any> {
+    // Verify decompte exists and is in PENDING status
+    const decompte = await this.databaseService.decompte.findUnique({
+      where: { n_decompte: id, soft_delete: false },
+      include: { mission: { include: { user: true } } },
+    });
+
+    if (!decompte) {
+      throw new BadRequestException(`Decompte with ID ${id} not found.`);
+    }
+
+    if (decompte.status !== DecompteStatus.PENDING) {
+      throw new BadRequestException(
+        `Decompte ${id} is not in PENDING status. Current status: ${decompte.status}`,
+      );
+    }
+
+    // Update decompte status to ACCEPTED
+    const updatedDecompte = await this.databaseService.decompte.update({
+      where: { n_decompte: id },
+      data: { status: DecompteStatus.ACCEPTED },
+    });
+
+    // Optionally create a comment if a message was provided
+    if (message && message.trim() !== '') {
+      await this.commentsService.create(
+        {
+          title: `Decompte #${id} accepted`,
+          type: 'DECOMPTE_STATUS',
+          status: 'ACCEPTED',
+          decompteId: id,
+        },
+        user.matricule,
+      );
+    }
+
+    return updatedDecompte;
+  }
+
+  /**
+   * Reject a decompte (Admin only)
+   * Changes status to REJECTED and creates a comment with rejection reason
+   */
+  async rejectDecompte(id: number, user: User, message: string): Promise<any> {
+    // Verify decompte exists and is in PENDING status
+    const decompte = await this.databaseService.decompte.findUnique({
+      where: { n_decompte: id, soft_delete: false },
+      include: { mission: { include: { user: true } } },
+    });
+
+    if (!decompte) {
+      throw new BadRequestException(`Decompte with ID ${id} not found.`);
+    }
+
+    if (decompte.status !== DecompteStatus.PENDING) {
+      throw new BadRequestException(
+        `Decompte ${id} is not in PENDING status. Current status: ${decompte.status}`,
+      );
+    }
+
+    // Update decompte status to REJECTED
+    const updatedDecompte = await this.databaseService.decompte.update({
+      where: { n_decompte: id },
+      data: { status: DecompteStatus.REGECTED },
+    });
+
+    // Create a comment with the rejection reason
+    await this.commentsService.create(
+      {
+        title: `Decompte #${id} rejected: ${message}`,
+        type: 'DECOMPTE_STATUS',
+        status: 'REJECTED',
+        decompteId: id,
+      },
+      user.matricule,
+    );
+
+    return updatedDecompte;
   }
 }
 const calculateMealsAndAccommodation = (

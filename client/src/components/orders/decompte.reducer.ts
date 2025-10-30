@@ -2,6 +2,7 @@ import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 // Define the Decompte interface for decompte data
 export interface IDecompte {
+  n_decompte?: number;
   heure_sortie: string;
   date_retour: string;
   heure_retour: string;
@@ -11,7 +12,14 @@ export interface IDecompte {
   hebergement_pec?: number;
   distance_km?: number; // Distance parcourue pour indemnité kilométrique
   transport_cost?: number; // Frais de transport engagés (DA)
-  missionId: number; // Relation to the mission
+  parcours?: number;
+  montant?: number;
+  status?: 'PENDING' | 'ACCEPTED' | 'REGECTED';
+  missionId?: number; // Relation to the mission
+  mission?: any;
+  messages?: any[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface DecompteState {
