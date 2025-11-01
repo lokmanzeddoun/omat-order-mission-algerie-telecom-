@@ -13,7 +13,18 @@ export const addDecompte =
       try {
         const missionId = order?.n_mission;
         if (missionId == null) throw new Error('Mission ID is required');
-        const res = await http.post(`/decompte/${missionId}`, decompte, {
+
+        // Transform distance_km to parcours for backend
+        const payload = {
+          ...decompte,
+          parcours: decompte.distance_km ?? 0,
+        };
+        // Remove distance_km as backend doesn't expect it
+        delete (payload as any).distance_km;
+        delete (payload as any).transport_cost;
+        delete (payload as any).missionId;
+
+        const res = await http.post(`/decompte/${missionId}`, payload, {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,

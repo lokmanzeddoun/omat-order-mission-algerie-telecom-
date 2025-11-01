@@ -96,6 +96,7 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
     heure_retour: false,
     hebergement: false,
     repas: false,
+    distance_km: false,
   });
 
   const missionDepartureDate = useMemo(
@@ -112,6 +113,7 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
       heure_retour: false,
       hebergement: false,
       repas: false,
+      distance_km: false,
     });
 
     if (
@@ -200,6 +202,7 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
       hebergement:
         (formData.hebergement_sans_pec || 0) + (formData.hebergement_pec || 0) !== hebergement,
       repas: (formData.repas_sans_pec || 0) + (formData.repas_pec || 0) !== repas,
+      distance_km: formData.distance_km === undefined || formData.distance_km === null || (typeof formData.distance_km === 'number' && formData.distance_km < 0),
     };
 
     if (Object.values(newErrors).some(Boolean)) {
@@ -224,6 +227,7 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
       heure_retour: false,
       hebergement: false,
       repas: false,
+      distance_km: false,
     });
     setFormData(buildDecompteFormData(order, initialData));
   };
@@ -348,6 +352,9 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
               value={formData.distance_km ?? ''}
               onChange={readOnly ? undefined : handleChange}
               InputProps={{ readOnly }}
+              required
+              error={errors.distance_km}
+              helperText={errors.distance_km ? 'La distance parcourue est obligatoire' : ''}
             />
             <TextField
               name="transport_cost"

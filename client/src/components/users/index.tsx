@@ -1,4 +1,26 @@
-import { Box, Button, Card, Chip, Stack, Tab, Tabs, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Stack,
+  Tab,
+  Tabs,
+  Typography,
+  Container,
+  Paper,
+  Grid,
+  alpha,
+  IconButton,
+  Tooltip,
+} from '@mui/material';
+import {
+  People as PeopleIcon,
+  PersonAdd as PersonAddIcon,
+  Upload as UploadIcon,
+  Download as DownloadIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import { GridColDef, GridRowsProp } from '@mui/x-data-grid';
 import SmartTable, { ContextMenuItem } from 'components/common/SmartTable';
 import IconifyIcon from 'components/base/IconifyIcon';
@@ -44,7 +66,15 @@ const initialColumns: GridColDef[] = [
     flex: 1,
     minWidth: 150,
     hideable: false,
-    renderCell: (params) => <>#{params.value}</>,
+    renderCell: (params) => (
+      <Chip
+        label={`#${params.value}`}
+        size="small"
+        color="primary"
+        variant="outlined"
+        sx={{ fontWeight: 600 }}
+      />
+    ),
   },
   {
     field: 'nom',
@@ -52,7 +82,11 @@ const initialColumns: GridColDef[] = [
     flex: 1,
     minWidth: 100,
     hideable: false,
-    renderCell: (params) => <>{params.value}</>,
+    renderCell: (params) => (
+      <Typography variant="body2" fontWeight={500} color="text.primary">
+        {params.value}
+      </Typography>
+    ),
   },
   {
     field: 'prenom',
@@ -60,7 +94,11 @@ const initialColumns: GridColDef[] = [
     minWidth: 100,
     flex: 1,
     hideable: false,
-    renderCell: (params) => <>{params.value}</>,
+    renderCell: (params) => (
+      <Typography variant="body2" fontWeight={500} color="text.primary">
+        {params.value}
+      </Typography>
+    ),
   },
   {
     field: 'email',
@@ -68,7 +106,11 @@ const initialColumns: GridColDef[] = [
     flex: 1,
     minWidth: 250,
     hideable: false,
-    renderCell: (params) => <>{params.value}</>,
+    renderCell: (params) => (
+      <Typography variant="body2" color="text.primary">
+        {params.value}
+      </Typography>
+    ),
   },
   {
     field: 'structure.name',
@@ -76,7 +118,11 @@ const initialColumns: GridColDef[] = [
     flex: 1,
     minWidth: 200,
     hideable: false,
-    renderCell: (params) => <>{params.row?.structure?.name}</>,
+    renderCell: (params) => (
+      <Typography variant="body2" color="text.primary">
+        {params.row?.structure?.name}
+      </Typography>
+    ),
     valueGetter: (params: any) => params?.row?.structure?.name ?? '',
   },
   {
@@ -84,21 +130,33 @@ const initialColumns: GridColDef[] = [
     headerName: 'Grade',
     width: 100,
     hideable: false,
-    renderCell: (params) => <>{params.value}</>,
+    renderCell: (params) => (
+      <Typography variant="body2" color="text.primary">
+        {params.value}
+      </Typography>
+    ),
   },
   {
     field: 'category',
     headerName: 'Category',
     width: 100,
     hideable: false,
-    renderCell: (params) => <>{params.value}</>,
+    renderCell: (params) => (
+      <Chip label={params.value} size="small" variant="outlined" />
+    ),
   },
   {
     field: 'role',
     headerName: 'Role',
     width: 100,
     hideable: false,
-    renderCell: (params) => <>{params.value}</>,
+    renderCell: (params) => (
+      <Chip
+        label={params.value}
+        size="small"
+        color={params.value === 'ADMIN' ? 'secondary' : 'default'}
+      />
+    ),
   },
   {
     field: 'userSince',
@@ -106,7 +164,11 @@ const initialColumns: GridColDef[] = [
     minWidth: 130,
     flex: 1,
     hideable: false,
-    renderCell: (params) => <>{dateFormatFromUTC(params.value)}</>,
+    renderCell: (params) => (
+      <Typography variant="body2" color="text.secondary">
+        {dateFormatFromUTC(params.value)}
+      </Typography>
+    ),
   },
   {
     field: 'status',
@@ -289,99 +351,228 @@ const InvoiceOverviewTable: React.FC = () => {
   if (loading) {
     return <Splash />;
   }
+
+  const totalUsers = users.length;
+  const activeUsers = users.filter((u) => u.status === 'ACTIVE').length;
+  const adminUsers = users.filter((u) => u.role === 'ADMIN').length;
+  const regularUsers = users.filter((u) => u.role === 'USER').length;
+
   return (
-    <Stack sx={{ overflow: 'auto', justifyContent: 'space-between', flexDirection: 'column' }}>
-      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
-        <Typography
-          sx={{
-            fontSize: {
-              xs: 'body2.fontSize',
-              md: 'h6.fontSize',
-              xl: 'h3.fontSize',
-            },
-            fontWeight: 600,
-          }}
-        >
-          Les Utilisateur courant
-        </Typography>
-        <Box sx={{ mr: 3 }}>
-          <Button
-            variant="outlined"
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <PeopleIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h4" fontWeight="600">
+              Gestion des Utilisateurs
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Gérer les utilisateurs, leurs rôles et permissions
+            </Typography>
+          </Box>
+          <Tooltip title="Actualiser">
+            <IconButton
+              onClick={() => dispatch(getAllUsers())}
+              sx={{
+                backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                '&:hover': {
+                  backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.2),
+                },
+              }}
+            >
+              <RefreshIcon color="primary" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+
+      {/* Statistics Cards */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
             sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'primary.main',
-              borderColor: 'primary.main',
-              '&:hover': {
-                borderColor: 'primary.dark',
-                bgcolor: 'primary.light',
-              },
-              mr: 3,
+              p: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
+              borderRadius: 2,
             }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <PeopleIcon sx={{ fontSize: 24, color: 'primary.main' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                Total
+              </Typography>
+            </Box>
+            <Typography variant="h4" fontWeight="600" color="primary.main">
+              {totalUsers}
+            </Typography>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: (theme) => alpha(theme.palette.success.main, 0.04),
+              borderRadius: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <PeopleIcon sx={{ fontSize: 24, color: 'success.main' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                Actifs
+              </Typography>
+            </Box>
+            <Typography variant="h4" fontWeight="600" color="success.main">
+              {activeUsers}
+            </Typography>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: (theme) => alpha(theme.palette.secondary.main, 0.04),
+              borderRadius: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <PeopleIcon sx={{ fontSize: 24, color: 'secondary.main' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                Administrateurs
+              </Typography>
+            </Box>
+            <Typography variant="h4" fontWeight="600" color="secondary.main">
+              {adminUsers}
+            </Typography>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: (theme) => alpha(theme.palette.info.main, 0.04),
+              borderRadius: 2,
+            }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <PeopleIcon sx={{ fontSize: 24, color: 'text.primary' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                Utilisateurs
+              </Typography>
+            </Box>
+            <Typography variant="h4" fontWeight="600" color="text.primary">
+              {regularUsers}
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Action Buttons */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
+        <Typography variant="h6" fontWeight={600}>
+          Actions
+        </Typography>
+        <Stack direction="row" spacing={2} flexWrap="wrap">
+          <Button
+            variant="contained"
+            startIcon={<PersonAddIcon />}
             onClick={handleOpen}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Ajouter Utilisateur
           </Button>
           <Button
             variant="outlined"
             component="label"
-            tabIndex={-1}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'white',
-              borderColor: 'primary.main',
-              bgcolor: 'secondary.main',
-              '&:hover': {
-                color: 'primary.main',
-                borderColor: 'secondary.light',
-                bgcolor: 'primary.light',
-              },
-              mr: 3,
-            }}
+            startIcon={<UploadIcon />}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Importer
             <input type="file" hidden onChange={handleFileChange} />
           </Button>
           <Button
             variant="outlined"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'primary.main',
-              borderColor: 'primary.main',
-              '&:hover': {
-                borderColor: 'primary.dark',
-                bgcolor: 'primary.light',
-              },
-            }}
+            startIcon={<DownloadIcon />}
             onClick={handleExportUsers}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Exporter
           </Button>
-        </Box>
-      </Box>
-      <Box sx={{ borderBottom: 1, borderColor: 'secondary.lighter', mb: 3.5, mr: 2 }}>
-        <Tabs value={value} onChange={handleChange} aria-label="transaction tabs">
-          <Tab label="All Users" {...a11yProps(0)} />
-          <Tab label="Users" {...a11yProps(1)} />
-          <Tab label="Admins" {...a11yProps(2)} />
+        </Stack>
+      </Paper>
+
+      {/* Tabs */}
+      <Paper elevation={0} sx={{ mb: 3, borderRadius: 2 }}>
+        <Tabs
+          value={value}
+          onChange={handleChange}
+          sx={{
+            borderBottom: 1,
+            borderColor: 'divider',
+            '& .MuiTab-root': {
+              textTransform: 'none',
+              fontSize: '1rem',
+              fontWeight: 500,
+              minHeight: 64,
+            },
+          }}
+        >
+          <Tab label={`Tous les Utilisateurs (${totalUsers})`} {...a11yProps(0)} />
+          <Tab label={`Utilisateurs (${regularUsers})`} {...a11yProps(1)} />
+          <Tab label={`Administrateurs (${adminUsers})`} {...a11yProps(2)} />
         </Tabs>
-      </Box>
+      </Paper>
+
+      {/* Table Card */}
       <Card
+        elevation={0}
         sx={{
-          flexGrow: { md: 1 },
-          display: { md: 'flex' },
-          flexDirection: { md: 'column' },
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
           overflow: 'hidden',
-          m: 2,
-          borderRadius: 6.5,
-          '&.MuiPaper-root': {
-            p: 1,
-            border: 1,
-            borderColor: 'neutral.light',
-            bgcolor: { xs: 'transparent', sm: 'white' },
-            boxShadow: (theme) => `inset 0px -1px ${theme.palette.neutral.light}`,
+          '& .MuiDataGrid-root': {
+            border: 'none',
+          },
+          '& .MuiDataGrid-columnHeaders': {
+            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
+            borderBottom: '2px solid',
+            borderColor: 'divider',
+          },
+          '& .MuiDataGrid-columnHeaderTitle': {
+            fontWeight: 600,
+          },
+          '& .MuiDataGrid-row:hover': {
+            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.02),
           },
         }}
       >
@@ -454,7 +645,7 @@ const InvoiceOverviewTable: React.FC = () => {
           />
         </>
       ) : null}
-    </Stack>
+    </Container>
   );
 };
 

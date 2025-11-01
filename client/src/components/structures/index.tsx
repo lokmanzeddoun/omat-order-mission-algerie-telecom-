@@ -1,4 +1,24 @@
-import { Box, Button, Card, Stack, Typography } from '@mui/material';
+import {
+  Box,
+  Button,
+  Card,
+  Stack,
+  Typography,
+  Container,
+  Paper,
+  Grid,
+  alpha,
+  IconButton,
+  Tooltip,
+  Chip,
+} from '@mui/material';
+import {
+  AccountTree as AccountTreeIcon,
+  Add as AddIcon,
+  Upload as UploadIcon,
+  Download as DownloadIcon,
+  Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import { GridColDef } from '@mui/x-data-grid';
 import SmartTable, { ContextMenuItem } from 'components/common/SmartTable';
 import IconifyIcon from 'components/base/IconifyIcon';
@@ -31,19 +51,31 @@ export interface RowData {
 const initialColumns: GridColDef[] = [
   {
     field: 'code',
-    headerName: 'code',
+    headerName: 'Code',
     flex: 1,
     minWidth: 150,
     hideable: false,
-    renderCell: (params) => <>#{params.value}</>,
+    renderCell: (params) => (
+      <Chip
+        label={`#${params.value}`}
+        size="small"
+        color="primary"
+        variant="outlined"
+        sx={{ fontWeight: 600 }}
+      />
+    ),
   },
   {
     field: 'name',
-    headerName: 'name',
+    headerName: 'Nom du Service',
     flex: 1,
-    minWidth: 100,
+    minWidth: 200,
     hideable: false,
-    renderCell: (params) => <>{params.value}</>,
+    renderCell: (params) => (
+      <Typography variant="body2" fontWeight={500} color="text.primary">
+        {params.value}
+      </Typography>
+    ),
   },
 ];
 
@@ -148,92 +180,134 @@ const InvoiceOverviewTable: React.FC = () => {
   if (structureLoading) {
     return <Splash />;
   }
+
+  const totalStructures = structures.length;
+
   return (
-    <Stack sx={{ overflow: 'auto', justifyContent: 'space-between', flexDirection: 'column' }}>
-      <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
-        <Typography
-          sx={{
-            fontSize: {
-              xs: 'body2.fontSize',
-              md: 'h6.fontSize',
-              xl: 'h3.fontSize',
-            },
-            fontWeight: 600,
-          }}
-        >
-          Les Services
-        </Typography>
-        <Box sx={{ mr: 3 }}>
-          <Button
-            variant="outlined"
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Header Section */}
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <AccountTreeIcon sx={{ fontSize: 40, color: 'primary.main' }} />
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h4" fontWeight="600">
+              Gestion des Services
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              Gérer les structures organisationnelles et services
+            </Typography>
+          </Box>
+          <Tooltip title="Actualiser">
+            <IconButton
+              onClick={() => dispatch(getAllStructures())}
+              sx={{
+                backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1),
+                '&:hover': {
+                  backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.2),
+                },
+              }}
+            >
+              <RefreshIcon color="primary" />
+            </IconButton>
+          </Tooltip>
+        </Box>
+      </Box>
+
+      {/* Statistics Card */}
+      <Grid container spacing={2} sx={{ mb: 3 }}>
+        <Grid item xs={12} sm={6} md={4}>
+          <Paper
+            elevation={0}
             sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'primary.main',
-              borderColor: 'primary.main',
-              '&:hover': {
-                borderColor: 'primary.dark',
-                bgcolor: 'primary.light',
-              },
-              mr: 3,
+              p: 2.5,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
+              borderRadius: 2,
             }}
+          >
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <AccountTreeIcon sx={{ fontSize: 24, color: 'primary.main' }} />
+              <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                Total Services
+              </Typography>
+            </Box>
+            <Typography variant="h4" fontWeight="600" color="primary.main">
+              {totalStructures}
+            </Typography>
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* Action Buttons */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2,
+          mb: 3,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: 2,
+        }}
+      >
+        <Typography variant="h6" fontWeight={600}>
+          Actions
+        </Typography>
+        <Stack direction="row" spacing={2} flexWrap="wrap">
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
             onClick={handleOpen}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Ajouter Service
           </Button>
           <Button
             variant="outlined"
             component="label"
-            tabIndex={-1}
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'white',
-              borderColor: 'primary.main',
-              bgcolor: 'secondary.main',
-              '&:hover': {
-                color: 'primary.main',
-                borderColor: 'secondary.light',
-                bgcolor: 'primary.light',
-              },
-              mr: 3,
-            }}
+            startIcon={<UploadIcon />}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Importer
             <input type="file" hidden onChange={handleFileChange} />
           </Button>
           <Button
             variant="outlined"
-            sx={{
-              textTransform: 'none',
-              fontWeight: 600,
-              color: 'primary.main',
-              borderColor: 'primary.main',
-              '&:hover': {
-                borderColor: 'primary.dark',
-                bgcolor: 'primary.light',
-              },
-            }}
+            startIcon={<DownloadIcon />}
             onClick={handleExportStructures}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
           >
             Exporter
           </Button>
-        </Box>
-      </Box>
+        </Stack>
+      </Paper>
+
+      {/* Table Card */}
       <Card
+        elevation={0}
         sx={{
-          flexGrow: { md: 1 },
-          display: { md: 'flex' },
-          flexDirection: { md: 'column' },
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
           overflow: 'hidden',
-          m: 2,
-          borderRadius: 6.5,
-          '&.MuiPaper-root': {
-            p: 1,
-            border: 1,
-            borderColor: 'neutral.light',
-            bgcolor: { xs: 'transparent', sm: 'white' },
-            boxShadow: (theme) => `inset 0px -1px ${theme.palette.neutral.light}`, // color for row border
+          '& .MuiDataGrid-root': {
+            border: 'none',
+          },
+          '& .MuiDataGrid-columnHeaders': {
+            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
+            borderBottom: '2px solid',
+            borderColor: 'divider',
+          },
+          '& .MuiDataGrid-columnHeaderTitle': {
+            fontWeight: 600,
+          },
+          '& .MuiDataGrid-row:hover': {
+            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.02),
           },
         }}
       >
@@ -286,7 +360,7 @@ const InvoiceOverviewTable: React.FC = () => {
           />
         </>
       ) : null}
-    </Stack>
+    </Container>
   );
 };
 

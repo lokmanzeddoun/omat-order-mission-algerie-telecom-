@@ -40,8 +40,20 @@ export const getAllStructures = () => async (dispatch: AppDispatch) => {
 };
 
 export const addStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
+  // Sanitize empty strings - trim whitespace
+  const sanitizedStructure = {
+    code: structure.code?.trim() || '',
+    name: structure.name?.trim() || '',
+  };
+
+  // Validate required fields
+  if (!sanitizedStructure.code || !sanitizedStructure.name) {
+    dispatch(setAlert({ msg: 'Code et nom du service sont obligatoires', type: AlertTypes.ERROR }));
+    return;
+  }
+
   try {
-    const res = await http.post<IStructure>(`/structures`, structure, {
+    const res = await http.post<IStructure>(`/structures`, sanitizedStructure, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -175,9 +187,20 @@ export const deleteStructure = (structure: IStructure) => async (dispatch: AppDi
 };
 
 export const updateStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
-  //
+  // Sanitize empty strings - trim whitespace
+  const sanitizedStructure = {
+    code: structure.code?.trim() || '',
+    name: structure.name?.trim() || '',
+  };
+
+  // Validate required fields
+  if (!sanitizedStructure.name) {
+    dispatch(setAlert({ msg: 'Le nom du service est obligatoire', type: AlertTypes.ERROR }));
+    return;
+  }
+
   try {
-    const res = await http.patch(`/structures/${structure.code}`, structure);
+    const res = await http.patch(`/structures/${sanitizedStructure.code}`, sanitizedStructure);
     if (res) {
       await dispatch(setAlert({ msg: 'Structure Updated Successfully', type: AlertTypes.SUCCESS }));
       dispatch(editStructure(res.data));

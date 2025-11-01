@@ -62,6 +62,14 @@ const UserModal: React.FC<UserModalProps> = ({
     serviceId: null,
   };
   const [formData, setFormData] = useState<RowData>(initialFormData);
+  const [errors, setErrors] = useState({
+    matricule: false,
+    nom: false,
+    prenom: false,
+    email: false,
+    grade: false,
+    serviceId: false,
+  });
   const { structures, loading } = useSelector((state: RootState) => state.structures);
   const dispatch = useDispatch<AppDispatch>();
 
@@ -75,13 +83,27 @@ const UserModal: React.FC<UserModalProps> = ({
         serviceId: initialData.serviceId || null,
       });
     }
-  }, [isEdit, initialData, dispatch]);
+    // Reset errors when modal opens
+    setErrors({
+      matricule: false,
+      nom: false,
+      prenom: false,
+      email: false,
+      grade: false,
+      serviceId: false,
+    });
+  }, [isEdit, initialData, dispatch, open]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value,
     });
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof typeof errors] !== undefined) {
+      setErrors((prev) => ({ ...prev, [name]: false }));
+    }
     console.log(formData);
   };
 
@@ -93,13 +115,36 @@ const UserModal: React.FC<UserModalProps> = ({
       return;
     }
 
+    // Validate required fields
+    const newErrors = {
+      matricule: !isEdit && (!formData.matricule || formData.matricule === 0),
+      nom: !formData.nom || formData.nom.trim() === '',
+      prenom: !formData.prenom || formData.prenom.trim() === '',
+      email: !formData.email || formData.email.trim() === '',
+      grade: !formData.grade || formData.grade.trim() === '',
+      serviceId: !isEdit && (!formData.serviceId || formData.serviceId.trim() === ''),
+    };
+
+    // Check if there are any errors
+    if (Object.values(newErrors).some(Boolean)) {
+      setErrors(newErrors);
+      return;
+    }
+
     // Submit the form data for both create and edit operations
     onSubmit(formData);
 
     setFormData(initialFormData); // Reset form after submission
+    setErrors({
+      matricule: false,
+      nom: false,
+      prenom: false,
+      email: false,
+      grade: false,
+      serviceId: false,
+    });
     dispatch(getAllUsers());
     onClose();
-    // // Form validation can be added here if needed
   };
   if (loading) {
     return (

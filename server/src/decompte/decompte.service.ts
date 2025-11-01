@@ -12,7 +12,7 @@ import {
 } from '@prisma/client';
 import moment from 'moment';
 import * as fs from 'fs';
-import PizZip from 'pizzip';  
+import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import libre from 'libreoffice-convert';
 import { promisify } from 'util';

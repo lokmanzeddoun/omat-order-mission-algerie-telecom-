@@ -48,8 +48,15 @@ export const getAllUsers = () => async (dispatch: AppDispatch) => {
 export const addUser = (user: IUser) => async (dispatch: AppDispatch) => {
   user.matricule = +user.matricule;
   console.log(user);
+
+  // Sanitize empty strings to null for optional fields
+  const sanitizedUser = {
+    ...user,
+    serviceId: (user as any).serviceId && (user as any).serviceId.trim() !== '' ? (user as any).serviceId : null,
+  };
+
   try {
-    const res = await http.post<IUser>(`/users`, user, {
+    const res = await http.post<IUser>(`/users`, sanitizedUser, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -185,9 +192,14 @@ export const deleteUser = (user: IUser) => async (dispatch: AppDispatch) => {
 
 export const updateUser =
   (matricule: number | null, user: IUser) => async (dispatch: AppDispatch) => {
-    //
+    // Sanitize empty strings to null for optional fields
+    const sanitizedUser = {
+      ...user,
+      serviceId: (user as any).serviceId && (user as any).serviceId.trim() !== '' ? (user as any).serviceId : null,
+    };
+
     try {
-      const res = await http.patch(`/users/${matricule}`, user);
+      const res = await http.patch(`/users/${matricule}`, sanitizedUser);
       if (res) {
         await dispatch(setAlert({ msg: 'User Updated Successfully', type: AlertTypes.SUCCESS }));
         dispatch(editUser(res.data));
