@@ -6,6 +6,7 @@ import ArchiveIcon from 'assets/icons/material-symbols--archive-outline.svg?reac
 import OrderIcon from 'assets/icons/hugeicons--book-open-01.svg?react';
 import { FC, SVGProps } from 'react';
 import DecompteIcon from 'assets/icons/hugeicons--document-validation.svg?react';
+import AnalyticsIcon from 'assets/icons/AnalyticsIcon';
 
 export interface SubMenuItem {
   name: string;
@@ -26,6 +27,12 @@ export interface MenuItem {
 }
 
 const sitemap: MenuItem[] = [
+  {
+    id: 'analytics',
+    subheader: 'Analytique',
+    path: '/dashboard/admins/analytics',
+    icon: AnalyticsIcon,
+  },
   {
     id: 'decomptes',
     subheader: 'Décomptes',

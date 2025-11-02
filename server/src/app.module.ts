@@ -15,6 +15,7 @@ import { BaremModule } from './barem/barem.module';
 import { ExercicesModule } from './exercices/exercices.module';
 import { ArchiveModule } from './archive/archive.module';
 import { CommentsModule } from './comments/comments.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 @Module({
   imports: [
     PinoLoggerModule.forRoot({
@@ -50,6 +51,7 @@ import { CommentsModule } from './comments/comments.module';
     ExercicesModule,
     CommentsModule,
     ArchiveModule,
+    AnalyticsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

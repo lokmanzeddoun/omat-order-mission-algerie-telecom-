@@ -11,6 +11,7 @@ export default {
   users: `/${rootPaths.dashboard}/users`,
   structures: `/${rootPaths.dashboard}/structures`,
   barem: `/${rootPaths.dashboard}/barem`,
+  analytics: `/${rootPaths.dashboard}/admins/analytics`,
   home: `/${rootPaths.dashboard}/home`,
   me: `/${rootPaths.dashboard}/me`,
   messages: `/${rootPaths.pageRoot}/messages`,

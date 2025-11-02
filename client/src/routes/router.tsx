@@ -22,6 +22,7 @@ import DataGridWithJson from 'pages/barem';
 import Archive from 'pages/archive';
 import DecomptesPage from 'pages/decomptes';
 import AdminComments from 'pages/admin/Comments';
+import AnalyticsDashboard from 'pages/admin/AnalyticsDashboard';
 
 const router = createBrowserRouter(
   [
@@ -99,6 +100,10 @@ const router = createBrowserRouter(
             {
               path: 'archive',
               element: <Archive />,
+            },
+            {
+              path: 'analytics',
+              element: <AnalyticsDashboard />,
             },
           ],
         },
