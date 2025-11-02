@@ -5,8 +5,6 @@ import {
   Tab,
   Tabs,
   IconButton,
-  Menu,
-  MenuItem,
   Badge,
   Container,
   Paper,
@@ -17,6 +15,9 @@ import {
 import {
   Receipt as ReceiptIcon,
   Refresh as RefreshIcon,
+  Download as DownloadIcon,
+  Comment as CommentIcon,
+  Visibility as ViewIcon,
 } from '@mui/icons-material';
 import NoData from 'components/users/NoData';
 import Splash from 'components/loader/Splash';
@@ -27,11 +28,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { fetchAllDecompte, acceptDecompte, rejectDecompte } from 'components/orders/decompte.thunk';
 import moment from 'moment';
 import SmartTable, { SmartTableColumn } from 'components/common/SmartTable';
-import MenuIcon from 'assets/icons/iconamoon--menu-kebab-horizontal-fill.svg?react';
 import RenderDecompteDownload from 'components/orders/RenderDecompteDownload';
 import AcceptDecompteDialog from 'components/orders/AcceptDecompteDialog';
 import RejectDecompteDialog from 'components/orders/RejectDecompteDialog';
 import ViewCommentsDialog from 'components/orders/ViewCommentsDialog';
+import DecompteDetailModal from 'components/orders/DecompteDetailModal';
+import DecompteActionMenu from 'components/orders/DecompteActionMenu';
+import IconifyIcon from 'components/base/IconifyIcon';
+import ValidateIcon from 'assets/icons/hugeicons--document-validation.svg?react';
+import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
 
 const DecomptesPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -43,6 +48,7 @@ const DecomptesPage = () => {
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
 
   useEffect(() => {
     if (token) dispatch(fetchAllDecompte(token));
@@ -94,7 +100,8 @@ const DecomptesPage = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
-      valueGetter: (p: any) => p?.row?.mission?.n_mission ?? '-'
+      valueGetter: (p: any) => p?.row?.mission?.n_mission,
+      renderCell: (p: any) => p?.row?.mission?.n_mission ?? '-'
     },
     {
       field: 'date_mission',
@@ -116,7 +123,8 @@ const DecomptesPage = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
-      valueGetter: (p: any) => p?.row?.mission?.user?.matricule ?? '-'
+      valueGetter: (p: any) => p?.row?.mission?.user?.matricule,
+      renderCell: (p: any) => p?.row?.mission?.user?.matricule ?? '-'
     },
     {
       field: 'nom_prenom',
@@ -127,6 +135,11 @@ const DecomptesPage = () => {
         if (!u) return '-';
         return `${u.nom ?? ''} ${u.prenom ?? ''}`.trim() || '-';
       },
+      renderCell: (p: any) => {
+        const u = p?.row?.mission?.user;
+        if (!u) return '-';
+        return `${u.nom ?? ''} ${u.prenom ?? ''}`.trim() || '-';
+      }
     },
     {
       field: 'date_sortie',
@@ -156,7 +169,8 @@ const DecomptesPage = () => {
       field: 'destination',
       headerName: 'Destination',
       minWidth: 180,
-      valueGetter: (p: any) => p?.row?.mission?.destination ?? '-'
+      valueGetter: (p: any) => p?.row?.mission?.destination,
+      renderCell: (p: any) => p?.row?.mission?.destination ?? '-'
     },
     {
       field: 'transport',
@@ -175,7 +189,8 @@ const DecomptesPage = () => {
       field: 'motif',
       headerName: 'Motif de Déplacement',
       minWidth: 280,
-      valueGetter: (p: any) => p?.row?.mission?.motif ?? '-'
+      valueGetter: (p: any) => p?.row?.mission?.motif,
+      renderCell: (p: any) => p?.row?.mission?.motif ?? '-'
     },
     {
       field: 'heure_sortie',
@@ -295,78 +310,94 @@ const DecomptesPage = () => {
       headerAlign: 'right',
       minWidth: 80,
       headerSearchable: false,
-      renderCell: (params: any) => <DecompteActionMenu row={params.row} />,
+      renderCell: (params: any) => (
+        <DecompteActionMenu
+          decompte={params.row}
+          isAdmin={user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN'}
+          onAccept={(row) => {
+            setSelectedDecompte(row);
+            setAcceptDialogOpen(true);
+          }}
+          onReject={(row) => {
+            setSelectedDecompte(row);
+            setRejectDialogOpen(true);
+          }}
+        />
+      ),
     },
   ];
 
-  // Actions (example: download) - already visible via column button but added for context menu / extensibility
-  // Inline action menu component for kebab menu per row
-  const DecompteActionMenu = ({ row }: { row: any }) => {
-    const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-    const open = Boolean(anchorEl);
-    const handleOpen = (e: React.MouseEvent<HTMLElement>) => setAnchorEl(e.currentTarget);
-    const handleClose = () => setAnchorEl(null);
-
-    const handleDownload = () => {
-      const id = row?.n_decompte ?? row?.mission?.n_mission;
-      if (id) window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
-      handleClose();
-    };
-
-    const handleAccept = () => {
-      setSelectedDecompte(row);
-      setAcceptDialogOpen(true);
-      handleClose();
-    };
-
-    const handleReject = () => {
-      setSelectedDecompte(row);
-      setRejectDialogOpen(true);
-      handleClose();
-    };
-
-    const handleViewComments = () => {
-      setSelectedDecompte(row);
-      setCommentsDialogOpen(true);
-      handleClose();
-    };
-
-    const isPending = row?.status === 'PENDING';
+  // Build context menu items for the table
+  const contextMenuItems = useMemo(() => {
+    // SmartTable expects a static array, but we need dynamic items per row
+    // We'll use a workaround by returning all possible items and filtering in onClick
     const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
-    const hasComments = row?.messages && row.messages.length > 0;
 
-    return (
-      <Box>
-        <IconButton onClick={handleOpen} size="small">
-          <MenuIcon />
-        </IconButton>
-        <Menu
-          anchorEl={anchorEl}
-          open={open}
-          onClose={handleClose}
-          anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-          transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-          sx={{ '& .MuiList-root': { width: 160 } }}
-        >
-          <MenuItem onClick={handleDownload}>Télécharger</MenuItem>
-          {hasComments && (
-            <MenuItem onClick={handleViewComments}>
-              Voir Commentaires ({row.messages.length})
-            </MenuItem>
-          )}
-          {isPending && isAdmin && (
-            <>
-              <MenuItem onClick={handleAccept} sx={{ color: 'success.main' }}>
-                Accepter
-              </MenuItem>
-              <MenuItem onClick={handleReject} sx={{ color: 'error.main' }}>
-                Rejeter
-              </MenuItem>
-            </>
-          )}
-        </Menu>
-      </Box>
-    );
+    return [
+      {
+        key: 'view',
+        label: 'Voir Détails',
+        icon: <ViewIcon />,
+        onClick: (row: any) => {
+          setSelectedDecompte(row);
+          setDetailModalOpen(true);
+        },
+      },
+      {
+        key: 'download',
+        label: 'Télécharger',
+        icon: <DownloadIcon />,
+        onClick: (row: any) => {
+          const id = row?.n_decompte ?? row?.mission?.n_mission;
+          if (id) window.open(`/api/decompte/${id}/download`, '_blank', 'noopener');
+        },
+      },
+      {
+        key: 'comments',
+        label: 'Voir Commentaires',
+        icon: <CommentIcon />,
+        onClick: (row: any) => {
+          if (row?.messages && row.messages.length > 0) {
+            setSelectedDecompte(row);
+            setCommentsDialogOpen(true);
+          }
+        },
+      },
+      ...(isAdmin
+        ? [
+            {
+              key: 'accept',
+              label: 'Accepter',
+              icon: <IconifyIcon icon={ValidateIcon} color="success" />,
+              color: 'success.main',
+              onClick: (row: any) => {
+                if (row?.status === 'PENDING') {
+                  setSelectedDecompte(row);
+                  setAcceptDialogOpen(true);
+                }
+              },
+            },
+            {
+              key: 'reject',
+              label: 'Rejeter',
+              icon: <IconifyIcon icon={DeleteIcon} color="error" />,
+              color: 'error.main',
+              onClick: (row: any) => {
+                if (row?.status === 'PENDING') {
+                  setSelectedDecompte(row);
+                  setRejectDialogOpen(true);
+                }
+              },
+            },
+          ]
+        : []),
+    ];
+  }, [user?.role]);
+
+  // Handle double-click to view details
+  const handleViewDetails = (row: any) => {
+    setSelectedDecompte(row);
+    setDetailModalOpen(true);
   };
 
   const handleAcceptConfirm = async (message?: string) => {
@@ -575,6 +606,8 @@ const DecomptesPage = () => {
           noRowsOverlay={NoData as any}
           enableHeaderSearch
           dateFields={['date_mission', 'date_sortie', 'date_retour']}
+          onViewDetails={handleViewDetails}
+          contextMenuItems={contextMenuItems as any}
         />
       )}
       </Paper>
@@ -606,6 +639,16 @@ const DecomptesPage = () => {
         open={commentsDialogOpen}
         onClose={() => {
           setCommentsDialogOpen(false);
+          setSelectedDecompte(null);
+        }}
+        decompte={selectedDecompte}
+      />
+
+      {/* Detail Modal */}
+      <DecompteDetailModal
+        open={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
           setSelectedDecompte(null);
         }}
         decompte={selectedDecompte}
