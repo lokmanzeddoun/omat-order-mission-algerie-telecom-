@@ -4,49 +4,72 @@ import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
-import Box from '@mui/material/Box';
 import IconifyIcon from 'components/base/IconifyIcon';
 import OrderView from 'components/orders/OrderView';
 import SearchIcon from 'assets/icons/mynaui--search.svg?react';
 
 const UserDashboard = () => {
   const [searchText, setSearchText] = useState('');
+
   const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
     setSearchText(e.target.value);
   };
 
   return (
-    <Stack direction="column" spacing={1} width={1}>
+    <Stack direction="column" spacing={3} width={1} sx={{ p: { xs: 2, sm: 3 } }}>
+      {/* Header Section */}
       <Stack
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: '1fr auto 1fr',
-          alignItems: 'center',
-          gap: 2,
-        }}
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={2}
+        alignItems={{ xs: 'stretch', sm: 'center' }}
+        justifyContent="space-between"
       >
-        <Box />
-        <Typography variant="h4" minWidth={200} sx={{ justifySelf: 'center' }}>
+        <Typography
+          variant="h4"
+          sx={{
+            fontWeight: 600,
+            color: 'text.primary'
+          }}
+        >
           Mes ordre de missions
         </Typography>
+
         <TextField
-          variant="filled"
+          variant="outlined"
           size="medium"
-          placeholder="Recherche Ordre"
+          placeholder="Rechercher un ordre de mission..."
           value={searchText}
           onChange={handleInputChange}
-          sx={{ width: 1, maxWidth: 320, justifySelf: 'end', mr: { xs: 2, sm: 3 } }}
+          sx={{
+            width: { xs: 1, sm: 'auto' },
+            minWidth: { sm: 320 },
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+            }
+          }}
           InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <IconifyIcon icon={SearchIcon} />
+            startAdornment: (
+              <InputAdornment position="start">
+                <IconifyIcon icon={SearchIcon} sx={{ color: 'text.secondary' }} />
               </InputAdornment>
             ),
           }}
         />
       </Stack>
 
-      <Paper sx={{ mt: 1.5, p: 3, pb: 0.75, minHeight: 411, width: 1 }}>
+      {/* Content Section */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          minHeight: 500,
+          width: 1,
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: 2,
+          backgroundColor: 'background.paper'
+        }}
+      >
         <OrderView searchText={searchText} />
       </Paper>
     </Stack>

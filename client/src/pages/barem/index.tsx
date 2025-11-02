@@ -73,7 +73,7 @@ const columns: GridColDef[] = [
     hideable: false,
     renderCell: (params) => (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <RestaurantIcon sx={{ fontSize: 16, color: 'info.main' }} />
+        <RestaurantIcon sx={{ fontSize: 16, color: 'text.primary' }} />
         <Typography variant="body2" sx={{ color: 'text.primary' }} fontWeight={500}>
           {params.value?.toLocaleString()} DZD
         </Typography>
@@ -88,7 +88,7 @@ const columns: GridColDef[] = [
     hideable: false,
     renderCell: (params) => (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <HotelIcon sx={{ fontSize: 16, color: 'info.main' }} />
+        <HotelIcon sx={{ fontSize: 16, color: 'text.primary' }} />
         <Typography variant="body2" sx={{ color: 'text.primary' }} fontWeight={500}>
           {params.value?.toLocaleString()} DZD
         </Typography>
@@ -286,14 +286,14 @@ export default function BaremTable() {
             sx={{
               p: 2.5,
               border: '1px solid',
-              borderColor: 'info.main',
+              borderColor: 'text.primary',
               borderRadius: 2,
               backgroundColor: (theme) => alpha(theme.palette.info.main, 0.02),
             }}
           >
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 1.5 }}>
-              <NorthIcon sx={{ color: 'info.main' }} />
-              <Typography variant="h6" fontWeight="600" color="info.main">
+              <NorthIcon sx={{ color: 'text.primary' }} />
+              <Typography variant="h6" fontWeight="600" color="text.primary">
                 Région Nord
               </Typography>
             </Box>
