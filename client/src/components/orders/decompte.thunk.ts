@@ -158,3 +158,34 @@ export const rejectDecompte =
         console.error('Error:', errorMessage);
       }
     };
+
+export const archiveDecompte =
+  (id: number, token: string | null) =>
+    async (dispatch: AppDispatch) => {
+      try {
+        const res = await http.delete(`/decompte/${id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (res && res.data) {
+          dispatch(setAlert({ msg: 'Décompte archivé avec succès', type: AlertTypes.SUCCESS }));
+          return dispatch(fetchAllDecompte(token, 'pending'));
+        } else {
+          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+        }
+      } catch (error) {
+        let errorMessage = 'An error occurred';
+
+        if (axios.isAxiosError(error)) {
+          errorMessage = error.response?.data?.message || error.message;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+        console.error('Error:', errorMessage);
+      }
+    };

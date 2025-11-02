@@ -132,7 +132,7 @@ export class DecompteService {
     return this.databaseService.$transaction([updateMission, createDecomte]);
   }
 
-  async findAll(status: string, exercice?: string) {
+  async findAll(status: string, archive: string, exercice?: string) {
     console.log(status);
     // convert status to DcompteStatus
     let sat: DecompteStatus;
@@ -151,9 +151,13 @@ export class DecompteService {
       });
       year = ex?.year;
     }
+
+    // Determine soft_delete filter based on archive parameter
+    const softDeleteFilter = archive === 'true';
+
     return this.databaseService.decompte.findMany({
       where: {
-        soft_delete: false,
+        soft_delete: softDeleteFilter,
         status: sat,
         ...(year ? { exercice: { year } } : {}),
       },

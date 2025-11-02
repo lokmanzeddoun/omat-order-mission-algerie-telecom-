@@ -38,9 +38,10 @@ export class DecompteController {
   @Get()
   findAll(
     @Query('status') status: string,
+    @Query('archive') archive: string,
     @Query('exercice') exercice?: string,
   ) {
-    return this.decompteService.findAll(status, exercice);
+    return this.decompteService.findAll(status, archive, exercice);
   }
 
   @Get(':id')

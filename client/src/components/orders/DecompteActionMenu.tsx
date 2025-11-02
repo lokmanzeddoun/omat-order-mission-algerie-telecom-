@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import { Archive as ArchiveIcon } from '@mui/icons-material';
 import IconifyIcon from 'components/base/IconifyIcon';
 import ValidateIcon from 'assets/icons/hugeicons--document-validation.svg?react';
 import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
@@ -14,9 +15,10 @@ import { FC, SVGProps } from 'react';
 
 interface Action {
   id: number;
-  icon: FC<SVGProps<SVGSVGElement>>;
+  icon: FC<SVGProps<SVGSVGElement>> | any;
   title: string;
   showCondition?: (decompte: any, isAdmin: boolean) => boolean;
+  isMuiIcon?: boolean;
 }
 
 const actions: Action[] = [
@@ -25,12 +27,21 @@ const actions: Action[] = [
     icon: ValidateIcon,
     title: 'Accepter',
     showCondition: (decompte, isAdmin) => isAdmin && decompte?.status === 'PENDING',
+    isMuiIcon: false,
   },
   {
     id: 2,
     icon: DeleteIcon,
     title: 'Rejeter',
     showCondition: (decompte, isAdmin) => isAdmin && decompte?.status === 'PENDING',
+    isMuiIcon: false,
+  },
+  {
+    id: 3,
+    icon: ArchiveIcon,
+    title: 'Archiver',
+    showCondition: (_decompte, isAdmin) => isAdmin,
+    isMuiIcon: true,
   },
 ];
 
@@ -39,9 +50,10 @@ interface DecompteActionMenuProps {
   isAdmin: boolean;
   onAccept?: (decompte: any) => void;
   onReject?: (decompte: any) => void;
+  onArchive?: (decompte: any) => void;
 }
 
-const DecompteActionMenu = ({ decompte, isAdmin, onAccept, onReject }: DecompteActionMenuProps) => {
+const DecompteActionMenu = ({ decompte, isAdmin, onAccept, onReject, onArchive }: DecompteActionMenuProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -60,6 +72,9 @@ const DecompteActionMenu = ({ decompte, isAdmin, onAccept, onReject }: DecompteA
         break;
       case 2:
         onReject?.(decompte);
+        break;
+      case 3:
+        onArchive?.(decompte);
         break;
       default:
         break;
@@ -101,24 +116,26 @@ const DecompteActionMenu = ({ decompte, isAdmin, onAccept, onReject }: DecompteA
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
         {visibleActions.map((actionItem) => {
+          const IconComponent = actionItem.icon;
+          const textColor = actionItem.id === 1
+            ? 'success.main'
+            : actionItem.id === 2
+              ? 'error.main'
+              : actionItem.id === 3
+                ? 'warning.main'
+                : 'text.primary';
+
           return (
             <MenuItem key={actionItem.id} onClick={() => handleActionItemClick(actionItem.id)}>
-              <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize' }}>
-                <IconifyIcon
-                  icon={actionItem.icon}
-                  color={actionItem.id === 1 ? 'success' : actionItem.id === 2 ? 'error' : 'action'}
-                />
+              <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize', color: textColor }}>
+                {actionItem.isMuiIcon ? (
+                  <IconComponent sx={{ color: textColor }} />
+                ) : (
+                  <IconifyIcon icon={IconComponent} sx={{ color: textColor }} />
+                )}
               </ListItemIcon>
               <ListItemText>
-                <Typography
-                  color={
-                    actionItem.id === 1
-                      ? 'success.main'
-                      : actionItem.id === 2
-                        ? 'error.main'
-                        : 'text.primary'
-                  }
-                >
+                <Typography color={textColor}>
                   {actionItem.title}
                 </Typography>
               </ListItemText>

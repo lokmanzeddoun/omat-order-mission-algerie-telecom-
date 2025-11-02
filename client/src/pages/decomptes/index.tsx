@@ -25,12 +25,18 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
 import { useEffect, useMemo, useState } from 'react';
-import { fetchAllDecompte, acceptDecompte, rejectDecompte } from 'components/orders/decompte.thunk';
+import {
+  fetchAllDecompte,
+  acceptDecompte,
+  rejectDecompte,
+  archiveDecompte,
+} from 'components/orders/decompte.thunk';
 import moment from 'moment';
 import SmartTable, { SmartTableColumn } from 'components/common/SmartTable';
 import RenderDecompteDownload from 'components/orders/RenderDecompteDownload';
 import AcceptDecompteDialog from 'components/orders/AcceptDecompteDialog';
 import RejectDecompteDialog from 'components/orders/RejectDecompteDialog';
+import ArchiveDecompteDialog from 'components/orders/ArchiveDecompteDialog';
 import ViewCommentsDialog from 'components/orders/ViewCommentsDialog';
 import DecompteDetailModal from 'components/orders/DecompteDetailModal';
 import DecompteActionMenu from 'components/orders/DecompteActionMenu';
@@ -47,6 +53,7 @@ const DecomptesPage = () => {
   const [selectedDecompte, setSelectedDecompte] = useState<any>(null);
   const [acceptDialogOpen, setAcceptDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
@@ -322,6 +329,10 @@ const DecomptesPage = () => {
             setSelectedDecompte(row);
             setRejectDialogOpen(true);
           }}
+          onArchive={(row) => {
+            setSelectedDecompte(row);
+            setArchiveDialogOpen(true);
+          }}
         />
       ),
     },
@@ -389,6 +400,16 @@ const DecomptesPage = () => {
                 }
               },
             },
+            {
+              key: 'archive',
+              label: 'Archiver',
+              icon: <DownloadIcon />,
+              color: 'warning.main',
+              onClick: (row: any) => {
+                setSelectedDecompte(row);
+                setArchiveDialogOpen(true);
+              },
+            },
           ]
         : []),
     ];
@@ -410,6 +431,13 @@ const DecomptesPage = () => {
   const handleRejectConfirm = async (message: string) => {
     if (selectedDecompte?.n_decompte) {
       await dispatch(rejectDecompte(selectedDecompte.n_decompte, token, message));
+      setSelectedDecompte(null);
+    }
+  };
+
+  const handleArchiveConfirm = async () => {
+    if (selectedDecompte?.n_decompte) {
+      await dispatch(archiveDecompte(selectedDecompte.n_decompte, token));
       setSelectedDecompte(null);
     }
   };
@@ -631,6 +659,17 @@ const DecomptesPage = () => {
           setSelectedDecompte(null);
         }}
         onConfirm={handleRejectConfirm}
+        decompte={selectedDecompte}
+      />
+
+      {/* Archive Dialog */}
+      <ArchiveDecompteDialog
+        open={archiveDialogOpen}
+        onClose={() => {
+          setArchiveDialogOpen(false);
+          setSelectedDecompte(null);
+        }}
+        onConfirm={handleArchiveConfirm}
         decompte={selectedDecompte}
       />
 
