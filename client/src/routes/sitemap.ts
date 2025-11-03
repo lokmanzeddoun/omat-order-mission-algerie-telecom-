@@ -71,7 +71,7 @@ const sitemap: MenuItem[] = [
   },
   {
     id: 'support',
-    subheader: 'Support',
+    subheader: 'Commentaires',
     path: '/dashboard/admins/support',
     icon: SupportIcon,
   },

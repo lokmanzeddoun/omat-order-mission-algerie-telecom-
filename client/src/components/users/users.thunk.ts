@@ -163,14 +163,13 @@ export const exportUsers = () => async (dispatch: AppDispatch) => {
   }
 };
 
-export const deleteUser = (user: IUser) => async (dispatch: AppDispatch) => {
-  //
+export const archiveUser = (user: IUser) => async (dispatch: AppDispatch) => {
   try {
-    const res = await http.delete(`/users/${user.matricule}`);
+    const res = await http.patch(`/users/${user.matricule}/archive`);
     if (res) {
-      await dispatch(setAlert({ msg: 'User Deleted Successfully', type: AlertTypes.SUCCESS }));
+      await dispatch(setAlert({ msg: 'Utilisateur Archivé avec Succès', type: AlertTypes.SUCCESS }));
       dispatch(removeUser(user.matricule));
-      return dispatch(getAllUsers()); // Assuming 'res.data' contains the newly created users
+      return dispatch(getAllUsers());
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
     }
@@ -251,5 +250,32 @@ export const changePassword =
 
       dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
       console.error('Error:', errorMessage);
+    }
+  };
+
+export const resetUserPassword =
+  (matricule: number, newPassword: string) => async (dispatch: AppDispatch) => {
+    try {
+      const res = await http.post(`/users/${matricule}/reset-password`, {
+        newPassword,
+      });
+      if (res.data) {
+        dispatch(setAlert({ msg: 'Mot de passe réinitialisé avec succès', type: AlertTypes.SUCCESS }));
+        return res.data;
+      } else {
+        dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      }
+    } catch (error) {
+      let errorMessage = 'An error occurred';
+
+      if (axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+      console.error('Error:', errorMessage);
+      throw error;
     }
   };

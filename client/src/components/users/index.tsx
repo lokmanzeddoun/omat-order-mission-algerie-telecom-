@@ -21,8 +21,8 @@ import {
   Download as DownloadIcon,
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
-import { GridColDef, GridRowsProp } from '@mui/x-data-grid';
-import SmartTable, { ContextMenuItem } from 'components/common/SmartTable';
+import { GridRowsProp } from '@mui/x-data-grid';
+import SmartTable, { ContextMenuItem, SmartTableColumn } from 'components/common/SmartTable';
 import IconifyIcon from 'components/base/IconifyIcon';
 import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
 import EditIcon from 'assets/icons/hugeicons--pencil-edit-02.svg?react';
@@ -35,11 +35,12 @@ import { SyntheticEvent, useEffect, useState } from 'react';
 import ActionMenu from './ActionMenu';
 import CreateUserModal from './modals/CreateUserModal';
 import EditUserModal from './modals/EditUserModal';
-import ConfirmDeletionModal from './modals/DeleteUser';
+import ConfirmDeletionModal from './modals/ArchiveUser';
+import ResetPasswordModal from './modals/ResetPasswordModal';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
-import { addUser, deleteUser, getAllUsers, updateUser, uploadUsers, exportUsers } from './users.thunk';
+import { addUser, archiveUser, getAllUsers, updateUser, uploadUsers, exportUsers, resetUserPassword } from './users.thunk';
 import { Role } from 'constants/role';
 import { Category } from 'constants/category';
 import Splash from 'components/loader/Splash';
@@ -59,7 +60,7 @@ export interface RowData {
   structure?: { name: string; code?: string } | null;
 }
 
-const initialColumns: GridColDef[] = [
+const initialColumns: SmartTableColumn<RowData>[] = [
   {
     field: 'matricule',
     headerName: 'Matricule',
@@ -103,11 +104,11 @@ const initialColumns: GridColDef[] = [
   {
     field: 'email',
     headerName: 'Email',
-    flex: 1,
-    minWidth: 250,
+    flex: 1.2,
+    minWidth: 280,
     hideable: false,
     renderCell: (params) => (
-      <Typography variant="body2" color="text.primary">
+      <Typography variant="body2" color="text.primary" sx={{ px: 1 }}>
         {params.value}
       </Typography>
     ),
@@ -115,11 +116,11 @@ const initialColumns: GridColDef[] = [
   {
     field: 'structure.name',
     headerName: 'Service',
-    flex: 1,
-    minWidth: 200,
+    flex: 1.2,
+    minWidth: 220,
     hideable: false,
     renderCell: (params) => (
-      <Typography variant="body2" color="text.primary">
+      <Typography variant="body2" color="text.primary" sx={{ px: 1 }}>
         {params.row?.structure?.name}
       </Typography>
     ),
@@ -128,10 +129,11 @@ const initialColumns: GridColDef[] = [
   {
     field: 'grade',
     headerName: 'Grade',
-    width: 100,
+    minWidth: 150,
+    flex: 0.8,
     hideable: false,
     renderCell: (params) => (
-      <Typography variant="body2" color="text.primary">
+      <Typography variant="body2" color="text.primary" sx={{ px: 1 }}>
         {params.value}
       </Typography>
     ),
@@ -141,6 +143,9 @@ const initialColumns: GridColDef[] = [
     headerName: 'Category',
     width: 100,
     hideable: false,
+    sortable: false,
+    filterable: false,
+    headerSearchable: false,
     renderCell: (params) => (
       <Chip label={params.value} size="small" variant="outlined" />
     ),
@@ -150,6 +155,9 @@ const initialColumns: GridColDef[] = [
     headerName: 'Role',
     width: 100,
     hideable: false,
+    sortable: false,
+    filterable: false,
+    headerSearchable: false,
     renderCell: (params) => (
       <Chip
         label={params.value}
@@ -164,28 +172,12 @@ const initialColumns: GridColDef[] = [
     minWidth: 130,
     flex: 1,
     hideable: false,
+    headerSearchable: false,
     renderCell: (params) => (
       <Typography variant="body2" color="text.secondary">
         {dateFormatFromUTC(params.value)}
       </Typography>
     ),
-  },
-  {
-    field: 'status',
-    headerName: 'Status',
-    headerAlign: 'center',
-    editable: false,
-    flex: 1,
-    minWidth: 140,
-    renderCell: (params) => {
-      const color =
-        params.value === 'ACTIVE' ? 'success' : params.value === 'INACTIVE' ? 'error' : 'info';
-      return (
-        <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
-          <Chip label={params.value} size="small" color={color} />
-        </Stack>
-      );
-    },
   },
 ];
 
@@ -207,6 +199,7 @@ const InvoiceOverviewTable: React.FC = () => {
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
   const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setResetPasswordModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<RowData | null>(null);
   const handleEdit = (user: any) => {
     setSelectedUser(user);
@@ -236,14 +229,28 @@ const InvoiceOverviewTable: React.FC = () => {
   };
 
 
-  // Function to handle opening of the delete modal
-  const handleDelete = (user: any) => {
+  // Function to handle opening of the archive modal
+  const handleArchive = (user: any) => {
     setSelectedUser(user);
     setDeleteModalOpen(true);
   };
-  const ConfirmationDelete = async () => {
+
+  // Function to handle opening of the reset password modal
+  const handleResetPassword = (user: any) => {
+    setSelectedUser(user);
+    setResetPasswordModalOpen(true);
+  };
+
+  // Function to submit password reset
+  const handleResetPasswordSubmit = async (newPassword: string) => {
+    if (!selectedUser) return;
+    await dispatch(resetUserPassword(selectedUser.matricule, newPassword));
+    setResetPasswordModalOpen(false);
+  };
+
+  const ConfirmationArchive = async () => {
     if (selectedUser) {
-      await dispatch(deleteUser(selectedUser as any));
+      await dispatch(archiveUser(selectedUser as any));
     }
     setDeleteModalOpen(false);
   };
@@ -328,7 +335,7 @@ const InvoiceOverviewTable: React.FC = () => {
   // no-op: handled by SmartTable
 
   // Define the full columns array including the dynamic action column
-  const columns: GridColDef[] = [
+  const columns: SmartTableColumn<RowData>[] = [
     ...initialColumns,
     {
       field: '',
@@ -342,8 +349,9 @@ const InvoiceOverviewTable: React.FC = () => {
         <ActionMenu
           user={params.row} // Pass the row data (user) to the ActionMenu
           onEdit={() => handleEdit(params.row)} // Attach the edit handler
-          onDelete={() => handleDelete(params.row)} // Attach the delete handler
+          onDelete={() => handleArchive(params.row)} // Attach the archive handler
           handleMissionOpen={() => handleOpen1(params.row)}
+          onResetPassword={() => handleResetPassword(params.row)} // Attach the reset password handler
         />
       ),
     },
@@ -606,11 +614,18 @@ const InvoiceOverviewTable: React.FC = () => {
                 onClick: (row: RowData) => handleEdit(row),
               },
               {
-                key: 'delete',
-                label: 'Supprimer',
+                key: 'reset-password',
+                label: 'Réinitialiser MDP',
+                color: 'warning',
+                icon: <IconifyIcon icon={EditIcon} color="warning" />,
+                onClick: (row: RowData) => handleResetPassword(row),
+              },
+              {
+                key: 'archive',
+                label: 'Archiver',
                 color: 'error',
                 icon: <IconifyIcon icon={DeleteIcon} color="error" />,
-                onClick: (row: RowData) => handleDelete(row),
+                onClick: (row: RowData) => handleArchive(row),
               },
             ] as ContextMenuItem<RowData>[]
           )}
@@ -641,7 +656,13 @@ const InvoiceOverviewTable: React.FC = () => {
             open={isDeleteModalOpen}
             onClose={() => setDeleteModalOpen(false)}
             itemName={selectedUser.nom}
-            onConfirm={ConfirmationDelete}
+            onConfirm={ConfirmationArchive}
+          />
+          <ResetPasswordModal
+            open={isResetPasswordModalOpen}
+            onClose={() => setResetPasswordModalOpen(false)}
+            onSubmit={handleResetPasswordSubmit}
+            userName={`${selectedUser.nom} ${selectedUser.prenom}`}
           />
         </>
       ) : null}

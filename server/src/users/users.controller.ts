@@ -23,6 +23,7 @@ import { Auth } from 'src/auth/guards/auth-role.guard';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { Response } from 'express';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
 
 @ApiTags('User')
 @Controller('users')
@@ -94,15 +95,31 @@ export class UsersController {
     return this.usersService.update(+id, updateUserDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+  @Patch(':id/archive')
+  @ApiOperation({
+    summary: 'ARCHIVE USER',
+    description: 'Archive a user by setting soft_delete to true',
+  })
+  @ApiResponse({ status: 200, description: 'User archived successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  archive(@Param('id') id: string) {
+    return this.usersService.archive(+id);
   }
-  // Admin-only endpoint to reset a user's password (generate temporary password)
+  // Admin-only endpoint to reset a user's password
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Post(':id/reset-password')
-  async resetPassword(@Param('id') id: string) {
-    return this.usersService.resetPassword(+id);
+  @ApiOperation({
+    summary: 'RESET USER PASSWORD',
+    description: 'Admin can reset a user password by providing a new password',
+  })
+  @ApiResponse({ status: 200, description: 'Password reset successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async resetPassword(
+    @Param('id') id: string,
+    @Body() resetPasswordDto: ResetPasswordDto,
+  ) {
+    return this.usersService.resetPassword(+id, resetPasswordDto.newPassword);
   }
   @Auth()
   @Post('/changePassword')

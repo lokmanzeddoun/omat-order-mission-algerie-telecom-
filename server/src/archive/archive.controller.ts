@@ -29,4 +29,52 @@ export class ArchiveController {
   moveDecompte(@Param('id') id: string) {
     return this.archive.moveDecompteToArchive(+id);
   }
+
+  @Get('structures')
+  @Auth()
+  listStructures() {
+    return this.archive.listStructures();
+  }
+
+  @Patch('structures/:code')
+  @Auth()
+  moveStructure(@Param('code') code: string) {
+    return this.archive.moveStructureToArchive(code);
+  }
+
+  @Get('users')
+  @Auth()
+  listUsers() {
+    return this.archive.listUsers();
+  }
+
+  @Patch('users/:id')
+  @Auth()
+  moveUser(@Param('id') id: string) {
+    return this.archive.moveUserToArchive(+id);
+  }
+
+  @Patch('missions/:id/restore')
+  @Auth()
+  restoreMission(@Param('id') id: string) {
+    return this.archive.restoreMission(+id);
+  }
+
+  @Patch('decomptes/:id/restore')
+  @Auth()
+  restoreDecompte(@Param('id') id: string) {
+    return this.archive.restoreDecompte(+id);
+  }
+
+  @Patch('users/:id/restore')
+  @Auth()
+  restoreUser(@Param('id') id: string) {
+    return this.archive.restoreUser(+id);
+  }
+
+  @Patch('structures/:code/restore')
+  @Auth()
+  restoreStructure(@Param('code') code: string) {
+    return this.archive.restoreStructure(code);
+  }
 }

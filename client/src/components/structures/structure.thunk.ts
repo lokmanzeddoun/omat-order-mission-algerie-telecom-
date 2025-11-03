@@ -160,12 +160,11 @@ export const exportStructures = () => async (dispatch: AppDispatch) => {
   }
 };
 
-export const deleteStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
-  //
+export const archiveStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   try {
-    const res = await http.delete(`/structures/${structure.code}`);
+    const res = await http.patch(`/structures/${structure.code}/archive`);
     if (res) {
-      await dispatch(setAlert({ msg: 'Structure Deleted Successfully', type: AlertTypes.SUCCESS }));
+      await dispatch(setAlert({ msg: 'Structure Archivée avec Succès', type: AlertTypes.SUCCESS }));
       await dispatch(removeStructure(structure.code));
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));

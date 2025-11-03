@@ -140,6 +140,8 @@ const OrderDashboard = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
+      sortable: false,
+      filterable: false,
       renderCell: (params: any) => {
         const statusTranslations: { [key: string]: string } = {
           PENDING: 'En attente',
@@ -172,6 +174,8 @@ const OrderDashboard = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
+      sortable: false,
+      filterable: false,
       renderCell: (params: any) => {
         const raw = params?.value ?? '';
         const translatedLabel = transportMapping[raw] || raw;

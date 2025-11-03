@@ -26,7 +26,6 @@ import {
   Search as SearchIcon,
   Comment as CommentIcon,
   PersonOutline as PersonIcon,
-  LockReset as LockResetIcon,
   Info as InfoIcon,
   Category as CategoryIcon,
   FlagOutlined as FlagIcon,
@@ -42,7 +41,7 @@ const AdminComments = () => {
   const [selected, setSelected] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [userNames, setUserNames] = useState<Record<string, string>>({});
-  const { handleError, handleSuccess } = useApiHandler();
+  const { handleError } = useApiHandler();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,7 +58,7 @@ const AdminComments = () => {
   useEffect(() => { load(); }, [load]);
 
   // Define which comment types are for admins
-  const ADMIN_TYPES = ['OTHER', 'SUPPORT', 'FORGET_PASSWORD'];
+  const ADMIN_TYPES = ['OTHER', 'SUPPORT'];
 
   // Helper to resolve user id and display name from different shapes
   const resolveUser = (it: any) => {
@@ -113,18 +112,6 @@ const AdminComments = () => {
     return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
-  const handleReset = async (userId: number) => {
-    try {
-      const res = await http.post(`/users/${userId}/reset-password`);
-      const pwd = res.data?.tempPassword;
-      handleSuccess(`Mot de passe réinitialisé: ${pwd}`);
-      // reload list
-      load();
-    } catch (err: any) {
-      handleError(err);
-    }
-  };
-
   const openDetails = (item: any) => {
     setSelected(item);
     setOpenDetail(true);
@@ -146,7 +133,6 @@ const AdminComments = () => {
 
   // Get type color
   const getTypeColor = (type: string): 'default' | 'primary' | 'secondary' | 'error' | 'warning' => {
-    if (type === 'FORGET_PASSWORD') return 'error';
     if (type === 'SUPPORT' || type === 'COMMENTAIRE') return 'primary';
     return 'secondary';
   };
@@ -233,7 +219,7 @@ const AdminComments = () => {
 
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Paper
             elevation={0}
             sx={{
@@ -251,25 +237,7 @@ const AdminComments = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <Paper
-            elevation={0}
-            sx={{
-              p: 2,
-              border: '1px solid',
-              borderColor: 'divider',
-              backgroundColor: (theme) => alpha(theme.palette.error.main, 0.04),
-            }}
-          >
-            <Typography variant="caption" color="text.secondary" gutterBottom>
-              Mot de passe oublié
-            </Typography>
-            <Typography variant="h4" fontWeight="600" color="error.main">
-              {adminItems.filter((it) => it.type === 'FORGET_PASSWORD').length}
-            </Typography>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Paper
             elevation={0}
             sx={{
@@ -280,14 +248,14 @@ const AdminComments = () => {
             }}
           >
             <Typography variant="caption" color="text.secondary" gutterBottom>
-              Support
+              Commentaires
             </Typography>
             <Typography variant="h4" fontWeight="600" color="text.primary">
               {adminItems.filter((it) => it.type === 'SUPPORT').length}
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <Paper
             elevation={0}
             sx={{
@@ -397,28 +365,7 @@ const AdminComments = () => {
                     {/* Actions */}
                     <Grid item xs={12} md={3}>
                       <Stack direction="row" spacing={1} justifyContent="flex-end">
-                        {it.type === 'FORGET_PASSWORD' ? (
-                          <Tooltip title="Réinitialiser le mot de passe">
-                            <Button
-                              variant="contained"
-                              size="small"
-                              color="error"
-                              startIcon={<LockResetIcon />}
-                              onClick={async () => {
-                                if (!u.id) {
-                                  handleError(
-                                    new Error("Aucun ID utilisateur disponible pour la réinitialisation")
-                                  );
-                                  return;
-                                }
-                                await handleReset(u.id);
-                              }}
-                              disabled={!u.id}
-                            >
-                              Réinitialiser
-                            </Button>
-                          </Tooltip>
-                        ) : it.type === 'OTHER' ? (
+                        {it.type === 'OTHER' ? (
                           <Tooltip title="Voir les détails">
                             <Button
                               variant="outlined"

@@ -32,7 +32,7 @@ import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
 import {
   addStructure,
-  deleteStructure,
+  archiveStructure,
   getAllStructures,
   updateStructure,
   uploadStructure,
@@ -40,7 +40,7 @@ import {
 } from './structure.thunk';
 import CreateStructureModal from './modals/CreateStructureModal';
 import EditStructureModal from './modals/EditStructureModal';
-import ConfirmDeletionModal from './modals/DeleteStructure';
+import ConfirmDeletionModal from './modals/ArchiveStructure';
 import Splash from 'components/loader/Splash';
 
 export interface RowData {
@@ -94,7 +94,7 @@ const InvoiceOverviewTable: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [isEditModalOpen, setEditModalOpen] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
-  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isArchiveModalOpen, setArchiveModalOpen] = useState(false);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -119,21 +119,21 @@ const InvoiceOverviewTable: React.FC = () => {
 
   // handled by SmartTable
 
-  // Function to handle opening of the delete modal
-  const handleDelete = async (structure: any) => {
+  // Function to handle opening of the archive modal
+  const handleArchive = async (structure: any) => {
     setselectedStructure(structure);
-    setDeleteModalOpen(true);
+    setArchiveModalOpen(true);
   };
-  const ConfirmationDelete = async () => {
+  const ConfirmationArchive = async () => {
     if (selectedStructure) {
-      await dispatch(deleteStructure(selectedStructure as any));
+      await dispatch(archiveStructure(selectedStructure as any));
     }
     await dispatch(getAllStructures());
-    setDeleteModalOpen(false);
+    setArchiveModalOpen(false);
   };
   const EditSumbission = async (data: RowData) => {
     await dispatch(updateStructure(data));
-    setDeleteModalOpen(false);
+    setEditModalOpen(false);
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,7 +172,7 @@ const InvoiceOverviewTable: React.FC = () => {
         <ActionMenu
           user={params.row} // Pass the row data (user) to the ActionMenu
           onEdit={() => handleEdit(params.row)} // Attach the edit handler
-          onDelete={() => handleDelete(params.row)} // Attach the delete handler
+          onDelete={() => handleArchive(params.row)} // Attach the archive handler
         />
       ),
     },
@@ -332,11 +332,11 @@ const InvoiceOverviewTable: React.FC = () => {
               onClick: (row) => handleEdit(row as any),
             },
             {
-              key: 'delete',
-              label: 'Supprimer',
+              key: 'archive',
+              label: 'Archiver',
               color: 'error',
               icon: <IconifyIcon icon={DeleteIcon} color="error" />,
-              onClick: (row) => handleDelete(row as any),
+              onClick: (row) => handleArchive(row as any),
             },
           ] as ContextMenuItem<RowData>[])}
         />
@@ -353,10 +353,10 @@ const InvoiceOverviewTable: React.FC = () => {
             viewOnly={viewOnly}
           />
           <ConfirmDeletionModal
-            open={isDeleteModalOpen}
-            onClose={() => setDeleteModalOpen(false)}
+            open={isArchiveModalOpen}
+            onClose={() => setArchiveModalOpen(false)}
             itemName={selectedStructure.name}
-            onConfirm={ConfirmationDelete}
+            onConfirm={ConfirmationArchive}
           />
         </>
       ) : null}

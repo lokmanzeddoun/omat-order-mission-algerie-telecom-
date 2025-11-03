@@ -179,7 +179,7 @@ export class UsersService {
     });
   }
 
-  remove(matricule: number) {
+  archive(matricule: number) {
     return this.databaseService.user.update({
       where: {
         matricule,
@@ -263,20 +263,25 @@ export class UsersService {
     });
   }
 
-  // Admin reset password: generate a temp password and set it for the user
-  async resetPassword(matricule: number) {
+  // Admin reset password: accept a custom password from admin
+  async resetPassword(matricule: number, newPassword: string) {
     const user = await this.databaseService.user.findUnique({
       where: { matricule },
     });
     if (!user) throw new BadRequestException('User not found');
-    // generate a simple temporary password - admin can copy it and communicate to user securely
-    const temp = `${user.nom.toLowerCase()}_${user.prenom.toLowerCase()}_reset_${Math.floor(Math.random() * 9000 + 1000)}`;
-    const hashed = await bcrypt.hash(temp, 10);
+
+    // Hash the new password provided by admin
+    const hashed = await bcrypt.hash(newPassword, 10);
     await this.databaseService.user.update({
       where: { matricule },
       data: { password: hashed },
     });
-    return { matricule, tempPassword: temp };
+
+    return {
+      matricule,
+      message: 'Password reset successfully',
+      success: true,
+    };
   }
 
   async exportUsers(res: Response) {

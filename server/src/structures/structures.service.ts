@@ -53,7 +53,7 @@ export class StructuresService {
     });
   }
 
-  remove(code: string) {
+  archive(code: string) {
     return this.databaseService.structure.update({
       where: {
         code,

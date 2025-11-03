@@ -67,9 +67,15 @@ export class StructuresController {
     return this.structuresService.update(id, updateStructureDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.structuresService.remove(id);
+  @Patch(':id/archive')
+  @ApiOperation({
+    summary: 'ARCHIVE STRUCTURE',
+    description: 'Archive a structure by setting soft_delete to true',
+  })
+  @ApiResponse({ status: 200, description: 'Structure archived successfully' })
+  @ApiResponse({ status: 404, description: 'Structure not found' })
+  archive(@Param('id') id: string) {
+    return this.structuresService.archive(id);
   }
 
   @Post('upload')
