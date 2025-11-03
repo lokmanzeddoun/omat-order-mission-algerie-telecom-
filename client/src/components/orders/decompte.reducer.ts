@@ -12,12 +12,12 @@ export interface IDecompte {
   hebergement_pec?: number;
   distance_km?: number; // Distance parcourue pour indemnité kilométrique
   transport_cost?: number; // Frais de transport engagés (DA)
-  parcours?: number;
-  montant?: number;
+  parcours?: number; // Distance parcours in km
+  montant?: number; // Total amount
   status?: 'PENDING' | 'ACCEPTED' | 'REGECTED';
   missionId?: number; // Relation to the mission
-  mission?: any;
-  messages?: any[];
+  mission?: any; // Mission object with user details
+  messages?: any[]; // Array of comments
   createdAt?: string;
   updatedAt?: string;
 }

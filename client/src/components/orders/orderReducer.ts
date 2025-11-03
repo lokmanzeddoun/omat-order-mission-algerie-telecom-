@@ -14,6 +14,8 @@ export interface IMission {
   destination: string; // The destination of the mission
   userId?: number; // The ID of the user associated with the mission
   direction: Direction;
+  status?: string | null;
+  soft_delete?: boolean;
 }
 
 export interface MissionState {

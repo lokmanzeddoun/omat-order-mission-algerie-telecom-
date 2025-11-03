@@ -9,6 +9,7 @@ import {
     GridRowClassNameParams,
     GridRowId,
     GridRowSelectionModel,
+    GridSortModel,
     GridValidRowModel,
 } from '@mui/x-data-grid';
 
@@ -44,6 +45,12 @@ type SmartTableProps<Row extends GridValidRowModel = GridValidRowModel> = {
     // Interactions
     onViewDetails?: (row: Row) => void; // double click
     contextMenuItems?: ContextMenuItem<Row>[]; // right click
+    sortingMode?: 'client' | 'server';
+    sortModel?: GridSortModel;
+    onSortModelChange?: (model: GridSortModel) => void;
+    filterMode?: 'client' | 'server';
+    filterModel?: GridFilterModel;
+    onFilterModelChange?: (model: GridFilterModel) => void;
 };
 
 const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
@@ -60,8 +67,20 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
     enableDateClear = false,
     onViewDetails,
     contextMenuItems = [],
+    sortingMode = 'client',
+    sortModel,
+    onSortModelChange,
+    filterMode = 'client',
+    filterModel,
+    onFilterModelChange,
 }: SmartTableProps<Row>) => {
-    const [filterModel, setFilterModel] = useState<GridFilterModel>({ items: [] });
+    const [internalFilterModel, setInternalFilterModel] = useState<GridFilterModel>({ items: [] });
+    const isFilterControlled = !!filterModel;
+    const activeFilterModel = filterModel ?? internalFilterModel;
+
+    const [internalSortModel, setInternalSortModel] = useState<GridSortModel>([]);
+    const isSortControlled = !!sortModel;
+    const activeSortModel = sortModel ?? internalSortModel;
     const [headerSearchField, setHeaderSearchField] = useState<string | null>(null);
     const [headerSearchValue, setHeaderSearchValue] = useState<string>('');
     const [rowSelectionModel, setRowSelectionModel] = useState<GridRowSelectionModel>([]);
@@ -74,16 +93,29 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
 
     const isDateField = useCallback((field: string) => dateFields.includes(field), [dateFields]);
 
+    useEffect(() => {
+        if (!isFilterControlled || !headerSearchField) return;
+        const existing = filterModel?.items?.find((it: any) => it.field === headerSearchField);
+        const nextValue = (existing?.value as string) ?? '';
+        setHeaderSearchValue(nextValue);
+        if (!nextValue) {
+            setHeaderSearchField(null);
+        }
+    }, [filterModel, headerSearchField, isFilterControlled]);
+
     // Close header search on Escape
     const closeHeaderSearch = useCallback((field?: string) => {
         if (!field && !headerSearchField) return;
         const f = field || headerSearchField!;
         setHeaderSearchField(null);
         setHeaderSearchValue('');
-        setFilterModel((prev) => ({
-            items: prev.items.filter((it: any) => it.field !== f),
-        }));
-    }, [headerSearchField]);
+        const withoutField = activeFilterModel.items.filter((it: any) => it.field !== f);
+        const nextModel = { items: withoutField } as GridFilterModel;
+        if (!isFilterControlled) {
+            setInternalFilterModel(nextModel);
+        }
+        onFilterModelChange?.(nextModel);
+    }, [activeFilterModel, headerSearchField, isFilterControlled, onFilterModelChange]);
 
     // Click outside clears selection and highlight
     useEffect(() => {
@@ -129,11 +161,13 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                                               setHeaderSearchValue(val);
                                               const field = col.field as string;
                                               const operator = isDateField(field) ? 'equals' : 'contains';
-                                              setFilterModel((prev) => {
-                                                  const others = prev.items.filter((it: any) => it.field !== field);
-                                                  const nextItems = val ? [...others, { field, operator, value: val } as any] : others;
-                                                  return { items: nextItems } as GridFilterModel;
-                                              });
+                                              const currentItems = activeFilterModel.items.filter((it: any) => it.field !== field);
+                                              const nextItems = val ? [...currentItems, { field, operator, value: val } as any] : currentItems;
+                                              const nextModel = { items: nextItems } as GridFilterModel;
+                                              if (!isFilterControlled) {
+                                                  setInternalFilterModel(nextModel);
+                                              }
+                                              onFilterModelChange?.(nextModel);
                                           }}
                                           onBlur={() => {
                                               if (!headerSearchValue) setHeaderSearchField(null);
@@ -163,7 +197,7 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                                                   const field = col.field as string;
                                                   if (!field) return;
                                                   setHeaderSearchField(field);
-                                                  const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
+                                                  const existing = (activeFilterModel.items as any[]).find((it: any) => it.field === field);
                                                   setHeaderSearchValue((existing?.value as string) || '');
                                               }}
                                           />
@@ -173,7 +207,7 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                         : col.renderHeader,
             } as GridColDef<Row>;
         });
-    }, [columns, enableHeaderSearch, headerSearchField, headerSearchValue, isDateField, enableDateClear, closeHeaderSearch, filterModel.items]);
+    }, [columns, enableHeaderSearch, headerSearchField, headerSearchValue, isDateField, enableDateClear, closeHeaderSearch, activeFilterModel.items, isFilterControlled, onFilterModelChange]);
 
     // NOTE: we rely on DataGrid's own context menu events (onCellContextMenu / onRowContextMenu)
     // to reliably determine the row under the pointer. The old DOM-based lookup was brittle
@@ -188,8 +222,22 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                 loading={!!loading}
                 rowSelectionModel={rowSelectionModel}
                 onRowSelectionModelChange={(m) => setRowSelectionModel(m)}
-                filterModel={filterModel}
-                onFilterModelChange={setFilterModel}
+                filterModel={activeFilterModel}
+                onFilterModelChange={(model) => {
+                    if (!isFilterControlled) {
+                        setInternalFilterModel(model);
+                    }
+                    onFilterModelChange?.(model);
+                }}
+                filterMode={filterMode}
+                sortingMode={sortingMode}
+                sortModel={activeSortModel}
+                onSortModelChange={(model) => {
+                    if (!isSortControlled) {
+                        setInternalSortModel(model);
+                    }
+                    onSortModelChange?.(model);
+                }}
                 rowHeight={60}
                 paginationMode={paginationModel ? 'server' : 'client'}
                 paginationModel={paginationModel}
@@ -306,7 +354,6 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                     noRowsOverlay: noRowsOverlay,
                 }}
                 sx={{
-                    px: { xs: 0, md: 3 },
                     '& .MuiDataGrid-main': { minHeight: 300 },
                     '& .MuiDataGrid-virtualScroller': { minHeight: 300, p: 0 },
                     '& .MuiDataGrid-columnHeader': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },

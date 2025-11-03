@@ -33,10 +33,7 @@ import {
 } from '@mui/icons-material';
 import http from 'helpers/http';
 import PageLoader from 'components/loader/PageLoader';
-import { setAlert } from 'components/alert/alert.reducer';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from 'store';
-import { AlertTypes } from 'constants/alert';
+import { useApiHandler } from 'components/hooks/useErrorHandler';
 
 const AdminComments = () => {
   const [loading, setLoading] = useState(true);
@@ -44,8 +41,8 @@ const AdminComments = () => {
   const [openDetail, setOpenDetail] = useState(false);
   const [selected, setSelected] = useState<any | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const dispatch = useDispatch<AppDispatch>();
   const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const { handleError, handleSuccess } = useApiHandler();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,11 +50,11 @@ const AdminComments = () => {
       const res = await http.get('/comments/admin');
       setItems(res.data || []);
     } catch (err: any) {
-      dispatch(setAlert({ msg: err?.response?.data?.message || err.message, type: AlertTypes.ERROR }));
+      handleError(err);
     } finally {
       setLoading(false);
     }
-  }, [dispatch]);
+  }, [handleError]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -98,10 +95,10 @@ const AdminComments = () => {
         if (Object.keys(map).length) setUserNames((s) => ({ ...s, ...map }));
       } catch (err: any) {
         // don't block UI, but report error
-        dispatch(setAlert({ msg: err?.response?.data?.message || 'Failed to fetch user names', type: AlertTypes.ERROR }));
+        handleError(err, 'Échec du chargement des noms d\'utilisateurs');
       }
     },
-    [dispatch, userNames],
+    [handleError, userNames],
   );
 
   // whenever items change, fetch missing names
@@ -120,11 +117,11 @@ const AdminComments = () => {
     try {
       const res = await http.post(`/users/${userId}/reset-password`);
       const pwd = res.data?.tempPassword;
-      dispatch(setAlert({ msg: `Password reset: ${pwd}`, type: AlertTypes.SUCCESS }));
+      handleSuccess(`Mot de passe réinitialisé: ${pwd}`);
       // reload list
       load();
     } catch (err: any) {
-      dispatch(setAlert({ msg: err?.response?.data?.message || err.message, type: AlertTypes.ERROR }));
+      handleError(err);
     }
   };
 
@@ -409,11 +406,8 @@ const AdminComments = () => {
                               startIcon={<LockResetIcon />}
                               onClick={async () => {
                                 if (!u.id) {
-                                  dispatch(
-                                    setAlert({
-                                      msg: "Aucun ID utilisateur disponible pour la réinitialisation",
-                                      type: AlertTypes.ERROR,
-                                    })
+                                  handleError(
+                                    new Error("Aucun ID utilisateur disponible pour la réinitialisation")
                                   );
                                   return;
                                 }

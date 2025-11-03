@@ -127,7 +127,7 @@ const DecompteActionMenu = ({ decompte, isAdmin, onAccept, onReject, onArchive }
 
           return (
             <MenuItem key={actionItem.id} onClick={() => handleActionItemClick(actionItem.id)}>
-              <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize', color: textColor }}>
+              <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize' }}>
                 {actionItem.isMuiIcon ? (
                   <IconComponent sx={{ color: textColor }} />
                 ) : (

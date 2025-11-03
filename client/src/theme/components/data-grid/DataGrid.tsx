@@ -6,6 +6,7 @@ const DataGrid: Components<Omit<Theme, 'components'>>['MuiDataGrid'] = {
     root: ({ theme }) => ({
       border: 'none',
       borderRadius: '0 !important',
+      overflow: 'hidden',
       '--DataGrid-rowBorderColor': theme.palette.divider,
       backgroundColor: theme.palette.background.paper,
       color: theme.palette.text.primary,
@@ -19,6 +20,38 @@ const DataGrid: Components<Omit<Theme, 'components'>>['MuiDataGrid'] = {
       },
       '& .MuiDataGrid-scrollbarFiller': {
         minWidth: 0,
+        backgroundColor: 'transparent',
+      },
+      // Enhanced toolbar styling for dark mode
+      '& .MuiDataGrid-toolbarContainer': {
+        padding: theme.spacing(2),
+        borderBottom: `1px solid ${theme.palette.divider}`,
+        backgroundColor: theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.02)'
+          : 'transparent',
+        '& .MuiButton-root': {
+          color: theme.palette.text.primary,
+        },
+      },
+      // Row hover effect
+      '& .MuiDataGrid-row:hover': {
+        backgroundColor: theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.03)'
+          : 'rgba(0, 0, 0, 0.04)',
+      },
+      // Column header background
+      '& .MuiDataGrid-columnHeaders': {
+        backgroundColor: theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.02)'
+          : 'rgba(0, 0, 0, 0.02)',
+        borderBottom: `1px solid ${theme.palette.divider}`,
+      },
+      // Footer styling
+      '& .MuiDataGrid-footerContainer': {
+        borderTop: `1px solid ${theme.palette.divider}`,
+        backgroundColor: theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.02)'
+          : 'transparent',
       },
     }),
     row: {

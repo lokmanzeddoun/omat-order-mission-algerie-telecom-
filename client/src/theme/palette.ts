@@ -72,10 +72,10 @@ const getPalette = (mode: PaletteMode): PaletteOptions => ({
     disabled: mode === 'light' ? gray[300] : gray[500],
   },
   background: {
-    default: mode === 'light' ? white[300] : '#1e1e2e',
-    paper: mode === 'light' ? white[100] : '#2a2a3e',
+    default: mode === 'light' ? white[300] : '#0f1115',
+    paper: mode === 'light' ? white[100] : '#1a1d24',
   },
-  divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.12)',
+  divider: mode === 'light' ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255, 255, 255, 0.08)',
   transparent: {
     gray: {
       main: transparentGray[500],

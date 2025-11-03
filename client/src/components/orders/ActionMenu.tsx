@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
 import ListItemIcon from '@mui/material/ListItemIcon';
+import { Archive as ArchiveIcon } from '@mui/icons-material';
 import IconifyIcon from 'components/base/IconifyIcon';
 import DeleteIcon from 'assets/icons/hugeicons--delete-02.svg?react';
 import ValidateIcon from 'assets/icons/hugeicons--document-validation.svg?react';
@@ -16,8 +17,10 @@ import { IMission } from './orderReducer';
 
 interface Action {
   id: number;
-  icon: FC<SVGProps<SVGSVGElement>>;
+  icon: FC<SVGProps<SVGSVGElement>> | any;
   title: string;
+  isMuiIcon?: boolean;
+  showCondition?: (mission: IMission) => boolean;
 }
 
 const actions: Action[] = [
@@ -25,16 +28,29 @@ const actions: Action[] = [
     id: 3,
     icon: ValidateIcon,
     title: 'Valider',
+    isMuiIcon: false,
+    showCondition: (mission) => (mission?.status ?? '') !== 'COMPLETED',
   },
   {
     id: 1,
     icon: EditIcon,
     title: 'Editer',
+    isMuiIcon: false,
+    showCondition: () => true,
+  },
+  {
+    id: 4,
+    icon: ArchiveIcon,
+    title: 'Archiver',
+    isMuiIcon: true,
+    showCondition: (mission) => (mission?.status ?? '') === 'COMPLETED',
   },
   {
     id: 2,
     icon: DeleteIcon,
     title: 'Annuler',
+    isMuiIcon: false,
+    showCondition: (mission) => (mission?.status ?? '') !== 'COMPLETED',
   },
 ];
 
@@ -43,9 +59,10 @@ interface ActionMenuProps {
   onEdit?: (order: IMission) => void;
   onDelete?: (order: IMission) => void;
   onValidate?: (order: IMission) => void;
+  onArchive?: (order: IMission) => void;
 }
 
-const ActionMenu = ({ order, onEdit, onDelete, onValidate }: ActionMenuProps) => {
+const ActionMenu = ({ order, onEdit, onDelete, onValidate, onArchive }: ActionMenuProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -67,6 +84,9 @@ const ActionMenu = ({ order, onEdit, onDelete, onValidate }: ActionMenuProps) =>
         break;
       case 3:
         onValidate?.(order);
+        break;
+      case 4:
+        onArchive?.(order);
         break;
       default:
         break;
@@ -98,27 +118,29 @@ const ActionMenu = ({ order, onEdit, onDelete, onValidate }: ActionMenuProps) =>
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        {actions.map((actionItem) => {
+        {actions
+          .filter((actionItem) => !actionItem.showCondition || actionItem.showCondition(order))
+          .map((actionItem) => {
+          const IconComponent = actionItem.icon;
+          const textColor = actionItem.id === 3
+            ? 'success.main'
+            : actionItem.id === 2
+              ? 'error.main'
+              : actionItem.id === 4
+                ? 'warning.main'
+                : 'text.primary';
+
           return (
             <MenuItem key={actionItem.id} onClick={() => handleActionItemClick(actionItem.id)}>
               <ListItemIcon sx={{ mr: 1, fontSize: 'h5.fontSize' }}>
-                <IconifyIcon
-                  icon={actionItem.icon}
-                  color={
-                    actionItem.id === 3 ? 'success' : actionItem.id === 2 ? 'error' : 'action'
-                  }
-                />
+                {actionItem.isMuiIcon ? (
+                  <IconComponent sx={{ color: textColor }} />
+                ) : (
+                  <IconifyIcon icon={IconComponent} sx={{ color: textColor }} />
+                )}
               </ListItemIcon>
               <ListItemText>
-                <Typography
-                  color={
-                    actionItem.id === 3
-                      ? 'success.main'
-                      : actionItem.id === 2
-                        ? 'error.main'
-                        : 'text.primary'
-                  }
-                >
+                <Typography color={textColor}>
                   {actionItem.title}
                 </Typography>
               </ListItemText>

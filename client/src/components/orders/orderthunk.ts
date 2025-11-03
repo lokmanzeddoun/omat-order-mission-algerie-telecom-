@@ -84,11 +84,15 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
   try {
     dispatch(fetchOrdersStart()); // Start loading
     const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const res = await http.get(`/missions/user`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       params: {
         exercice: selectedYear ?? undefined,
       },
@@ -172,11 +176,15 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
   try {
     dispatch(fetchOrdersStart()); // Start loading
     const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     const res = await http.get(`/missions`, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
+      headers,
       params: {
         exercice: selectedYear ?? undefined,
       },
@@ -212,7 +220,9 @@ export const deleteOrder = (n_mission: number | null) => async (dispatch: AppDis
     });
     if (res) {
       await dispatch(setAlert({ msg: 'Order Deleted Successfully', type: AlertTypes.SUCCESS }));
-      dispatch(removeOrder(res.data));
+      if (typeof n_mission === 'number') {
+        dispatch(removeOrder(n_mission));
+      }
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
     }
@@ -224,6 +234,96 @@ export const deleteOrder = (n_mission: number | null) => async (dispatch: AppDis
       errorMessage = error.response?.data?.message || error.message;
     } else if (error instanceof Error) {
       // Handle other errors
+      errorMessage = error.message;
+    }
+
+    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+    console.error('Error:', errorMessage);
+  }
+};
+
+export const archiveMission = (n_mission: number | null) => async (dispatch: AppDispatch, getState: any) => {
+  if (typeof n_mission !== 'number') {
+    dispatch(setAlert({ msg: 'Mission invalide pour archivage', type: AlertTypes.ERROR }));
+    return;
+  }
+
+  try {
+    const token: string | null = getState()?.auth?.token ?? null;
+    if (!token) {
+      dispatch(setAlert({ msg: 'Session expirée. Veuillez vous reconnecter.', type: AlertTypes.ERROR }));
+      return;
+    }
+
+    const res = await http.patch(
+      `/archive/missions/${n_mission}`,
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (res && res.data) {
+      dispatch(setAlert({ msg: 'Mission archivée avec succès', type: AlertTypes.SUCCESS }));
+      dispatch(removeOrder(n_mission));
+      await dispatch(fetchUserOrders(token));
+    } else {
+      dispatch(setAlert({ msg: 'Une erreur inattendue est survenue', type: AlertTypes.ERROR }));
+    }
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+    console.error('Error:', errorMessage);
+  }
+};
+
+export const validateMission = (n_mission: number | null) => async (dispatch: AppDispatch, getState: any) => {
+  if (typeof n_mission !== 'number') {
+    dispatch(setAlert({ msg: 'Mission invalide pour validation', type: AlertTypes.ERROR }));
+    return;
+  }
+
+  try {
+    const token: string | null = getState()?.auth?.token ?? null;
+    if (!token) {
+      dispatch(setAlert({ msg: 'Session expirée. Veuillez vous reconnecter.', type: AlertTypes.ERROR }));
+      return;
+    }
+
+    const res = await http.patch(
+      `/missions/${n_mission}`,
+      { status: 'COMPLETED' },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    if (res && res.data) {
+      dispatch(setAlert({ msg: 'Mission validée', type: AlertTypes.SUCCESS }));
+      dispatch(editMission(res.data));
+      await dispatch(fetchUserOrders(token));
+    } else {
+      dispatch(setAlert({ msg: 'Une erreur inattendue est survenue', type: AlertTypes.ERROR }));
+    }
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
       errorMessage = error.message;
     }
 

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { extractErrorMessage } from './errorHandler';
 
 // Use the Vite proxy in dev (/api -> backend) to avoid CORS. In prod, prefer VITE_API_URL or fallback to '/api'.
 const baseURL = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL ?? '/api');
@@ -61,6 +62,7 @@ http.interceptors.response.use(
         const method = (cfg.method || 'get').toUpperCase();
         const fullUrl = `${cfg.baseURL ?? ''}${cfg.url ?? ''}`;
         const status = error?.response?.status;
+
         if (import.meta.env.DEV) {
             console.warn(`[http] × ${method} ${fullUrl} ${status ?? ''}`, error?.message);
         }
@@ -83,48 +85,31 @@ http.interceptors.response.use(
                 }
                 return await http(cfg);
             } catch {
-                // fall through to normalize and reject original error
+                // If refresh fails, logout user by clearing storage
+                if (typeof window !== 'undefined') {
+                    window.localStorage.removeItem('token');
+                    window.localStorage.removeItem('user');
+                    window.localStorage.removeItem('persist:root');
+                    // Optionally redirect to login
+                    if (!window.location.pathname.includes('/signin')) {
+                        window.location.href = '/signin';
+                    }
+                }
+                return Promise.reject(error);
             }
         }
 
-        // Normalize error message across the app (handles Blob JSON too)
-        try {
-            const resp = error?.response;
-            let data = resp?.data;
-            const headers = resp?.headers || {};
-            const contentType: string = headers['content-type'] || headers['Content-Type'] || '';
+        // Use the error handler to extract and normalize the error message
+        const normalizedMessage = extractErrorMessage(error);
 
-            // If data is a Blob (e.g., because responseType was 'blob'), try to decode JSON
-            if (typeof Blob !== 'undefined' && data instanceof Blob) {
-                const isJson = contentType.includes('application/json') || contentType === '';
-                const text = await data.text();
-                try {
-                    data = isJson ? JSON.parse(text) : text;
-                } catch {
-                    data = text;
-                }
-                // replace the blob with parsed data for downstream catch blocks
-                if (resp) resp.data = data;
-            }
-
-            // Compute a normalized message
-            let normalizedMessage = '';
-            if (data) {
-                const msg = (data as any).message;
-                if (Array.isArray(msg)) normalizedMessage = msg.join(' | ');
-                else if (typeof msg === 'string') normalizedMessage = msg;
-                else if (typeof data === 'string') normalizedMessage = data as string;
-                else if (typeof (data as any).error === 'string') normalizedMessage = (data as any).error;
-            }
-            if (!normalizedMessage) normalizedMessage = error.message || 'Request failed';
-
-            // Attach normalized message for consumers
-            if (resp) {
-                (resp as any).data = { ...(resp.data || {}), normalizedMessage, message: normalizedMessage };
-            }
-            error.message = normalizedMessage;
-        } catch {
-            // ignore normalization errors
+        // Attach normalized message to the error object for easy access in catch blocks
+        error.message = normalizedMessage;
+        if (error.response) {
+            error.response.data = {
+                ...(typeof error.response.data === 'object' ? error.response.data : {}),
+                normalizedMessage,
+                message: normalizedMessage,
+            };
         }
 
         return Promise.reject(error);

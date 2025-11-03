@@ -679,8 +679,8 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
               },
               '& .MuiDataGrid-row:hover': {
                 cursor: 'pointer',
-                bgcolor: (theme) => theme.palette.mode === 'dark' 
-                  ? 'rgba(255, 255, 255, 0.05)' 
+                bgcolor: (theme) => theme.palette.mode === 'dark'
+                  ? 'rgba(255, 255, 255, 0.05)'
                   : 'rgba(0, 0, 0, 0.04)',
               },
               '& .MuiDataGrid-columnHeaders': {

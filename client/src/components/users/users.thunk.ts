@@ -169,7 +169,7 @@ export const deleteUser = (user: IUser) => async (dispatch: AppDispatch) => {
     const res = await http.delete(`/users/${user.matricule}`);
     if (res) {
       await dispatch(setAlert({ msg: 'User Deleted Successfully', type: AlertTypes.SUCCESS }));
-      dispatch(removeUser(res.data));
+      dispatch(removeUser(user.matricule));
       return dispatch(getAllUsers()); // Assuming 'res.data' contains the newly created users
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));

@@ -149,6 +149,33 @@ const DecomptesPage = () => {
       }
     },
     {
+      field: 'nbr_jours',
+      headerName: 'Nombre de Jours',
+      minWidth: 160,
+      type: 'number',
+      align: 'center',
+      headerAlign: 'center',
+      headerSearchable: false,
+      valueGetter: (p: any) => {
+        const dateSortie = p?.row?.mission?.date_sortie;
+        const dateRetour = p?.row?.mission?.date_retour;
+        if (!dateSortie || !dateRetour) return 0;
+        const days = Math.ceil(
+          (new Date(dateRetour).getTime() - new Date(dateSortie).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return days > 0 ? days : 0;
+      },
+      renderCell: (p: any) => {
+        const dateSortie = p?.row?.mission?.date_sortie;
+        const dateRetour = p?.row?.mission?.date_retour;
+        if (!dateSortie || !dateRetour) return '0';
+        const days = Math.ceil(
+          (new Date(dateRetour).getTime() - new Date(dateSortie).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return days > 0 ? days.toString() : '0';
+      },
+    },
+    {
       field: 'date_sortie',
       headerName: 'Date Sortie',
       minWidth: 150,
@@ -224,6 +251,20 @@ const DecomptesPage = () => {
       },
     },
     {
+      field: 'd_parcours',
+      headerName: 'Distance Parcours (km)',
+      minWidth: 200,
+      type: 'number',
+      align: 'center',
+      headerAlign: 'center',
+      headerSearchable: false,
+      valueGetter: (p: any) => p?.row?.parcours ?? 0,
+      renderCell: (p: any) => {
+        const val = p?.row?.parcours;
+        return val != null ? `${val} km` : '0 km';
+      },
+    },
+    {
       field: 'repas_pec',
       headerName: 'Nbr Repas PEC',
       type: 'number',
@@ -231,6 +272,8 @@ const DecomptesPage = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
+      valueGetter: (p: any) => p?.row?.repas_pec ?? 0,
+      renderCell: (p: any) => p?.row?.repas_pec ?? 0,
     },
     {
       field: 'hebergement_pec',
@@ -240,6 +283,8 @@ const DecomptesPage = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
+      valueGetter: (p: any) => p?.row?.hebergement_pec ?? 0,
+      renderCell: (p: any) => p?.row?.hebergement_pec ?? 0,
     },
     {
       field: 'repas_sans_pec',
@@ -249,6 +294,8 @@ const DecomptesPage = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
+      valueGetter: (p: any) => p?.row?.repas_sans_pec ?? 0,
+      renderCell: (p: any) => p?.row?.repas_sans_pec ?? 0,
     },
     {
       field: 'hebergement_sans_pec',
@@ -258,6 +305,8 @@ const DecomptesPage = () => {
       align: 'center',
       headerAlign: 'center',
       headerSearchable: false,
+      valueGetter: (p: any) => p?.row?.hebergement_sans_pec ?? 0,
+      renderCell: (p: any) => p?.row?.hebergement_sans_pec ?? 0,
     },
     {
       field: 'montant',
@@ -605,20 +654,6 @@ const DecomptesPage = () => {
           borderColor: 'divider',
           borderRadius: 2,
           overflow: 'hidden',
-          '& .MuiDataGrid-root': {
-            border: 'none',
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
-            borderBottom: '2px solid',
-            borderColor: 'divider',
-          },
-          '& .MuiDataGrid-columnHeaderTitle': {
-            fontWeight: 600,
-          },
-          '& .MuiDataGrid-row:hover': {
-            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.02),
-          },
         }}
       >
       {filteredRows.length === 0 ? (

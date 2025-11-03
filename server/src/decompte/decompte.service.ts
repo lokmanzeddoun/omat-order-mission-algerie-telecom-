@@ -51,8 +51,6 @@ export class DecompteService {
       date_retour,
       createDecompteDto.heure_retour,
     );
-    console.log(meals, accommodations, 'meals accommodations');
-    console.log(createDecompteDto);
     if (
       meals !==
         createDecompteDto.repas_pec + createDecompteDto.repas_sans_pec ||
@@ -428,25 +426,61 @@ export class DecompteService {
     });
   }
 
-  private fmtDate(val: any): string | null {
-    if (!val) return null;
+  private fmtDate(val: any): string {
+    if (!val) return '';
     const d = val instanceof Date ? val : new Date(val);
-    if (isNaN(d.getTime())) return null;
+    if (isNaN(d.getTime())) return '';
     return moment(d).format('DD/MM/YYYY');
   }
 
-  private getHour(val: any): string | null {
-    if (!val) return null;
+  private getHour(val: any): string {
+    if (!val) return '';
     const d = val instanceof Date ? val : new Date(val);
-    if (isNaN(d.getTime())) return null;
+    if (isNaN(d.getTime())) return '';
     return String(d.getHours()).padStart(2, '0');
   }
 
-  private getMinute(val: any): string | null {
-    if (!val) return null;
+  private getMinute(val: any): string {
+    if (!val) return '';
     const d = val instanceof Date ? val : new Date(val);
-    if (isNaN(d.getTime())) return null;
+    if (isNaN(d.getTime())) return '';
     return String(d.getMinutes()).padStart(2, '0');
+  }
+
+  private sanitizeTemplateData(
+    data: Record<string, unknown>,
+  ): Record<string, string | number> {
+    const sanitized: Record<string, string | number> = {};
+
+    Object.entries(data).forEach(([key, value]) => {
+      if (value === null || value === undefined) {
+        sanitized[key] = '';
+        return;
+      }
+
+      if (value instanceof Date) {
+        sanitized[key] = this.fmtDate(value);
+        return;
+      }
+
+      if (typeof value === 'number') {
+        sanitized[key] = Number.isFinite(value) ? value : '';
+        return;
+      }
+
+      const textual = String(value);
+      if (
+        textual.trim().toLowerCase() === 'undefined' ||
+        textual.trim().toLowerCase() === 'null'
+      ) {
+        sanitized[key] = '';
+        return;
+      }
+
+      sanitized[key] = textual;
+    });
+
+    return sanitized;
   }
 
   async downloadDecompte(id: number, res: ExpressResponse) {
@@ -473,15 +507,15 @@ export class DecompteService {
     const mission = decompte?.mission ?? null;
     const user = mission?.user ?? null;
     const structure = user?.structure ?? null;
-
+    console.log(user,mission,structure);
     // Precompute values
     const fullanmeVal = user
-      ? `${user.nom ?? ''} ${user.prenom ?? ''}`.trim() || null
-      : null;
-    const h_d_val = this.getHour(mission?.date_sortie);
-    const h_r_val = this.getHour(mission?.date_retour);
-    const m_d_val = this.getMinute(mission?.date_sortie);
-    const m_r_val = this.getMinute(mission?.date_retour);
+      ? `${user.nom ?? ''} ${user.prenom ?? ''}`.trim()
+      : '';
+    const h_d_val = this.getHour(mission?.date_sortie) ?? '';
+    const h_r_val = this.getHour(mission?.date_retour) ?? '';
+    const m_d_val = this.getMinute(mission?.date_sortie) ?? '';
+    const m_r_val = this.getMinute(mission?.date_retour) ?? '';
     const nbr_jour_val =
       mission?.date_sortie && mission?.date_retour
         ? Math.max(
@@ -492,19 +526,20 @@ export class DecompteService {
                 (24 * 3600 * 1000),
             ),
           )
-        : null;
+        : 0;
 
-    // Map placeholders per instruction, null when not available
+    // Map placeholders - use empty string for missing text fields, 0 for missing numbers
     const replacements: Record<string, any> = {
-      matricule: user?.matricule ?? null,
+      matricule: user?.matricule ?? '',
       fullanme: fullanmeVal, // note: placeholder spelled fullanme
-      post: user?.grade ?? null,
-      structure: structure?.name ?? null,
-      id: decompte?.n_decompte ?? null,
+      post: user?.grade ?? '',
+      structure: structure?.name ?? '',
+      structure_code: structure?.code ?? '',
+      id: decompte?.n_decompte ?? '',
       date: this.fmtDate(decompte?.createdAt ?? new Date()),
-      reference: mission?.n_mission ?? null,
-      destination: mission?.destination ?? null,
-      motif: mission?.motif ?? null,
+      reference: mission?.n_mission ?? '',
+      destination: mission?.destination ?? '',
+      motif: mission?.motif ?? '',
       date_depart: this.fmtDate(mission?.date_sortie),
       date_retour: this.fmtDate(mission?.date_retour),
       h_d: h_d_val,
@@ -512,42 +547,35 @@ export class DecompteService {
       m_d: m_d_val,
       m_r: m_r_val,
       nbr_jour: nbr_jour_val,
-      d_parcours: decompte?.parcours ?? null,
-      m_indrmnite: null, // not stored; leave null per instruction
-      n_1: mission?.direction === 'NORD' ? (decompte?.repas_pec ?? null) : null,
+      d_parcours: decompte?.parcours ?? 0,
+      m_indrmnite: '', // not stored; leave empty
+      // North: only show values if direction is NORD, otherwise empty string
+      n_1: mission?.direction === 'NORD' ? (decompte?.repas_pec ?? 0) : '',
       n_2:
-        mission?.direction === 'NORD'
-          ? (decompte?.hebergement_pec ?? null)
-          : null,
-      n_3:
-        mission?.direction === 'NORD'
-          ? (decompte?.repas_sans_pec ?? null)
-          : null,
+        mission?.direction === 'NORD' ? (decompte?.hebergement_pec ?? 0) : '',
+      n_3: mission?.direction === 'NORD' ? (decompte?.repas_sans_pec ?? 0) : '',
       n_4:
         mission?.direction === 'NORD'
-          ? (decompte?.hebergement_sans_pec ?? null)
-          : null,
-      s_1: mission?.direction === 'SUD' ? (decompte?.repas_pec ?? null) : null,
-      s_2:
-        mission?.direction === 'SUD'
-          ? (decompte?.hebergement_pec ?? null)
-          : null,
-      s_3:
-        mission?.direction === 'SUD'
-          ? (decompte?.repas_sans_pec ?? null)
-          : null,
+          ? (decompte?.hebergement_sans_pec ?? 0)
+          : '',
+      // South: only show values if direction is SUD, otherwise empty string
+      s_1: mission?.direction === 'SUD' ? (decompte?.repas_pec ?? 0) : '',
+      s_2: mission?.direction === 'SUD' ? (decompte?.hebergement_pec ?? 0) : '',
+      s_3: mission?.direction === 'SUD' ? (decompte?.repas_sans_pec ?? 0) : '',
       s_4:
         mission?.direction === 'SUD'
-          ? (decompte?.hebergement_sans_pec ?? null)
-          : null,
-      f_transport: null, // not stored explicitly
-      m_total: decompte?.montant ?? null,
+          ? (decompte?.hebergement_sans_pec ?? 0)
+          : '',
+      f_transport: '', // not stored explicitly, leave empty
+      m_total: decompte?.montant ?? 0,
+      direction: mission?.direction ?? '',
+      transport: mission?.transport ?? '',
     };
 
     const content = fs.readFileSync(templatePath, 'binary');
     const zip = new PizZip(content);
     const doc = new Docxtemplater(zip);
-    doc.setData(replacements);
+    doc.setData(this.sanitizeTemplateData(replacements));
 
     try {
       doc.render();

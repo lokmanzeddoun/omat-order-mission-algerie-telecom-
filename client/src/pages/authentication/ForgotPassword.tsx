@@ -3,23 +3,19 @@ import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 import FormControl from '@mui/material/FormControl';
 import OutlinedInput from '@mui/material/OutlinedInput';
-import FormHelperText from '@mui/material/FormHelperText';
 import Typography from '@mui/material/Typography';
 import PageLoader from 'components/loader/PageLoader';
 import http from 'helpers/http';
 import { useNavigate } from 'react-router-dom';
 import { rootPaths } from 'routes/paths';
-import { setAlert } from 'components/alert/alert.reducer';
-import { useDispatch } from 'react-redux';
-import { AppDispatch } from 'store';
-import { AlertTypes } from 'constants/alert';
+import { useApiHandler } from 'components/hooks/useErrorHandler';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   // local guard to prevent double-submit from multiple clicks
   const [submittedOnce, setSubmittedOnce] = useState(false);
-  const dispatch = useDispatch<AppDispatch>();
+  const { handleError, handleSuccess } = useApiHandler();
   const navigate = useNavigate();
 
   const submit = async (e: any) => {
@@ -29,17 +25,18 @@ const ForgotPassword = () => {
     setSubmittedOnce(true);
     try {
       await http.post('/comments', { title: 'Forgot password request', type: 'FORGET_PASSWORD', email });
-      dispatch(setAlert({ msg: 'request submitted', type: AlertTypes.SUCCESS }));
+      handleSuccess('Demande envoyée avec succès');
       navigate(rootPaths.root);
     } catch (err: any) {
-      // show server-provided message (e.g., existing pending request) and allow retry for other errors
-      const msg = err?.response?.data?.message || err.message;
-      dispatch(setAlert({ msg, type: AlertTypes.ERROR }));
-      // If server explicitly says there is already a pending request, keep form disabled but inform user
-      if (msg?.toLowerCase?.().includes('pending password reset') || msg?.toLowerCase?.().includes('pending password') || msg?.toLowerCase?.().includes('pending')) {
-        // leave submittedOnce true to prevent further submissions
-      } else {
-        // allow retry on other errors
+      // Use the centralized error handler
+      handleError(err);
+
+      // If server explicitly says there is already a pending request, keep form disabled
+      const msg = err?.response?.data?.message || err.message || '';
+      const isPending = msg?.toLowerCase?.().includes('pending');
+
+      if (!isPending) {
+        // Allow retry on other errors
         setSubmittedOnce(false);
       }
     } finally {

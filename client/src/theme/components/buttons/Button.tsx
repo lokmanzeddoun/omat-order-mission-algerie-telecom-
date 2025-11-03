@@ -20,8 +20,8 @@ const Button: Components<Omit<Theme, 'components'>>['MuiButton'] = {
       borderColor: theme.palette.primary.main,
       backgroundColor: 'transparent',
       '&:hover': {
-        backgroundColor: theme.palette.mode === 'dark' 
-          ? 'rgba(84, 111, 255, 0.08)' 
+        backgroundColor: theme.palette.mode === 'dark'
+          ? 'rgba(84, 111, 255, 0.08)'
           : 'rgba(84, 111, 255, 0.04)',
         borderColor: theme.palette.primary.main,
       },
@@ -36,9 +36,9 @@ const Button: Components<Omit<Theme, 'components'>>['MuiButton'] = {
       backgroundColor: theme.palette.background.paper,
       border: '1px solid',
       borderColor: theme.palette.divider,
-      '&:hover': { 
-        backgroundColor: theme.palette.mode === 'dark' 
-          ? 'rgba(255, 255, 255, 0.08)' 
+      '&:hover': {
+        backgroundColor: theme.palette.mode === 'dark'
+          ? 'rgba(255, 255, 255, 0.08)'
           : 'rgba(0, 0, 0, 0.04)',
       },
     }),

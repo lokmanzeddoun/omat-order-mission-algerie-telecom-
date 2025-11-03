@@ -6,6 +6,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { Logger } from 'nestjs-pino';
 import cookieParser = require('cookie-parser');
 import { PrismaClientExceptionFilter } from './prisma-client-exception/prisma-client-exception.filter';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 
 import type {
   CorsConfig,
@@ -16,14 +18,42 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
-  // Validation
-  app.useGlobalPipes(new ValidationPipe());
+  // Validation with detailed error messages
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+      },
+      // Return validation errors in a user-friendly format
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          const constraints = error.constraints;
+          return constraints
+            ? Object.values(constraints).join(', ')
+            : 'Validation error';
+        });
+        return new (require('@nestjs/common').BadRequestException)(messages);
+      },
+    }),
+  );
+
   // enable shutdown hook
   app.enableShutdownHooks();
 
-  // Prisma Client Exception Filter for unhandled exceptions
+  // Global Exception Filters (order matters - specific to general)
   const { httpAdapter } = app.get(HttpAdapterHost);
+
+  // 1. Prisma-specific errors
   app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter));
+
+  // 2. HTTP exceptions
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  // 3. Catch-all for any unhandled exceptions
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   const configService = app.get(ConfigService);
   const nestConfig = configService.get<NestConfig>('nest');

@@ -166,7 +166,7 @@ export const deleteStructure = (structure: IStructure) => async (dispatch: AppDi
     const res = await http.delete(`/structures/${structure.code}`);
     if (res) {
       await dispatch(setAlert({ msg: 'Structure Deleted Successfully', type: AlertTypes.SUCCESS }));
-      await dispatch(removeStructure(res.data));
+      await dispatch(removeStructure(structure.code));
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
     }

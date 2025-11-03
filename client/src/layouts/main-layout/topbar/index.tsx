@@ -72,6 +72,14 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       position="sticky"
       top={0}
       zIndex={1200}
+      sx={{
+        borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+        backdropFilter: 'blur(8px)',
+        boxShadow: (theme) =>
+          theme.palette.mode === 'dark'
+            ? '0 1px 3px rgba(0, 0, 0, 0.3)'
+            : '0 1px 3px rgba(0, 0, 0, 0.08)',
+      }}
     >
       <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
         {/* Use programmatic navigation and guard with auth.loading */}

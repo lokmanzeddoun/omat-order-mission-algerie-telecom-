@@ -45,6 +45,19 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
   const mission = decompte.mission || {};
   const user = mission.user || {};
 
+  // Calculate mission duration in days
+  const calculateDuration = () => {
+    if (!mission.date_sortie || !mission.date_retour) return 0;
+    const days = Math.ceil(
+      (new Date(mission.date_retour).getTime() - new Date(mission.date_sortie).getTime()) /
+      (1000 * 60 * 60 * 24)
+    );
+    return days > 0 ? days : 0;
+  };
+
+  const fullName = user ? `${user.nom || ''} ${user.prenom || ''}`.trim() : '';
+  const nbrJours = calculateDuration();
+
   return (
     <Dialog
       open={open}
@@ -66,7 +79,7 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
         </Box>
         {user && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Agent: {user.nom || ''} {user.prenom || ''} (Matricule: {user.matricule || '-'})
+            Agent: {fullName || '-'} (Matricule: {user.matricule || '-'})
           </Typography>
         )}
       </DialogTitle>
@@ -89,6 +102,20 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
                 <TextField
                   label="Date Décompte"
                   value={decompte.createdAt ? moment(decompte.createdAt).format('DD/MM/YYYY') : '-'}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+                <TextField
+                  label="Durée (jours)"
+                  value={nbrJours}
+                  InputProps={{ readOnly: true }}
+                  fullWidth
+                />
+              </Stack>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
+                  label="Nom Complet"
+                  value={fullName || '-'}
                   InputProps={{ readOnly: true }}
                   fullWidth
                 />
@@ -222,14 +249,35 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
             <Stack spacing={2}>
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField
+                  label="Distance Parcours (km)"
+                  value={decompte.parcours ?? 0}
+                  InputProps={{
+                    readOnly: true,
+                    endAdornment: <InputAdornment position="end">km</InputAdornment>
+                  }}
+                  fullWidth
+                />
+                <TextField
+                  label="Frais de Transport (DA)"
+                  value={'-'}
+                  InputProps={{
+                    readOnly: true,
+                    endAdornment: <InputAdornment position="end">DA</InputAdornment>
+                  }}
+                  helperText="Non disponible dans les données actuelles"
+                  fullWidth
+                />
+              </Stack>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
                   label="Repas PEC"
-                  value={decompte.repas_pec || 0}
+                  value={decompte.repas_pec ?? 0}
                   InputProps={{ readOnly: true }}
                   fullWidth
                 />
                 <TextField
                   label="Hébergement PEC"
-                  value={decompte.hebergement_pec || 0}
+                  value={decompte.hebergement_pec ?? 0}
                   InputProps={{ readOnly: true }}
                   fullWidth
                 />
@@ -237,17 +285,27 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField
                   label="Repas non PEC"
-                  value={decompte.repas_sans_pec || 0}
+                  value={decompte.repas_sans_pec ?? 0}
                   InputProps={{ readOnly: true }}
                   fullWidth
                 />
                 <TextField
                   label="Hébergement non PEC"
-                  value={decompte.hebergement_sans_pec || 0}
+                  value={decompte.hebergement_sans_pec ?? 0}
                   InputProps={{ readOnly: true }}
                   fullWidth
                 />
               </Stack>
+              <TextField
+                label="Montant Indemnité Kilométrique (DA)"
+                value={'-'}
+                InputProps={{
+                  readOnly: true,
+                  endAdornment: <InputAdornment position="end">DA</InputAdornment>
+                }}
+                helperText="Calculé automatiquement (non stocké séparément)"
+                fullWidth
+              />
             </Stack>
           </Box>
 
