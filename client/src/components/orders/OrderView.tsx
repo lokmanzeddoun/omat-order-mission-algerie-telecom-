@@ -510,15 +510,81 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           }}
           pageSizeOptions={[10]}
           sx={{
-            px: { xs: 0, md: 3 },
-            '& .MuiDataGrid-columnHeaders': { bgcolor: 'grey.100' },
+            border: 'none',
+            '& .MuiDataGrid-root': {
+              border: 'none',
+            },
+            '& .MuiDataGrid-columnHeaders': {
+              bgcolor: (theme) => theme.palette.mode === 'dark' 
+                ? '#3a3a52'
+                : theme.palette.neutral.lighter,
+              color: (theme) => theme.palette.mode === 'dark' 
+                ? '#FFFFFF'
+                : theme.palette.text.primary,
+              borderBottom: '2px solid',
+              borderColor: 'divider',
+              minHeight: '56px !important',
+              maxHeight: '56px !important',
+            },
+            '& .MuiDataGrid-columnHeader': { 
+              fontSize: { xs: 13, lg: 16 }, 
+              userSelect: 'none',
+            },
+            '& .MuiDataGrid-columnHeaderTitle': {
+              color: (theme) => theme.palette.mode === 'dark' 
+                ? '#FFFFFF'
+                : theme.palette.text.primary,
+              fontWeight: 600,
+            },
+            '& .MuiDataGrid-iconButtonContainer': {
+              '& .MuiIconButton-root': {
+                color: (theme) => theme.palette.mode === 'dark' 
+                  ? '#FFFFFF'
+                  : theme.palette.text.primary,
+              },
+            },
+            '& .MuiDataGrid-menuIcon': {
+              '& .MuiSvgIcon-root': {
+                color: (theme) => theme.palette.mode === 'dark' 
+                  ? '#FFFFFF'
+                  : theme.palette.text.primary,
+              },
+            },
+            '& .MuiDataGrid-sortIcon': {
+              color: (theme) => theme.palette.mode === 'dark' 
+                ? '#FFFFFF'
+                : theme.palette.text.primary,
+            },
             '& .MuiDataGrid-main': { minHeight: 300 },
-            '& .MuiDataGrid-virtualScroller': { minHeight: 300, p: 0 },
-            '& .MuiDataGrid-columnHeader': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },
+            '& .MuiDataGrid-virtualScroller': { 
+              minHeight: 300, 
+              p: 0,
+              bgcolor: 'background.paper',
+            },
             '& .MuiDataGrid-columnHeader .MuiInputBase-input': { userSelect: 'text' },
-            '& .MuiDataGrid-cell': { fontSize: { xs: 13, lg: 16 }, userSelect: 'none' },
-            '& .MuiTypography-root': { fontSize: { xs: 13, lg: 16 } },
-            '& .MuiDataGrid-row': { userSelect: 'none' },
+            '& .MuiDataGrid-cell': { 
+              fontSize: { xs: 13, lg: 16 }, 
+              userSelect: 'none',
+              color: 'text.primary',
+              borderColor: 'divider',
+            },
+            '& .MuiTypography-root': { 
+              fontSize: { xs: 13, lg: 16 },
+              color: 'text.primary',
+            },
+            '& .MuiDataGrid-row': { 
+              userSelect: 'none',
+              '&:hover': {
+                bgcolor: (theme) => theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.04)',
+              },
+            },
+            '& .MuiDataGrid-footerContainer': {
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+            },
             // Action-based highlight
             '& .action-highlight': { backgroundColor: 'primary.light !important' },
           }}

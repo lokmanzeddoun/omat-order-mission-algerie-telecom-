@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
-import { Box, Paper, Typography } from '@mui/material';
+import { Box, Paper, Typography, useTheme } from '@mui/material';
 
 interface PieChartProps {
   title: string;
@@ -9,7 +9,10 @@ interface PieChartProps {
 }
 
 export const PieChart: React.FC<PieChartProps> = ({ title, data, height = 350 }) => {
+  const theme = useTheme();
+
   const option = {
+    backgroundColor: 'transparent',
     title: {
       text: title,
       left: 'center',
@@ -17,16 +20,25 @@ export const PieChart: React.FC<PieChartProps> = ({ title, data, height = 350 })
       textStyle: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: theme.palette.text.primary,
       },
     },
     tooltip: {
       trigger: 'item',
       formatter: '{b}: {c} ({d}%)',
+      backgroundColor: theme.palette.background.paper,
+      borderColor: theme.palette.divider,
+      textStyle: {
+        color: theme.palette.text.primary,
+      },
     },
     legend: {
       orient: 'vertical',
       left: 'left',
       top: 'middle',
+      textStyle: {
+        color: theme.palette.text.primary,
+      },
     },
     series: [
       {
@@ -36,12 +48,13 @@ export const PieChart: React.FC<PieChartProps> = ({ title, data, height = 350 })
         avoidLabelOverlap: false,
         itemStyle: {
           borderRadius: 10,
-          borderColor: '#fff',
+          borderColor: theme.palette.background.paper,
           borderWidth: 2,
         },
         label: {
           show: true,
           formatter: '{b}: {d}%',
+          color: theme.palette.text.primary,
         },
         emphasis: {
           label: {
@@ -81,7 +94,10 @@ export const BarChart: React.FC<BarChartProps> = ({
   height = 350,
   yAxisLabel,
 }) => {
+  const theme = useTheme();
+
   const option = {
+    backgroundColor: 'transparent',
     title: {
       text: title,
       left: 'center',
@@ -89,6 +105,7 @@ export const BarChart: React.FC<BarChartProps> = ({
       textStyle: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: theme.palette.text.primary,
       },
     },
     tooltip: {
@@ -96,10 +113,18 @@ export const BarChart: React.FC<BarChartProps> = ({
       axisPointer: {
         type: 'shadow',
       },
+      backgroundColor: theme.palette.background.paper,
+      borderColor: theme.palette.divider,
+      textStyle: {
+        color: theme.palette.text.primary,
+      },
     },
     legend: {
       top: 40,
       data: seriesData.map((s) => s.name),
+      textStyle: {
+        color: theme.palette.text.primary,
+      },
     },
     grid: {
       left: '3%',
@@ -114,10 +139,34 @@ export const BarChart: React.FC<BarChartProps> = ({
       axisTick: {
         alignWithLabel: true,
       },
+      axisLine: {
+        lineStyle: {
+          color: theme.palette.divider,
+        },
+      },
+      axisLabel: {
+        color: theme.palette.text.secondary,
+      },
     },
     yAxis: {
       type: 'value',
       name: yAxisLabel,
+      nameTextStyle: {
+        color: theme.palette.text.primary,
+      },
+      axisLine: {
+        lineStyle: {
+          color: theme.palette.divider,
+        },
+      },
+      axisLabel: {
+        color: theme.palette.text.secondary,
+      },
+      splitLine: {
+        lineStyle: {
+          color: theme.palette.divider,
+        },
+      },
     },
     series: seriesData.map((s) => ({
       name: s.name,
@@ -153,7 +202,10 @@ export const LineChart: React.FC<LineChartProps> = ({
   height = 350,
   yAxisLabel,
 }) => {
+  const theme = useTheme();
+
   const option = {
+    backgroundColor: 'transparent',
     title: {
       text: title,
       left: 'center',
@@ -161,14 +213,23 @@ export const LineChart: React.FC<LineChartProps> = ({
       textStyle: {
         fontSize: 16,
         fontWeight: 'bold',
+        color: theme.palette.text.primary,
       },
     },
     tooltip: {
       trigger: 'axis',
+      backgroundColor: theme.palette.background.paper,
+      borderColor: theme.palette.divider,
+      textStyle: {
+        color: theme.palette.text.primary,
+      },
     },
     legend: {
       top: 40,
       data: seriesData.map((s) => s.name),
+      textStyle: {
+        color: theme.palette.text.primary,
+      },
     },
     grid: {
       left: '3%',
@@ -181,10 +242,34 @@ export const LineChart: React.FC<LineChartProps> = ({
       type: 'category',
       boundaryGap: false,
       data: xAxisData,
+      axisLine: {
+        lineStyle: {
+          color: theme.palette.divider,
+        },
+      },
+      axisLabel: {
+        color: theme.palette.text.secondary,
+      },
     },
     yAxis: {
       type: 'value',
       name: yAxisLabel,
+      nameTextStyle: {
+        color: theme.palette.text.primary,
+      },
+      axisLine: {
+        lineStyle: {
+          color: theme.palette.divider,
+        },
+      },
+      axisLabel: {
+        color: theme.palette.text.secondary,
+      },
+      splitLine: {
+        lineStyle: {
+          color: theme.palette.divider,
+        },
+      },
     },
     series: seriesData.map((s) => ({
       name: s.name,

@@ -6,6 +6,8 @@ import structureReducer from 'components/structures/structure.reducer';
 import orderReducer from 'components/orders/orderReducer';
 import decompteReducer from 'components/orders/decompte.reducer';
 import exerciceReducer from 'components/exercices/exercice.slice';
+import themeReducer from 'store/theme.slice';
+
 const rootReducer = combineReducers({
   auth: authReducer,
   alerts: alertReducer,
@@ -14,6 +16,7 @@ const rootReducer = combineReducers({
   orders: orderReducer,
   decompte: decompteReducer,
   exercice: exerciceReducer,
+  theme: themeReducer,
 });
 
 export type RootState = ReturnType<typeof rootReducer>;

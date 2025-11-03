@@ -1,4 +1,4 @@
-import { createTheme } from "@mui/material/styles";
+import { createTheme, PaletteMode } from "@mui/material/styles";
 import type {} from "@mui/x-data-grid/themeAugmentation";
 import Stack from "./components/layout/Stack";
 import Paper from "./components/surfaces/Paper";
@@ -37,11 +37,11 @@ import FormControlLabel from "./components/inputs/FormControlLabel";
 import PaginationItem from "./components/pagination/PaginationItem";
 import customShadows from "./shadows";
 import typography from "./typography";
-import palette from "./palette";
+import getPalette from "./palette";
 
-export const theme = createTheme({
+export const getTheme = (mode: PaletteMode) => createTheme({
 	typography,
-	palette,
+	palette: getPalette(mode),
 	customShadows,
 	components: {
 		MuiStack: Stack,
@@ -81,3 +81,7 @@ export const theme = createTheme({
 		MuiCssBaseline: CssBaseline,
 	},
 });
+
+// Default light theme for backward compatibility
+export const theme = getTheme('light');
+

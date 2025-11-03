@@ -18,6 +18,7 @@ import { Button } from '@mui/material';
 import MenuIcon from 'assets/icons/clarity--menu-line.svg?react';
 import { useState } from 'react';
 import ExerciceSelector from 'components/exercices/ExerciceSelector';
+import DarkModeToggle from 'components/common/DarkModeToggle';
 
 interface TopbarProps {
   isClosing: boolean;
@@ -67,7 +68,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       height={90}
       alignItems="center"
       justifyContent="space-between"
-      bgcolor="info.lighter"
+      bgcolor="background.paper"
       position="sticky"
       top={0}
       zIndex={1200}
@@ -91,6 +92,7 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
       <AppAlert />
 
       <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
+        <DarkModeToggle />
         <ExerciceSelector />
         <Button variant="contained" color="primary" onClick={handleOpen}>
           Ajouter Mission

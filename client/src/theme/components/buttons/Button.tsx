@@ -15,15 +15,32 @@ const Button: Components<Omit<Theme, 'components'>>['MuiButton'] = {
       color: theme.palette.primary.main,
       backgroundColor: 'transparent !important',
     }),
+    outlined: ({ theme }) => ({
+      color: theme.palette.primary.main,
+      borderColor: theme.palette.primary.main,
+      backgroundColor: 'transparent',
+      '&:hover': {
+        backgroundColor: theme.palette.mode === 'dark' 
+          ? 'rgba(84, 111, 255, 0.08)' 
+          : 'rgba(84, 111, 255, 0.04)',
+        borderColor: theme.palette.primary.main,
+      },
+    }),
     containedPrimary: ({ theme }) => ({
-      color: theme.palette.info.lighter,
+      color: '#FFFFFF',
       backgroundColor: theme.palette.primary.main,
-      '&:hover': { backgroundColor: theme.palette.primary.main },
+      '&:hover': { backgroundColor: theme.palette.primary.dark },
     }),
     containedSecondary: ({ theme }) => ({
       color: theme.palette.text.primary,
-      backgroundColor: theme.palette.info.lighter,
-      '&:hover': { backgroundColor: theme.palette.info.lighter },
+      backgroundColor: theme.palette.background.paper,
+      border: '1px solid',
+      borderColor: theme.palette.divider,
+      '&:hover': { 
+        backgroundColor: theme.palette.mode === 'dark' 
+          ? 'rgba(255, 255, 255, 0.08)' 
+          : 'rgba(0, 0, 0, 0.04)',
+      },
     }),
     sizeLarge: ({ theme }) => ({
       padding: theme.spacing(1.25, 2.25),

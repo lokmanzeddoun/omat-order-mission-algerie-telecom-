@@ -28,7 +28,7 @@ const DrawerItems = () => {
         pt={4}
         pb={2.5}
         alignItems="center"
-        bgcolor="info.lighter"
+        bgcolor="background.paper"
         zIndex={1000}
       >
         <ButtonBase onClick={handleLogoClick} disableRipple>

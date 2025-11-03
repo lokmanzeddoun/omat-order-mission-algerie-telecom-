@@ -18,6 +18,7 @@ import { RootState } from 'store/rootReducer';
 import { useNavigate } from 'react-router-dom';
 import paths, { rootPaths } from 'routes/paths';
 import SearchIcon from 'assets/icons/mynaui--search.svg?react';
+import DarkModeToggle from 'components/common/DarkModeToggle';
 
 const Topbar = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -65,7 +66,7 @@ const Topbar = () => {
       height={90}
       alignItems="center"
       justifyContent="space-between"
-      bgcolor="info.lighter"
+      bgcolor="background.paper"
       position="sticky"
       top={0}
       zIndex={1200}
@@ -77,7 +78,7 @@ const Topbar = () => {
           pt={4}
           pb={2.5}
           alignItems="center"
-          bgcolor="info.lighter"
+          bgcolor="background.paper"
           zIndex={1000}
         >
           <ButtonBase onClick={handleLogoClick} disableRipple>
@@ -111,6 +112,7 @@ const Topbar = () => {
 
       <Stack direction="row" spacing={{ xs: 1, sm: 2 }} alignItems="center">
         {/* <LanguageSelect /> */}
+        <DarkModeToggle />
         <Button variant="contained" color="primary" onClick={handleOpen}>
           Ajouter Mission
         </Button>

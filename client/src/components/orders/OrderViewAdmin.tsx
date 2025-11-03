@@ -670,14 +670,43 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             // }}
             pageSizeOptions={[10]}
             sx={{
+              border: 'none',
+              '& .MuiDataGrid-root': {
+                border: 'none',
+              },
               '.MuiDataGrid-cell:focus': {
                 outline: 'none',
               },
               '& .MuiDataGrid-row:hover': {
                 cursor: 'pointer',
+                bgcolor: (theme) => theme.palette.mode === 'dark' 
+                  ? 'rgba(255, 255, 255, 0.05)' 
+                  : 'rgba(0, 0, 0, 0.04)',
               },
               '& .MuiDataGrid-columnHeaders': {
                 bgcolor: 'primary.main',
+                color: '#FFFFFF',
+                borderBottom: '2px solid',
+                borderColor: 'divider',
+                minHeight: '56px !important',
+                maxHeight: '56px !important',
+              },
+              '& .MuiDataGrid-columnHeaderTitle': {
+                color: '#FFFFFF',
+                fontWeight: 600,
+              },
+              '& .MuiDataGrid-iconButtonContainer': {
+                '& .MuiIconButton-root': {
+                  color: '#FFFFFF',
+                },
+              },
+              '& .MuiDataGrid-menuIcon': {
+                '& .MuiSvgIcon-root': {
+                  color: '#FFFFFF',
+                },
+              },
+              '& .MuiDataGrid-sortIcon': {
+                color: '#FFFFFF',
               },
               '& .MuiDataGrid-columnHeader': {
                 fontSize: { xs: 13, lg: 16 },
@@ -692,18 +721,26 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
               '& .MuiDataGrid-virtualScroller': {
                 minHeight: 300,
                 p: 0,
+                bgcolor: 'background.paper',
               },
               '& .MuiDataGrid-cell': {
                 fontSize: { xs: 13, lg: 16 },
                 userSelect: 'none',
+                color: 'text.primary',
+                borderColor: 'divider',
               },
               '& .MuiTypography-root': {
                 fontSize: { xs: 13, lg: 16 },
+                color: 'text.primary',
               },
               '& .MuiDataGrid-row': {
                 userSelect: 'none',
               },
-              px: { xs: 0, md: 3 },
+              '& .MuiDataGrid-footerContainer': {
+                borderTop: '1px solid',
+                borderColor: 'divider',
+                bgcolor: 'background.paper',
+              },
               // Action-based highlight
               '& .action-highlight': { backgroundColor: 'primary.light !important' },
             }}
