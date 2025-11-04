@@ -15,11 +15,22 @@ export const addDecompte =
         if (missionId == null) throw new Error('Mission ID is required');
 
         // Transform distance_km to parcours for backend
+        // Ensure parcours is always a valid number (default to 0 if undefined/null)
+        const parcours = typeof decompte.distance_km === 'number'
+          ? decompte.distance_km
+          : (decompte.distance_km ? Number(decompte.distance_km) : 0);
+
+        // Transform transport_cost to fees_transport for backend
+        const fees_transport = typeof decompte.transport_cost === 'number'
+          ? decompte.transport_cost
+          : (decompte.transport_cost ? Number(decompte.transport_cost) : 0);
+
         const payload = {
           ...decompte,
-          parcours: decompte.distance_km ?? 0,
+          parcours,
+          fees_transport,
         };
-        // Remove distance_km as backend doesn't expect it
+        // Remove distance_km and transport_cost as backend expects parcours and fees_transport
         delete (payload as any).distance_km;
         delete (payload as any).transport_cost;
         delete (payload as any).missionId;
@@ -65,7 +76,46 @@ export const fetchAllDecompte = (token: string | null, status?: string) => async
       },
       params: {
         exercice: selectedYear ?? undefined,
-        status: status ?? 'pending',
+        archive: 'false',
+        // Don't pass status to get all decomptes with any status (only filter by soft_delete = false)
+        ...(status ? { status } : {}),
+      },
+    });
+
+    if (res && res.data) {
+      dispatch(fetchDecompteSuccess(res.data)); // Dispatch success and pass the data
+      return;
+    }
+
+    dispatch(fetchDecompteFailure('Problem in getting decomptes'));
+  } catch (error) {
+    let errorMessage = 'An error occurred';
+
+    if (axios.isAxiosError(error)) {
+      errorMessage = error.response?.data?.message || error.message;
+    } else if (error instanceof Error) {
+      errorMessage = error.message;
+    }
+
+    dispatch(fetchDecompteFailure(errorMessage)); // Dispatch failure and pass the error message
+    console.error('Error:', errorMessage);
+  }
+};
+
+export const fetchUserDecompte = (token: string | null, status?: string) => async (dispatch: AppDispatch, getState: any) => {
+  try {
+    dispatch(fetchDecompteStart()); // Start loading
+
+    const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
+    const res = await http.get(`/decompte/user`, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      params: {
+        exercice: selectedYear ?? undefined,
+        // Don't pass status to get all user decomptes with any status
+        ...(status ? { status } : {}),
       },
     });
 
@@ -90,7 +140,7 @@ export const fetchAllDecompte = (token: string | null, status?: string) => async
 };
 
 export const acceptDecompte =
-  (id: number, token: string | null, message?: string) =>
+  (id: number, token: string | null, message?: string, isAdmin?: boolean) =>
     async (dispatch: AppDispatch) => {
       try {
         const res = await http.patch(
@@ -106,7 +156,12 @@ export const acceptDecompte =
 
         if (res && res.data) {
           dispatch(setAlert({ msg: 'Décompte accepté avec succès', type: AlertTypes.SUCCESS }));
-          return dispatch(fetchAllDecompte(token, 'pending'));
+          // Refresh based on user role without status filter
+          if (isAdmin) {
+            return dispatch(fetchAllDecompte(token));
+          } else {
+            return dispatch(fetchUserDecompte(token));
+          }
         } else {
           dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
         }
@@ -125,7 +180,7 @@ export const acceptDecompte =
     };
 
 export const rejectDecompte =
-  (id: number, token: string | null, message: string) =>
+  (id: number, token: string | null, message: string, isAdmin?: boolean) =>
     async (dispatch: AppDispatch) => {
       try {
         const res = await http.patch(
@@ -141,7 +196,12 @@ export const rejectDecompte =
 
         if (res && res.data) {
           dispatch(setAlert({ msg: 'Décompte rejeté avec succès', type: AlertTypes.SUCCESS }));
-          return dispatch(fetchAllDecompte(token, 'pending'));
+          // Refresh based on user role without status filter
+          if (isAdmin) {
+            return dispatch(fetchAllDecompte(token));
+          } else {
+            return dispatch(fetchUserDecompte(token));
+          }
         } else {
           dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
         }
@@ -160,7 +220,7 @@ export const rejectDecompte =
     };
 
 export const archiveDecompte =
-  (id: number, token: string | null) =>
+  (id: number, token: string | null, isAdmin?: boolean) =>
     async (dispatch: AppDispatch) => {
       try {
         const res = await http.delete(`/decompte/${id}`, {
@@ -172,7 +232,12 @@ export const archiveDecompte =
 
         if (res && res.data) {
           dispatch(setAlert({ msg: 'Décompte archivé avec succès', type: AlertTypes.SUCCESS }));
-          return dispatch(fetchAllDecompte(token, 'pending'));
+          // Refresh based on user role without status filter
+          if (isAdmin) {
+            return dispatch(fetchAllDecompte(token));
+          } else {
+            return dispatch(fetchUserDecompte(token));
+          }
         } else {
           dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
         }
@@ -189,3 +254,43 @@ export const archiveDecompte =
         console.error('Error:', errorMessage);
       }
     };
+
+export const addCommentToDecompte =
+  (comment: { title: string; type: string; decompteId?: number }, token: string | null) =>
+    async (dispatch: AppDispatch) => {
+      try {
+        const res = await http.post(
+          `/comments`,
+          comment,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        if (res && res.data) {
+          dispatch(setAlert({ msg: 'Commentaire ajouté avec succès', type: AlertTypes.SUCCESS }));
+          // Refresh decomptes if it's a decompte comment, otherwise just return
+          if (comment.decompteId) {
+            return dispatch(fetchUserDecompte(token));
+          }
+          return res.data;
+        } else {
+          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+        }
+      } catch (error) {
+        let errorMessage = 'An error occurred';
+
+        if (axios.isAxiosError(error)) {
+          errorMessage = error.response?.data?.message || error.message;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+
+        dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
+        console.error('Error:', errorMessage);
+      }
+    };
+

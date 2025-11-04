@@ -156,9 +156,14 @@ export class MissionsService {
   }
 
   async findAll(delete_status: string, status: string, exercice?: string) {
-    let missionStatus: MissionStatus;
-    if (status === 'completed') missionStatus = MissionStatus.COMPLETED;
-    else missionStatus = MissionStatus.INPROGRESS;
+    let missionStatus: MissionStatus | undefined;
+    if (status === 'completed') {
+      missionStatus = MissionStatus.COMPLETED;
+    } else if (status === 'inprogress') {
+      missionStatus = MissionStatus.INPROGRESS;
+    }
+    // If status is not provided or invalid, missionStatus will be undefined and won't filter by status
+
     let year = exercice ? Number(exercice) : undefined;
     if (!year) {
       await this.exercicesService.ensureCurrentForNow();
@@ -170,7 +175,7 @@ export class MissionsService {
     return this.databaseService.mission.findMany({
       where: {
         soft_delete: delete_status === 'true',
-        status: missionStatus,
+        ...(missionStatus ? { status: missionStatus } : {}),
         ...(year ? { exercice: { year } } : {}),
       },
       orderBy: [
@@ -217,9 +222,14 @@ export class MissionsService {
     exercice?: string,
   ) {
     // console.log()
-    let missionStatus: MissionStatus;
-    if (status === 'completed') missionStatus = MissionStatus.COMPLETED;
-    else missionStatus = MissionStatus.INPROGRESS;
+    let missionStatus: MissionStatus | undefined;
+    if (status === 'completed') {
+      missionStatus = MissionStatus.COMPLETED;
+    } else if (status === 'inprogress') {
+      missionStatus = MissionStatus.INPROGRESS;
+    }
+    // If status is not provided or invalid, missionStatus will be undefined and won't filter by status
+
     let year = exercice ? Number(exercice) : undefined;
     if (!year) {
       await this.exercicesService.ensureCurrentForNow();
@@ -232,7 +242,7 @@ export class MissionsService {
       where: {
         userId: user.matricule,
         soft_delete: delete_status === 'true',
-        status: missionStatus,
+        ...(missionStatus ? { status: missionStatus } : {}),
         ...(year ? { exercice: { year } } : {}),
       },
       orderBy: [
@@ -340,15 +350,38 @@ export class MissionsService {
     });
   }
 
-  remove(id: number) {
-    return this.databaseService.mission.update({
-      where: {
-        n_mission: id,
-      },
-      data: {
-        soft_delete: true,
-      },
-    });
+  async remove(id: number) {
+    try {
+      const mission = await this.databaseService.mission.findUnique({
+        where: { n_mission: id },
+      });
+
+      if (!mission) {
+        throw new BadRequestException(`Mission with ID ${id} not found`);
+      }
+
+      if (mission.soft_delete) {
+        throw new BadRequestException(
+          `Mission with ID ${id} is already deleted`,
+        );
+      }
+
+      return await this.databaseService.mission.update({
+        where: {
+          n_mission: id,
+        },
+        data: {
+          soft_delete: true,
+        },
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to delete mission: ${error.message}`,
+      );
+    }
   }
   async downloadOrdre(id: number, user: User, res: ExpressResponse) {
     const mission = await this.databaseService.mission.findUnique({

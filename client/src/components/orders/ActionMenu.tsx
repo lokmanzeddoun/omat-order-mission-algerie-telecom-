@@ -60,9 +60,10 @@ interface ActionMenuProps {
   onDelete?: (order: IMission) => void;
   onValidate?: (order: IMission) => void;
   onArchive?: (order: IMission) => void;
+  showValidate?: boolean; // Control whether validate option is shown
 }
 
-const ActionMenu = ({ order, onEdit, onDelete, onValidate, onArchive }: ActionMenuProps) => {
+const ActionMenu = ({ order, onEdit, onDelete, onValidate, onArchive, showValidate = true }: ActionMenuProps) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -94,6 +95,20 @@ const ActionMenu = ({ order, onEdit, onDelete, onValidate, onArchive }: ActionMe
     handleActionMenuClose();
   };
 
+  // Filter actions based on conditions and showValidate prop
+  const filteredActions = actions.filter((actionItem) => {
+    // Hide validate option if showValidate is false
+    if (actionItem.id === 3 && !showValidate) {
+      return false;
+    }
+    // Hide edit option if status is COMPLETED
+    if (actionItem.id === 1 && order.status === 'COMPLETED') {
+      return false;
+    }
+    // Apply the action's own showCondition
+    return !actionItem.showCondition || actionItem.showCondition(order);
+  });
+
   return (
     <Box pr={1.5}>
       <IconButton
@@ -118,9 +133,7 @@ const ActionMenu = ({ order, onEdit, onDelete, onValidate, onArchive }: ActionMe
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        {actions
-          .filter((actionItem) => !actionItem.showCondition || actionItem.showCondition(order))
-          .map((actionItem) => {
+        {filteredActions.map((actionItem) => {
           const IconComponent = actionItem.icon;
           const textColor = actionItem.id === 3
             ? 'success.main'

@@ -8,6 +8,8 @@ import {
   alpha,
   IconButton,
   Tooltip,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import {
   Assignment as AssignmentIcon,
@@ -25,6 +27,7 @@ import { RootState } from 'store/rootReducer';
 import { AppDispatch } from 'store';
 import {
   fetchUserOrders,
+  fetchAllOrders,
   deleteOrder,
   updateMission,
   archiveMission,
@@ -50,7 +53,7 @@ import { saveAs } from 'file-saver';
 const OrderDashboard = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { orders, loading } = useSelector((s: RootState) => s.orders);
-  const { token } = useSelector((state: RootState) => state.auth);
+  const { token, user } = useSelector((state: RootState) => state.auth);
   const selectedYear = useSelector((s: RootState) => (s as any).exercice?.selectedYear ?? null);
 
   const [selectedOrder, setSelectedOrder] = useState<IMission | null>(null);
@@ -59,15 +62,46 @@ const OrderDashboard = () => {
   const [isValidateModalOpen, setValidateModalOpen] = useState(false);
   const [isArchiveModalOpen, setArchiveModalOpen] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
+  const [tab, setTab] = useState(0);
+
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
   useEffect(() => {
-    if (token) dispatch(fetchUserOrders(token));
-  }, [dispatch, token, selectedYear]);
+    // Admins see all missions, regular users see only their missions
+    if (token) {
+      if (isAdmin) {
+        dispatch(fetchAllOrders(token));
+      } else {
+        dispatch(fetchUserOrders(token));
+      }
+    }
+  }, [dispatch, token, selectedYear, isAdmin]);
 
-  const totalMissions = orders?.length || 0;
-  const pendingMissions = orders?.filter((m: any) => m.status === 'PENDING')?.length || 0;
-  const approvedMissions = orders?.filter((m: any) => m.status === 'APPROVED')?.length || 0;
-  const inProgressMissions = orders?.filter((m: any) => m.status === 'INPROGRESS')?.length || 0;
+  // Helper function to refresh orders based on role
+  const refreshOrders = useCallback(() => {
+    if (token) {
+      if (isAdmin) {
+        dispatch(fetchAllOrders(token));
+      } else {
+        dispatch(fetchUserOrders(token));
+      }
+    }
+  }, [dispatch, token, isAdmin]);
+
+  const allRows: IMission[] = useMemo(() => orders as IMission[], [orders]);
+  const filteredRows: IMission[] = useMemo(() => {
+    if (isAdmin && tab === 1 && user?.matricule != null) {
+      // Tab 1 for admins: show only their own missions
+      return (allRows as any[]).filter((r) => r?.user?.matricule === user.matricule);
+    }
+    // Tab 0 for admins: all missions, or for regular users: their missions
+    return allRows;
+  }, [tab, allRows, user?.matricule, isAdmin]);
+
+  const totalMissions = filteredRows?.length || 0;
+  const pendingMissions = filteredRows?.filter((m: any) => m.status === 'PENDING')?.length || 0;
+  const approvedMissions = filteredRows?.filter((m: any) => m.status === 'APPROVED')?.length || 0;
+  const inProgressMissions = filteredRows?.filter((m: any) => m.status === 'INPROGRESS')?.length || 0;
 
   const transportMapping: { [key: string]: string } = {
     SERVICE_CAR: 'Véhicule de service',
@@ -91,7 +125,7 @@ const OrderDashboard = () => {
       minWidth: 150,
       align: 'center',
       headerAlign: 'center',
-      headerSearchable: false,
+      headerSearchable: true,
       renderCell: (params: any) => {
         const value = params?.row?.date_sortie;
         return value ? moment(value).format('YYYY/MM/DD') : '-';
@@ -115,7 +149,7 @@ const OrderDashboard = () => {
       minWidth: 150,
       align: 'center',
       headerAlign: 'center',
-      headerSearchable: false,
+      headerSearchable: true,
       renderCell: (params: any) => {
         const value = params?.row?.date_retour;
         return value ? moment(value).format('YYYY/MM/DD') : '-';
@@ -293,27 +327,29 @@ const OrderDashboard = () => {
 
   const confirmDelete = async () => {
     if (!selectedOrder) return;
-    await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
-    await dispatch(fetchUserOrders(token));
-    setDeleteModalOpen(false);
+    const success = await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
+    if (success) {
+      await refreshOrders();
+      setDeleteModalOpen(false);
+    }
   };
 
   const confirmArchive = async () => {
     if (!selectedOrder) return;
-    await dispatch(archiveMission(selectedOrder.n_mission ?? null));
+    await dispatch(archiveMission(selectedOrder.n_mission ?? null, isAdmin));
     setArchiveModalOpen(false);
   };
 
   const handleEditSubmit = async (data: IMission) => {
     await dispatch(updateMission(data));
-    await dispatch(fetchUserOrders(token));
+    await refreshOrders();
     setEditModalOpen(false);
   };
 
   const handleValidateSubmit = async (data: IDecompte) => {
     if (!selectedOrder) return;
     await dispatch(addDecompte(data, selectedOrder, token));
-    await dispatch(fetchUserOrders(token));
+    await refreshOrders();
     setValidateModalOpen(false);
   };
 
@@ -401,7 +437,7 @@ const OrderDashboard = () => {
           </Box>
           <Tooltip title="Actualiser">
             <IconButton
-              onClick={() => dispatch(fetchUserOrders(token))}
+              onClick={refreshOrders}
               sx={{
                 backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1),
                 '&:hover': {
@@ -510,6 +546,28 @@ const OrderDashboard = () => {
         </Grid>
       </Grid>
 
+      {/* Tabs - Only show for admins */}
+      {isAdmin && (
+        <Box sx={{ mb: 3 }}>
+          <Tabs
+            value={tab}
+            onChange={(_, newValue) => setTab(newValue)}
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.95rem',
+              },
+            }}
+          >
+            <Tab label={`Toutes les Missions (${allRows.length})`} />
+            <Tab label={`Mes Missions (${tab === 1 ? filteredRows.length : allRows.filter((r: any) => r?.user?.matricule === user?.matricule).length})`} />
+          </Tabs>
+        </Box>
+      )}
+
       {/* Table Card */}
       <Paper
         elevation={0}
@@ -520,19 +578,20 @@ const OrderDashboard = () => {
           overflow: 'hidden',
         }}
       >
-        {orders.length === 0 ? (
+        {filteredRows.length === 0 ? (
           <Box sx={{ p: 6, textAlign: 'center' }}>
             <NoData />
           </Box>
         ) : (
           <SmartTable
             columns={columns}
-            rows={orders}
+            rows={filteredRows}
             getRowId={(row: any) => row.n_mission}
             loading={loading}
             noRowsOverlay={NoData as any}
             enableHeaderSearch
             dateFields={['date_sortie', 'date_retour']}
+            enableDateClear
             onViewDetails={handleViewDetails as any}
             contextMenuItems={contextMenuItems as any}
           />

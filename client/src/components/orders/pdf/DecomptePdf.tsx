@@ -27,7 +27,7 @@ export interface DecomptePdfProps {
         heureDepartH?: string; // HH
         heureDepartM?: string; // mm
         nbJours?: string | number;
-        moyenTransport?: 'avion' | 'vehicule_service' | 'vehicule_personnel' | 'autres';
+        moyenTransport?: 'vehicule_service' | 'vehicule_personnel' | 'autres';
         distanceKm?: string | number;
         indemniteKm?: string | number;
         priseEnCharge?: 'oui' | 'non';
@@ -123,20 +123,6 @@ const TwoCol = ({ left, right }: { left: React.ReactNode; right: React.ReactNode
         <View style={{ ...styles.flex1 }}>{left}</View>
         <View style={{ ...styles.flex1 }}>{right}</View>
     </View>
-);
-
-const Radio = ({ checked = false }: { checked?: boolean }) => (
-    <View
-        style={{
-            width: 10,
-            height: 10,
-            border: 1,
-            borderColor: '#777',
-            borderRadius: 5,
-            marginHorizontal: 4,
-            backgroundColor: checked ? '#333' : 'transparent',
-        }}
-    />
 );
 
 export const DecompteDocument: React.FC<DecomptePdfProps> = ({ data, logoPath = '/Logo.png' }) => (
@@ -276,10 +262,27 @@ export const DecompteDocument: React.FC<DecomptePdfProps> = ({ data, logoPath = 
             <View style={{ ...styles.section, ...styles.borderBox, padding: 8 }}>
                 <Text style={{ ...styles.bold, marginBottom: 6 }}>Moyen de transport</Text>
                 <View style={{ ...styles.row, gap: 16 }}>
-                    <View style={styles.row}><Radio checked={data?.moyenTransport === 'avion'} /><Text>Avion</Text></View>
-                    <View style={styles.row}><Radio checked={data?.moyenTransport === 'vehicule_service'} /><Text>véhicule de service</Text></View>
-                    <View style={styles.row}><Radio checked={data?.moyenTransport === 'vehicule_personnel'} /><Text>véhicule personnel</Text></View>
-                    <View style={styles.row}><Radio checked={data?.moyenTransport === 'autres'} /><Text>Autres</Text></View>
+                    <View style={styles.row}>
+                        <Text>a -</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <View style={styles.boxSmall}>
+                            <Text>{data?.moyenTransport === 'vehicule_service' ? '☒' : '☐'}</Text>
+                        </View>
+                        <Text style={{ marginLeft: 4 }}>b - véhicule de service</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <View style={styles.boxSmall}>
+                            <Text>{data?.moyenTransport === 'vehicule_personnel' ? '☒' : '☐'}</Text>
+                        </View>
+                        <Text style={{ marginLeft: 4 }}>c - véhicule personnel</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <View style={styles.boxSmall}>
+                            <Text>{data?.moyenTransport === 'autres' ? '☒' : '☐'}</Text>
+                        </View>
+                        <Text style={{ marginLeft: 4 }}>d - Autres</Text>
+                    </View>
                 </View>
             </View>
 

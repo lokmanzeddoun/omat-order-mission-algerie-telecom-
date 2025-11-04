@@ -24,9 +24,10 @@ import Splash from 'components/loader/Splash';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import {
   fetchAllDecompte,
+  fetchUserDecompte,
   acceptDecompte,
   rejectDecompte,
   archiveDecompte,
@@ -57,17 +58,40 @@ const DecomptesPage = () => {
   const [commentsDialogOpen, setCommentsDialogOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
 
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+
   useEffect(() => {
-    if (token) dispatch(fetchAllDecompte(token));
-  }, [dispatch, token, selectedYear]);
+    // Admins see all decomptes, regular users see only their decomptes
+    if (token) {
+      if (isAdmin) {
+        dispatch(fetchAllDecompte(token));
+      } else {
+        dispatch(fetchUserDecompte(token));
+      }
+    }
+  }, [dispatch, token, selectedYear, isAdmin]);
+
+  // Helper function to refresh decomptes based on role
+  const refreshDecomptes = useCallback(() => {
+    if (token) {
+      if (isAdmin) {
+        dispatch(fetchAllDecompte(token));
+      } else {
+        dispatch(fetchUserDecompte(token));
+      }
+    }
+  }, [dispatch, token, isAdmin]);
 
   const allRows: any[] = useMemo(() => decomptes as any, [decomptes]);
+
   const filteredRows: any[] = useMemo(() => {
-    if (tab === 1 && user?.matricule != null) {
+    if (isAdmin && tab === 1 && user?.matricule != null) {
+      // Tab 1 for admins: show only their own decomptes
       return (allRows as any[]).filter((r) => r?.mission?.user?.matricule === user.matricule);
     }
+    // Tab 0 for admins: all decomptes, or for regular users: their decomptes
     return allRows;
-  }, [tab, allRows, user?.matricule]);
+  }, [tab, allRows, user?.matricule, isAdmin]);
 
   const transportMapping: { [key: string]: string } = {
     SERVICE_CAR: 'Véhicule de service',
@@ -391,7 +415,6 @@ const DecomptesPage = () => {
   const contextMenuItems = useMemo(() => {
     // SmartTable expects a static array, but we need dynamic items per row
     // We'll use a workaround by returning all possible items and filtering in onClick
-    const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
 
     return [
       {
@@ -462,7 +485,7 @@ const DecomptesPage = () => {
           ]
         : []),
     ];
-  }, [user?.role]);
+  }, [isAdmin]);
 
   // Handle double-click to view details
   const handleViewDetails = (row: any) => {
@@ -472,21 +495,21 @@ const DecomptesPage = () => {
 
   const handleAcceptConfirm = async (message?: string) => {
     if (selectedDecompte?.n_decompte) {
-      await dispatch(acceptDecompte(selectedDecompte.n_decompte, token, message));
+      await dispatch(acceptDecompte(selectedDecompte.n_decompte, token, message, isAdmin));
       setSelectedDecompte(null);
     }
   };
 
   const handleRejectConfirm = async (message: string) => {
     if (selectedDecompte?.n_decompte) {
-      await dispatch(rejectDecompte(selectedDecompte.n_decompte, token, message));
+      await dispatch(rejectDecompte(selectedDecompte.n_decompte, token, message, isAdmin));
       setSelectedDecompte(null);
     }
   };
 
   const handleArchiveConfirm = async () => {
     if (selectedDecompte?.n_decompte) {
-      await dispatch(archiveDecompte(selectedDecompte.n_decompte, token));
+      await dispatch(archiveDecompte(selectedDecompte.n_decompte, token, isAdmin));
       setSelectedDecompte(null);
     }
   };
@@ -514,7 +537,7 @@ const DecomptesPage = () => {
           </Box>
           <Tooltip title="Actualiser">
             <IconButton
-              onClick={() => dispatch(fetchAllDecompte(token))}
+              onClick={refreshDecomptes}
               sx={{
                 backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.1),
                 '&:hover': {
@@ -623,28 +646,30 @@ const DecomptesPage = () => {
         </Grid>
       </Grid>
 
-      {/* Tabs */}
-      <Paper elevation={0} sx={{ mb: 3, borderRadius: 2 }}>
-        <Tabs
-          value={tab}
-          onChange={(_e, v) => {
-            setTab(v);
-          }}
-          sx={{
-            borderBottom: 1,
-            borderColor: 'divider',
-            '& .MuiTab-root': {
-              textTransform: 'none',
-              fontSize: '1rem',
-              fontWeight: 500,
-              minHeight: 64,
-            },
-          }}
-        >
-          <Tab label={`Tous les Décomptes (${totalDecomptes})`} />
-          <Tab label={`Mes Décomptes (${filteredRows.length})`} />
-        </Tabs>
-      </Paper>
+      {/* Tabs - Only show for admins */}
+      {isAdmin && (
+        <Paper elevation={0} sx={{ mb: 3, borderRadius: 2 }}>
+          <Tabs
+            value={tab}
+            onChange={(_e, v) => {
+              setTab(v);
+            }}
+            sx={{
+              borderBottom: 1,
+              borderColor: 'divider',
+              '& .MuiTab-root': {
+                textTransform: 'none',
+                fontSize: '1rem',
+                fontWeight: 500,
+                minHeight: 64,
+              },
+            }}
+          >
+            <Tab label={`Tous les Décomptes (${allRows.length})`} />
+            <Tab label={`Mes Décomptes (${tab === 1 ? filteredRows.length : allRows.filter((r: any) => r?.mission?.user?.matricule === user?.matricule).length})`} />
+          </Tabs>
+        </Paper>
+      )}
 
       {/* Table Card */}
       <Paper

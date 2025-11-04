@@ -55,10 +55,11 @@ const Topbar = ({ isClosing, mobileOpen, setMobileOpen }: TopbarProps) => {
     }
   };
   const handleUserSubmit = async (data: any) => {
-    await dispatch(addOrder(data, token));
-    // await dispatch(getAllUsers());
-    setOpen(false);
-    // Handle the submission (e.g., send data to a backend)
+    const success = await dispatch(addOrder(data, token));
+    if (success) {
+      setOpen(false);
+    }
+    // If there's an error, the modal stays open so user can fix the form
   };
 
   return (

@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 import IconifyIcon from 'components/base/IconifyIcon';
 import OrderView from 'components/orders/OrderView';
+import DecompteCommentsButton from 'components/orders/DecompteCommentsButton';
 import SearchIcon from 'assets/icons/mynaui--search.svg?react';
 
 const UserDashboard = () => {
@@ -34,27 +35,31 @@ const UserDashboard = () => {
           Mes ordre de missions
         </Typography>
 
-        <TextField
-          variant="outlined"
-          size="medium"
-          placeholder="Rechercher un ordre de mission..."
-          value={searchText}
-          onChange={handleInputChange}
-          sx={{
-            width: { xs: 1, sm: 'auto' },
-            minWidth: { sm: 320 },
-            '& .MuiOutlinedInput-root': {
-              borderRadius: 2,
-            }
-          }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <IconifyIcon icon={SearchIcon} sx={{ color: 'text.secondary' }} />
-              </InputAdornment>
-            ),
-          }}
-        />
+        <Stack direction="row" spacing={2} alignItems="center">
+          <DecompteCommentsButton />
+
+          <TextField
+            variant="outlined"
+            size="medium"
+            placeholder="Rechercher un ordre de mission..."
+            value={searchText}
+            onChange={handleInputChange}
+            sx={{
+              width: { xs: 1, sm: 'auto' },
+              minWidth: { sm: 320 },
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+              }
+            }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <IconifyIcon icon={SearchIcon} sx={{ color: 'text.secondary' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Stack>
       </Stack>
 
       {/* Content Section */}

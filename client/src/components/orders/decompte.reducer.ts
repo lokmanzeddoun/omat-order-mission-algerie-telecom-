@@ -13,6 +13,7 @@ export interface IDecompte {
   distance_km?: number; // Distance parcourue pour indemnité kilométrique
   transport_cost?: number; // Frais de transport engagés (DA)
   parcours?: number; // Distance parcours in km
+  fees_transport?: number; // Frais de transport (backend field)
   montant?: number; // Total amount
   status?: 'PENDING' | 'ACCEPTED' | 'REGECTED';
   missionId?: number; // Relation to the mission

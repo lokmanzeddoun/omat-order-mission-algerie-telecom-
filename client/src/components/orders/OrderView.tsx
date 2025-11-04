@@ -331,9 +331,11 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   // Removed view-only open on double click; users can still toggle read-only later if needed
   const ConfirmationDelete = async () => {
     if (!selectedOrder) return;
-    await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
-    await dispatch(fetchUserOrders(token));
-    setDeleteModalOpen(false);
+    const success = await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
+    if (success) {
+      await dispatch(fetchUserOrders(token));
+      setDeleteModalOpen(false);
+    }
   };
   const EditSumbission = async (data: IMission) => {
     await dispatch(updateMission(data));
@@ -414,6 +416,7 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           order={params.row}
           onEdit={() => handleEdit(params.row)}
           onDelete={() => handleDelete(params.row)}
+          showValidate={false}
         />
       ),
     },
@@ -479,6 +482,8 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
           localeText={localizedTextsMap}
           onRowDoubleClick={(params) => {
             if (!params) return;
+            // Don't allow editing if status is COMPLETED
+            if (params.row.status === 'COMPLETED') return;
             setHighlightRowId(params.id as GridRowId);
             handleEdit(params.row as IMission);
           }}
@@ -597,32 +602,36 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
         anchorPosition={ctx ? { top: ctx.mouseY, left: ctx.mouseX } : undefined}
         sx={{ mt: 0.5, '& .MuiList-root': { width: 140 } }}
       >
-        <MenuItem
-          onClick={() => {
-            if (ctxRow) handleEdit(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={EditIcon} color="action" />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography>Editer</Typography>
-          </ListItemText>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (ctxRow) handleDelete(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={DeleteIcon} color="error" />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography color="error.main">Annuler</Typography>
-          </ListItemText>
-        </MenuItem>
+        {ctxRow && ctxRow.status !== 'COMPLETED' && (
+          <MenuItem
+            onClick={() => {
+              if (ctxRow) handleEdit(ctxRow);
+              setCtx(null);
+            }}
+          >
+            <ListItemIcon sx={{ mr: 1 }}>
+              <IconifyIcon icon={EditIcon} color="action" />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography>Editer</Typography>
+            </ListItemText>
+          </MenuItem>
+        )}
+        {ctxRow && ctxRow.status !== 'COMPLETED' && (
+          <MenuItem
+            onClick={() => {
+              if (ctxRow) handleDelete(ctxRow);
+              setCtx(null);
+            }}
+          >
+            <ListItemIcon sx={{ mr: 1 }}>
+              <IconifyIcon icon={DeleteIcon} color="error" />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography color="error.main">Annuler</Typography>
+            </ListItemText>
+          </MenuItem>
+        )}
       </Menu>
     </>
   );

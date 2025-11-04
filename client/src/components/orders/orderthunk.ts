@@ -59,24 +59,38 @@ export const addOrder =
         // link.click(); // Trigger download
         // document.body.removeChild(link); // Clean up the link
 
-        dispatch(setAlert({ msg: 'Order Created Successfully', type: AlertTypes.SUCCESS }));
-        return dispatch(fetchUserOrders(token)); // Dispatch createOrder if necessary
+        dispatch(setAlert({ msg: 'Ordre de mission créé avec succès', type: AlertTypes.SUCCESS }));
+        await dispatch(fetchUserOrders(token)); // Refresh the orders list
+        return true; // Return true on success
       } else {
-        dispatch(setAlert({ msg: 'Unexpected error: no file returned', type: AlertTypes.ERROR }));
+        dispatch(setAlert({ msg: 'Erreur inattendue: aucun fichier retourné', type: AlertTypes.ERROR }));
+        return false;
       }
     } catch (error) {
-      let errorMessage = 'An error occurred';
+      let errorMessage = 'Requête invalide';
 
       if (axios.isAxiosError(error)) {
-        // For Axios errors, extract specific information
-        errorMessage = error.response?.data?.message || error.message;
+        // When responseType is 'blob', error.response.data is also a Blob
+        // We need to parse it to get the actual error message
+        if (error.response?.data instanceof Blob) {
+          try {
+            const text = await error.response.data.text();
+            const errorData = JSON.parse(text);
+            errorMessage = errorData.message || errorMessage;
+          } catch {
+            // If parsing fails, use the status text or default message
+            errorMessage = error.response?.statusText || errorMessage;
+          }
+        } else {
+          errorMessage = error.response?.data?.message || error.message;
+        }
       } else if (error instanceof Error) {
-        // Handle other errors
         errorMessage = error.message;
       }
 
       dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
-      console.error('Error:', errorMessage);
+      console.error('Error creating order:', errorMessage);
+      return false; // Return false on error
     }
   };
 
@@ -95,6 +109,8 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
       headers,
       params: {
         exercice: selectedYear ?? undefined,
+        archive: 'false',
+        // Don't pass status to get all user missions with any status (only filter by soft_delete = false)
       },
     });
 
@@ -187,6 +203,8 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
       headers,
       params: {
         exercice: selectedYear ?? undefined,
+        archive: 'false',
+        // Don't pass status to get all missions with any status (only filter by soft_delete = false)
       },
     });
 
@@ -211,38 +229,50 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
 };
 
 export const deleteOrder = (n_mission: number | null) => async (dispatch: AppDispatch, getState: any) => {
+  if (typeof n_mission !== 'number') {
+    dispatch(setAlert({ msg: 'Mission invalide pour annulation', type: AlertTypes.ERROR }));
+    return false;
+  }
+
   try {
     const token: string | null = getState()?.auth?.token ?? null;
+
+    if (!token) {
+      dispatch(setAlert({ msg: 'Session expirée. Veuillez vous reconnecter.', type: AlertTypes.ERROR }));
+      return false;
+    }
+
     const res = await http.delete(`/missions/${n_mission}`, {
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
       },
     });
-    if (res) {
-      await dispatch(setAlert({ msg: 'Order Deleted Successfully', type: AlertTypes.SUCCESS }));
-      if (typeof n_mission === 'number') {
-        dispatch(removeOrder(n_mission));
-      }
+
+    if (res && res.data) {
+      dispatch(setAlert({ msg: 'Mission annulée avec succès', type: AlertTypes.SUCCESS }));
+      dispatch(removeOrder(n_mission));
+      return true;
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: 'Erreur inattendue lors de l\'annulation', type: AlertTypes.ERROR }));
+      return false;
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
+    let errorMessage = 'Erreur lors de l\'annulation de la mission';
 
     if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
       errorMessage = error.response?.data?.message || error.message;
     } else if (error instanceof Error) {
-      // Handle other errors
       errorMessage = error.message;
     }
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
-    console.error('Error:', errorMessage);
+    console.error('Error deleting order:', errorMessage);
+    return false;
   }
 };
 
-export const archiveMission = (n_mission: number | null) => async (dispatch: AppDispatch, getState: any) => {
+export const archiveMission = (n_mission: number | null, isAdmin?: boolean) => async (dispatch: AppDispatch, getState: any) => {
   if (typeof n_mission !== 'number') {
     dispatch(setAlert({ msg: 'Mission invalide pour archivage', type: AlertTypes.ERROR }));
     return;
@@ -269,7 +299,12 @@ export const archiveMission = (n_mission: number | null) => async (dispatch: App
     if (res && res.data) {
       dispatch(setAlert({ msg: 'Mission archivée avec succès', type: AlertTypes.SUCCESS }));
       dispatch(removeOrder(n_mission));
-      await dispatch(fetchUserOrders(token));
+      // Refresh based on user role
+      if (isAdmin) {
+        await dispatch(fetchAllOrders(token));
+      } else {
+        await dispatch(fetchUserOrders(token));
+      }
     } else {
       dispatch(setAlert({ msg: 'Une erreur inattendue est survenue', type: AlertTypes.ERROR }));
     }

@@ -126,7 +126,7 @@ const ArchivePage = () => {
 
   const confirmUnarchive = async () => {
     if (!itemToUnarchive) return;
-    
+
     const headers = { Authorization: `Bearer ${token}` };
     try {
       if (tab === 'missions') {

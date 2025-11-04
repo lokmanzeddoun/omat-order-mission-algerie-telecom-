@@ -17,7 +17,8 @@ import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { Prisma, User } from '@prisma/client';
 import { Response } from 'express';
 import { BadRequestException } from '@nestjs/common';
-import { isValidDestination } from '../utils/destination-validator';
+// Removed destination validator import - now just using string validation
+// import { isValidDestination } from '../utils/destination-validator';
 @Controller('missions')
 export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
@@ -42,15 +43,8 @@ export class MissionsController {
       }
     }
 
-    // Destination validation: split by '-' and ensure each token matches a commune_name_ascii (case-insensitive)
-    if (
-      typeof createMissionDto.destination !== 'string' ||
-      !isValidDestination(createMissionDto.destination)
-    ) {
-      throw new BadRequestException(
-        'destination must be a list of valid communes (commune_name_ascii), separated by -',
-      );
-    }
+    // Destination is now validated as a string by the DTO
+    // No need for complex JSON file validation
 
     return this.missionsService.create(
       createMissionDto as unknown as Prisma.MissionCreateInput,
@@ -146,15 +140,8 @@ export class MissionsController {
       }
     }
 
-    if (
-      typeof updateMissionDto.destination === 'string' &&
-      updateMissionDto.destination.trim() !== '' &&
-      !isValidDestination(updateMissionDto.destination)
-    ) {
-      throw new BadRequestException(
-        'destination must be a list of valid communes (commune_name_ascii), separated by -',
-      );
-    }
+    // Destination is now validated as a string by the DTO
+    // No need for complex JSON file validation
 
     return this.missionsService.update(
       +id,

@@ -53,9 +53,24 @@ export class CommentsService {
   }
 
   async findForAdmins() {
-    // simple finder for admins: all non-soft-deleted comments
+    // Return all non-soft-deleted comments with user information included
     return this.databaseService.commentaire.findMany({
       where: { soft_delete: false },
+      include: {
+        user: {
+          select: {
+            matricule: true,
+            nom: true,
+            prenom: true,
+            email: true,
+          },
+        },
+        decompte: {
+          select: {
+            n_decompte: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'desc' },
     });
   }

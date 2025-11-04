@@ -64,6 +64,7 @@ model Decompte {
   hebergement_sans_pec Int @default(0)
   montant Float
   parcours Float?
+  fees_transport Float? @default(0)
   status DecompteStatus @default(PENDING)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

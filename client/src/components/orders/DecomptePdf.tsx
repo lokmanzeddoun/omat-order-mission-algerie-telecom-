@@ -40,13 +40,13 @@ export const DecomptePdf: React.FC<Props> = ({ mission, decompte, user }) => (
                     }
                 })(),
                 moyenTransport:
-                    mission?.transport === 'Avion'
-                        ? 'avion'
-                        : mission?.transport === 'Vehicule de service'
-                            ? 'vehicule_service'
-                            : mission?.transport === 'Vehicule personnel'
-                                ? 'vehicule_personnel'
-                                : 'autres',
+                    mission?.transport === 'SERVICE_CAR'
+                        ? 'vehicule_service'
+                        : mission?.transport === 'PERSONAL_CAR'
+                            ? 'vehicule_personnel'
+                            : mission?.transport === 'TRANSPORT_ENTREPRISE' || mission?.transport === 'TRANSPORT_EMPLOYEE'
+                                ? 'autres'
+                                : undefined,
                 distanceKm: decompte?.distance_km,
                 indemniteKm: undefined,
                 // Prise en charge section uses counts; mapping available fields

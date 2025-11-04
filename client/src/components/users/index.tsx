@@ -222,10 +222,11 @@ const InvoiceOverviewTable: React.FC = () => {
     if (!selectedUser) return;
     // Attach target user matricule for backend to create mission for that user
     const payload = { ...data, userMatricule: selectedUser.matricule };
-    await dispatch(addOrder(payload, token));
-    // await dispatch(getAllUsers());
-    setOpen(false);
-    // Handle the submission (e.g., send data to a backend)
+    const success = await dispatch(addOrder(payload, token));
+    if (success) {
+      setOpen(false);
+    }
+    // If there's an error, the modal stays open so user can fix the form
   };
 
 

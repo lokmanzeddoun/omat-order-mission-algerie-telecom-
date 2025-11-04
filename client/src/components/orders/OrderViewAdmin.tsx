@@ -318,9 +318,11 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
   };
   const ConfirmationDelete = async () => {
     if (!selectedOrder) return;
-    await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
-    await dispatch(fetchAllOrders(token));
-    setDeleteModalOpen(false);
+    const success = await dispatch(deleteOrder(selectedOrder.n_mission ?? null));
+    if (success) {
+      await dispatch(fetchAllOrders(token));
+      setDeleteModalOpen(false);
+    }
   };
   const EditSumbission = async (data: IMission) => {
     await dispatch(updateMission(data));
@@ -637,6 +639,8 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
             paginationModel={paginationModel}
             onRowDoubleClick={(params) => {
               if (params && params.row) {
+                // Don't allow editing if status is COMPLETED
+                if (params.row.status === 'COMPLETED') return;
                 handleEdit(params.row);
                 setHighlightRowId(params.id as GridRowId);
               }
@@ -754,45 +758,51 @@ const OrderView = ({ searchText }: TaskOverviewTableProps) => {
         anchorPosition={ctx ? { top: ctx.mouseY, left: ctx.mouseX } : undefined}
         sx={{ mt: 0.5, '& .MuiList-root': { width: 140 } }}
       >
-        <MenuItem
-          onClick={() => {
-            if (ctxRow) handleValidate(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={ValidateIcon} color="success" />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography color="success.main">Valider</Typography>
-          </ListItemText>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (ctxRow) handleEdit(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={EditIcon} color="action" />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography>Editer</Typography>
-          </ListItemText>
-        </MenuItem>
-        <MenuItem
-          onClick={() => {
-            if (ctxRow) handleDelete(ctxRow);
-            setCtx(null);
-          }}
-        >
-          <ListItemIcon sx={{ mr: 1 }}>
-            <IconifyIcon icon={DeleteIcon} color="error" />
-          </ListItemIcon>
-          <ListItemText>
-            <Typography color="error.main">Annuler</Typography>
-          </ListItemText>
-        </MenuItem>
+        {ctxRow && ctxRow.status !== 'COMPLETED' && (
+          <MenuItem
+            onClick={() => {
+              if (ctxRow) handleValidate(ctxRow);
+              setCtx(null);
+            }}
+          >
+            <ListItemIcon sx={{ mr: 1 }}>
+              <IconifyIcon icon={ValidateIcon} color="success" />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography color="success.main">Valider</Typography>
+            </ListItemText>
+          </MenuItem>
+        )}
+        {ctxRow && ctxRow.status !== 'COMPLETED' && (
+          <MenuItem
+            onClick={() => {
+              if (ctxRow) handleEdit(ctxRow);
+              setCtx(null);
+            }}
+          >
+            <ListItemIcon sx={{ mr: 1 }}>
+              <IconifyIcon icon={EditIcon} color="action" />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography>Editer</Typography>
+            </ListItemText>
+          </MenuItem>
+        )}
+        {ctxRow && ctxRow.status !== 'COMPLETED' && (
+          <MenuItem
+            onClick={() => {
+              if (ctxRow) handleDelete(ctxRow);
+              setCtx(null);
+            }}
+          >
+            <ListItemIcon sx={{ mr: 1 }}>
+              <IconifyIcon icon={DeleteIcon} color="error" />
+            </ListItemIcon>
+            <ListItemText>
+              <Typography color="error.main">Annuler</Typography>
+            </ListItemText>
+          </MenuItem>
+        )}
       </Menu>
       <Box sx={{ mt: 2, display: 'flex', justifyContent: { xs: 'center', md: 'flex-end' } }}>
         <CustomPagination

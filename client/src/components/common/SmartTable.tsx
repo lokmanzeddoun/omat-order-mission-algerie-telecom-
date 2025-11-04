@@ -134,8 +134,34 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
         if (!enableHeaderSearch) return columns;
         return columns.map((col) => {
             const searchable = col.headerSearchable !== false; // default true
+            const colIsDateField = isDateField(col.field as string);
+
+            // Add custom filter operators for date fields
+            const filterOperators = colIsDateField ? [
+                {
+                    label: 'equals',
+                    value: 'equals',
+                    getApplyFilterFn: (filterItem: any) => {
+                        if (!filterItem.value) {
+                            return null;
+                        }
+                        return (params: any) => {
+                            const cellValue = params.value;
+                            if (!cellValue) return false;
+
+                            // Extract date part only (YYYY-MM-DD) from both values
+                            const cellDate = new Date(cellValue).toISOString().split('T')[0];
+                            const filterDate = new Date(filterItem.value).toISOString().split('T')[0];
+
+                            return cellDate === filterDate;
+                        };
+                    },
+                },
+            ] : undefined;
+
             return {
                 ...col,
+                filterOperators,
                 renderHeader:
                     col.field && (col.headerName || col.field)
                         ? () =>
@@ -247,7 +273,7 @@ const SmartTable = <Row extends GridValidRowModel = GridValidRowModel>({
                     const field = params.field as string;
                     if (!field) return;
                     setHeaderSearchField(field);
-                    const existing = (filterModel.items as any[]).find((it: any) => it.field === field);
+                    const existing = (activeFilterModel.items as any[]).find((it: any) => it.field === field);
                     setHeaderSearchValue((existing?.value as string) || '');
                 }}
                 slotProps={{

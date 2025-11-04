@@ -44,6 +44,16 @@ export class DecompteController {
     return this.decompteService.findAll(status, archive, exercice);
   }
 
+  @Get('user')
+  @Auth()
+  getUserDecompte(
+    @GetUser() user: User,
+    @Query('status') status: string,
+    @Query('exercice') exercice?: string,
+  ) {
+    return this.decompteService.getUserDecompte(user, status, exercice);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.decompteService.findOne(+id);
@@ -61,16 +71,6 @@ export class DecompteController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.decompteService.remove(+id);
-  }
-
-  @Get('user')
-  @Auth()
-  getUserDecompte(
-    @GetUser() user: User,
-    @Query('status') status: string,
-    @Query('exercice') exercice?: string,
-  ) {
-    return this.decompteService.getUserDecompte(user, status, exercice);
   }
 
   @Get(':id/download')

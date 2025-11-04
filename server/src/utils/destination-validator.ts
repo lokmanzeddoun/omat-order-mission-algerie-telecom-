@@ -36,6 +36,10 @@ function loadCommuneSet(): Set<string> {
   const candidates = [
     // From env override
     envPath && path.resolve(envPath),
+    // Server's own data folder (source)
+    path.resolve(__dirname, '../data/algeria_cities.json'),
+    // Server's own data folder (compiled dist)
+    path.resolve(__dirname, '../../src/data/algeria_cities.json'),
     // When running from repo root
     path.resolve(process.cwd(), 'client/src/data/algeria_cities.json'),
     // When running from server folder (dev)
@@ -49,7 +53,17 @@ function loadCommuneSet(): Set<string> {
   let cities: City[] | null = null;
   for (const p of candidates) {
     cities = tryLoadJson(p);
-    if (cities) break;
+    if (cities) {
+      console.log(`[destination-validator] Loaded cities from: ${p}`);
+      break;
+    }
+  }
+
+  if (!cities) {
+    console.warn(
+      '[destination-validator] Could not load algeria_cities.json from any candidate path',
+    );
+    console.warn('[destination-validator] Tried paths:', candidates);
   }
 
   const set = new Set<string>();

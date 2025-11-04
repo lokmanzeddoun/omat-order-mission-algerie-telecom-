@@ -7,11 +7,12 @@ import { Auth } from 'src/auth/guards/auth-role.guard';
 export class CommentsController {
   constructor(private readonly commentsService: CommentsService) {}
 
-  // Public endpoint to create a support comment (e.g., forget-password request)
+  // Endpoint to create a support comment - requires authentication
+  @Auth()
   @Post()
   async create(@Body() dto: CreateCommentDto, @Req() req: any) {
-    const user = req.user; // if auth middleware present this will be populated; else client can provide userId in body
-    const userId = user?.matricule ?? dto['userId'];
+    const user = req.user; // user will be populated from auth guard
+    const userId = user?.matricule;
     return this.commentsService.create(dto, userId);
   }
 

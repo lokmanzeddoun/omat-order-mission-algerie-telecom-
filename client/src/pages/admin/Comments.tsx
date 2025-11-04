@@ -57,8 +57,8 @@ const AdminComments = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  // Define which comment types are for admins
-  const ADMIN_TYPES = ['OTHER', 'SUPPORT'];
+  // Define which comment types are for admins - include all types from MessageType enum
+  const ADMIN_TYPES = ['FORGET_PASSWORD', 'DECOMPTE_STATUS', 'OTHER'];
 
   // Helper to resolve user id and display name from different shapes
   const resolveUser = (it: any) => {
@@ -105,10 +105,12 @@ const AdminComments = () => {
     if (items.length) fetchMissingUserNames(items);
   }, [items, fetchMissingUserNames]);
 
-  // humanize strings and map SUPPORT -> COMMENTAIRE
+  // humanize strings with proper type mappings
   const humanize = (s?: string) => {
     if (!s) return '';
-    if (s === 'SUPPORT') return 'COMMENTAIRE';
+    if (s === 'FORGET_PASSWORD') return 'Réinitialisation de mot de passe';
+    if (s === 'DECOMPTE_STATUS') return 'Statut de décompte';
+    if (s === 'OTHER') return 'Autre';
     return s.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
   };
 
@@ -133,8 +135,10 @@ const AdminComments = () => {
 
   // Get type color
   const getTypeColor = (type: string): 'default' | 'primary' | 'secondary' | 'error' | 'warning' => {
-    if (type === 'SUPPORT' || type === 'COMMENTAIRE') return 'primary';
-    return 'secondary';
+    if (type === 'FORGET_PASSWORD') return 'warning';
+    if (type === 'DECOMPTE_STATUS') return 'primary';
+    if (type === 'OTHER') return 'secondary';
+    return 'default';
   };
 
   // Filter items
@@ -219,7 +223,7 @@ const AdminComments = () => {
 
       {/* Stats */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
             sx={{
@@ -237,7 +241,25 @@ const AdminComments = () => {
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Paper
+            elevation={0}
+            sx={{
+              p: 2,
+              border: '1px solid',
+              borderColor: 'divider',
+              backgroundColor: (theme) => alpha(theme.palette.warning.main, 0.04),
+            }}
+          >
+            <Typography variant="caption" color="text.secondary" gutterBottom>
+              Mot de passe
+            </Typography>
+            <Typography variant="h4" fontWeight="600" color="warning.main">
+              {adminItems.filter((it) => it.type === 'FORGET_PASSWORD').length}
+            </Typography>
+          </Paper>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
             sx={{
@@ -248,14 +270,14 @@ const AdminComments = () => {
             }}
           >
             <Typography variant="caption" color="text.secondary" gutterBottom>
-              Commentaires
+              Statut décompte
             </Typography>
-            <Typography variant="h4" fontWeight="600" color="text.primary">
-              {adminItems.filter((it) => it.type === 'SUPPORT').length}
+            <Typography variant="h4" fontWeight="600" color="text.main">
+              {adminItems.filter((it) => it.type === 'DECOMPTE_STATUS').length}
             </Typography>
           </Paper>
         </Grid>
-        <Grid item xs={12} sm={6} md={4}>
+        <Grid item xs={12} sm={6} md={3}>
           <Paper
             elevation={0}
             sx={{

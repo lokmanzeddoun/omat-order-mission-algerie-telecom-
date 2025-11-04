@@ -110,6 +110,9 @@ export class DecompteService {
     ) {
       montant = montant * 0.25;
     }
+    // Add transport fees to the total amount
+    montant = montant + (createDecompteDto.fees_transport || 0);
+
     const exerciceId = await this.getCurrentExerciceId();
     const createDecomte = this.databaseService.decompte.create({
       data: {
@@ -121,6 +124,9 @@ export class DecompteService {
         parcours: createDecompteDto.parcours
           ? createDecompteDto.parcours
           : null,
+        fees_transport: createDecompteDto.fees_transport
+          ? createDecompteDto.fees_transport
+          : 0,
         mission: {
           connect: { n_mission: id },
         },
@@ -133,14 +139,16 @@ export class DecompteService {
   async findAll(status: string, archive: string, exercice?: string) {
     console.log(status);
     // convert status to DcompteStatus
-    let sat: DecompteStatus;
+    let sat: DecompteStatus | undefined;
     if (status === 'accepted') {
       sat = DecompteStatus.ACCEPTED;
     } else if (status === 'regected') {
       sat = DecompteStatus.REGECTED;
-    } else {
+    } else if (status === 'pending') {
       sat = DecompteStatus.PENDING;
     }
+    // If status is not provided or invalid, sat will be undefined and won't filter by status
+
     let year = exercice ? Number(exercice) : undefined;
     if (!year) {
       await this.exercicesService.ensureCurrentForNow();
@@ -156,7 +164,7 @@ export class DecompteService {
     return this.databaseService.decompte.findMany({
       where: {
         soft_delete: softDeleteFilter,
-        status: sat,
+        ...(sat ? { status: sat } : {}),
         ...(year ? { exercice: { year } } : {}),
       },
       orderBy: {
@@ -170,6 +178,7 @@ export class DecompteService {
         hebergement_sans_pec: true,
         montant: true,
         parcours: true,
+        fees_transport: true,
         status: true,
         createdAt: true,
         updatedAt: true,
@@ -352,6 +361,9 @@ export class DecompteService {
     ) {
       montant = montant * 0.25;
     }
+    // Add transport fees to the total amount
+    montant = montant + (updateDecompteDto.fees_transport || 0);
+
     const updateDecompte = this.databaseService.decompte.update({
       where: {
         soft_delete: false,
@@ -366,6 +378,9 @@ export class DecompteService {
         parcours: updateDecompteDto.parcours
           ? updateDecompteDto.parcours
           : null,
+        fees_transport: updateDecompteDto.fees_transport
+          ? updateDecompteDto.fees_transport
+          : 0,
       },
     });
     return this.databaseService.$transaction([updateMission, updateDecompte]);
@@ -507,7 +522,7 @@ export class DecompteService {
     const mission = decompte?.mission ?? null;
     const user = mission?.user ?? null;
     const structure = user?.structure ?? null;
-    console.log(user,mission,structure);
+    console.log(user, mission, structure);
     // Precompute values
     const fullanmeVal = user
       ? `${user.nom ?? ''} ${user.prenom ?? ''}`.trim()
@@ -527,49 +542,74 @@ export class DecompteService {
             ),
           )
         : 0;
-
+    console.log('ALL VALUES', {
+      fullanmeVal,
+      h_d_val,
+      h_r_val,
+      m_d_val,
+      m_r_val,
+      nbr_jour_val,
+      user,
+      mission,
+      structure,
+    });
+    console.log('undefined values', {
+      fullanmeVal,
+      nbr_jour_val,
+    });
     // Map placeholders - use empty string for missing text fields, 0 for missing numbers
     const replacements: Record<string, any> = {
-      matricule: user?.matricule ?? '',
-      fullanme: fullanmeVal, // note: placeholder spelled fullanme
-      post: user?.grade ?? '',
-      structure: structure?.name ?? '',
-      structure_code: structure?.code ?? '',
-      id: decompte?.n_decompte ?? '',
+      matricule: user?.matricule ?? ' ',
+      fullname: fullanmeVal, // note: placeholder spelled fullanme
+      post: user?.grade ?? ' ',
+      structure: structure?.name ?? ' ',
+      structure_code: structure?.code ?? ' ',
+      id: decompte?.n_decompte ?? ' ',
       date: this.fmtDate(decompte?.createdAt ?? new Date()),
-      reference: mission?.n_mission ?? '',
-      destination: mission?.destination ?? '',
-      motif: mission?.motif ?? '',
+      reference: mission?.n_mission ?? ' ',
+      destination: mission?.destination ?? ' ',
+      motif: mission?.motif ?? ' ',
       date_depart: this.fmtDate(mission?.date_sortie),
       date_retour: this.fmtDate(mission?.date_retour),
       h_d: h_d_val,
       h_r: h_r_val,
       m_d: m_d_val,
       m_r: m_r_val,
-      nbr_jour: nbr_jour_val,
+      nbr_jours: nbr_jour_val,
       d_parcours: decompte?.parcours ?? 0,
-      m_indrmnite: '', // not stored; leave empty
+      m_indrmnite: 0, // not stored; leave empty
       // North: only show values if direction is NORD, otherwise empty string
-      n_1: mission?.direction === 'NORD' ? (decompte?.repas_pec ?? 0) : '',
+      n_1: mission?.direction === 'NORD' ? (decompte?.repas_pec ?? 0) : ' ',
       n_2:
-        mission?.direction === 'NORD' ? (decompte?.hebergement_pec ?? 0) : '',
-      n_3: mission?.direction === 'NORD' ? (decompte?.repas_sans_pec ?? 0) : '',
+        mission?.direction === 'NORD' ? (decompte?.hebergement_pec ?? 0) : ' ',
+      n_3:
+        mission?.direction === 'NORD' ? (decompte?.repas_sans_pec ?? 0) : '  ',
       n_4:
         mission?.direction === 'NORD'
           ? (decompte?.hebergement_sans_pec ?? 0)
           : '',
       // South: only show values if direction is SUD, otherwise empty string
-      s_1: mission?.direction === 'SUD' ? (decompte?.repas_pec ?? 0) : '',
-      s_2: mission?.direction === 'SUD' ? (decompte?.hebergement_pec ?? 0) : '',
-      s_3: mission?.direction === 'SUD' ? (decompte?.repas_sans_pec ?? 0) : '',
+      s_1: mission?.direction === 'SUD' ? (decompte?.repas_pec ?? 0) : ' ',
+      s_2:
+        mission?.direction === 'SUD' ? (decompte?.hebergement_pec ?? 0) : ' ',
+      s_3: mission?.direction === 'SUD' ? (decompte?.repas_sans_pec ?? 0) : ' ',
       s_4:
         mission?.direction === 'SUD'
           ? (decompte?.hebergement_sans_pec ?? 0)
           : '',
-      f_transport: '', // not stored explicitly, leave empty
+      f_transport: decompte?.fees_transport ?? 0,
       m_total: decompte?.montant ?? 0,
-      direction: mission?.direction ?? '',
-      transport: mission?.transport ?? '',
+      direction: mission?.direction ?? ' ',
+      transport: mission?.transport ?? ' ',
+      // Transport checkboxes (b, c, d) - a is just a hyphen without checkbox
+      a: '☐', // Just a hyphen, no checkbox
+      b: mission?.transport === 'SERVICE_CAR' ? '☒' : '☐',
+      c: mission?.transport === 'PERSONAL_CAR' ? '☒' : '☐',
+      d:
+        mission?.transport === 'TRANSPORT_ENTREPRISE' ||
+        mission?.transport === 'TRANSPORT_EMPLOYEE'
+          ? '☒'
+          : '☐',
     };
 
     const content = fs.readFileSync(templatePath, 'binary');
@@ -687,35 +727,54 @@ const calculateMealsAndAccommodation = (
   date_retour: string,
   heure_retour: string,
 ) => {
-  const start = new Date(`${date_sortie}T${heure_sortie}`);
-  const end = new Date(`${date_retour}T${heure_retour}`);
+  try {
+    // Ensure time format includes seconds for proper Date parsing
+    const formattedHeureSortie =
+      heure_sortie.includes(':') && heure_sortie.split(':').length === 2
+        ? `${heure_sortie}:00`
+        : heure_sortie;
+    const formattedHeureRetour =
+      heure_retour.includes(':') && heure_retour.split(':').length === 2
+        ? `${heure_retour}:00`
+        : heure_retour;
 
-  let meals = 0;
-  let accommodations = 0;
-  const currentDate = new Date(start);
+    const start = new Date(`${date_sortie}T${formattedHeureSortie}`);
+    const end = new Date(`${date_retour}T${formattedHeureRetour}`);
 
-  while (currentDate <= end) {
-    // Check for lunch (11:00 to 14:00)
-    if (isWithinTimeRange(currentDate, 11, 0, 14, 0, start, end)) {
-      meals++;
+    // Validate dates
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) {
+      return { meals: 0, accommodations: 0 };
     }
 
-    // Check for dinner (18:00 to 21:00)
-    if (isWithinTimeRange(currentDate, 18, 0, 21, 0, start, end)) {
-      meals++;
+    let meals = 0;
+    let accommodations = 0;
+    const currentDate = new Date(start);
+
+    while (currentDate <= end) {
+      // Check for lunch (11:00 to 14:00)
+      if (isWithinTimeRange(currentDate, 11, 0, 14, 0, start, end)) {
+        meals++;
+      }
+
+      // Check for dinner (18:00 to 21:00)
+      if (isWithinTimeRange(currentDate, 18, 0, 21, 0, start, end)) {
+        meals++;
+      }
+
+      // Check for accommodation (00:00 to 06:00)
+      if (isWithinTimeRange(currentDate, 0, 0, 6, 0, start, end)) {
+        accommodations++;
+      }
+
+      // Move to the next day
+      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setHours(0, 0, 0, 0);
     }
 
-    // Check for accommodation (00:00 to 06:00)
-    if (isWithinTimeRange(currentDate, 0, 0, 6, 0, start, end)) {
-      accommodations++;
-    }
-
-    // Move to the next day
-    currentDate.setDate(currentDate.getDate() + 1);
-    currentDate.setHours(0, 0, 0, 0);
+    return { meals, accommodations };
+  } catch {
+    return { meals: 0, accommodations: 0 };
   }
-
-  return { meals, accommodations };
 };
 
 function isWithinTimeRange(
