@@ -47,7 +47,6 @@ export const getAllUsers = () => async (dispatch: AppDispatch) => {
 
 export const addUser = (user: IUser) => async (dispatch: AppDispatch) => {
   user.matricule = +user.matricule;
-  console.log(user);
 
   // Sanitize empty strings to null for optional fields
   const sanitizedUser = {
@@ -62,7 +61,7 @@ export const addUser = (user: IUser) => async (dispatch: AppDispatch) => {
       },
     });
     if (res.data) {
-      dispatch(setAlert({ msg: 'User Created Successfully', type: AlertTypes.SUCCESS }));
+      dispatch(setAlert({ msg: 'Utilisateur créé', type: AlertTypes.SUCCESS }));
       return dispatch(createUser(res.data));
     } else {
       dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
