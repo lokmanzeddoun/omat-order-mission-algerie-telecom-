@@ -143,6 +143,9 @@ export default function UsersPage() {
     if (ok) setMissionFor(null);
   };
 
+  // Stable object: a new one each render would re-run the dialog's reset and erase edits.
+  const formInitial = useMemo(() => (form?.user ? toFormValues(form.user) : null), [form]);
+
   const fullName = (u: UserRow | null) => (u ? `${u.prenom} ${u.nom}` : '');
 
   return (
@@ -191,6 +194,7 @@ export default function UsersPage() {
         emptyTitle="Aucun utilisateur"
         toolbar={
           <Tabs
+            label="Filtrer par rôle"
             value={tab}
             onValueChange={(v) => setTab(v as Tab)}
             items={[
@@ -214,7 +218,7 @@ export default function UsersPage() {
       <UserFormDialog
         open={form !== null}
         mode={form?.mode ?? 'create'}
-        initial={form?.user ? toFormValues(form.user) : null}
+        initial={formInitial}
         onClose={() => setForm(null)}
         onSubmit={submitForm}
       />

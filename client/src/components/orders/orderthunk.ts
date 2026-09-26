@@ -94,7 +94,12 @@ export const addOrder =
     }
   };
 
+// Responses can arrive out of order when the exercice changes quickly;
+// only the latest request may update the list.
+let ordersRequestId = 0;
+
 export const fetchUserOrders = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {
+  const requestId = ++ordersRequestId;
   try {
     dispatch(fetchOrdersStart()); // Start loading
     const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
@@ -113,6 +118,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
         // Don't pass status to get all user missions with any status (only filter by soft_delete = false)
       },
     });
+    if (requestId !== ordersRequestId) return;
 
     if (res && res.data) {
       dispatch(fetchUserOrderSuccess(res.data)); // Dispatch success and pass the data
@@ -121,6 +127,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
 
     dispatch(fetchUserOrderFailure('Problem in getting orders'));
   } catch (error) {
+    if (requestId !== ordersRequestId) return;
     let errorMessage = 'An error occurred';
 
     if (axios.isAxiosError(error)) {
@@ -189,6 +196,7 @@ export const updateMission = (order: IMission) => async (dispatch: AppDispatch, 
   }
 };
 export const fetchAllOrders = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {
+  const requestId = ++ordersRequestId;
   try {
     dispatch(fetchOrdersStart()); // Start loading
     const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
@@ -207,6 +215,7 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
         // Don't pass status to get all missions with any status (only filter by soft_delete = false)
       },
     });
+    if (requestId !== ordersRequestId) return;
 
     if (res && res.data) {
       dispatch(fetchUserOrderSuccess(res.data)); // Dispatch success and pass the data
@@ -215,6 +224,7 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
 
     dispatch(fetchUserOrderFailure('Problem in getting orders'));
   } catch (error) {
+    if (requestId !== ordersRequestId) return;
     let errorMessage = 'An error occurred';
 
     if (axios.isAxiosError(error)) {

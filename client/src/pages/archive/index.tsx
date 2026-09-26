@@ -205,6 +205,7 @@ export default function ArchivePage() {
 
   const tabs = (
     <Tabs
+      label="Type d’élément archivé"
       value={tab}
       onValueChange={(v) => setTab(v as Kind)}
       items={[

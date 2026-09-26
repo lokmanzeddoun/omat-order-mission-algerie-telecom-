@@ -76,6 +76,7 @@ export default function AnalyticsDashboard() {
       actions={
         <>
           <Tabs
+            label="Période"
             value={scope}
             onValueChange={(v) => setScope(v as 'year' | 'all')}
             items={[

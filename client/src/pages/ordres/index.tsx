@@ -107,6 +107,7 @@ export default function OrdresPage() {
         toolbar={
           isAdmin && (
             <Tabs
+              label="Périmètre"
               value={tab}
               onValueChange={(v) => setTab(v as 'all' | 'mine')}
               items={[

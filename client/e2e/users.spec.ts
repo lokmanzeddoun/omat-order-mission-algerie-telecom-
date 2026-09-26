@@ -10,9 +10,9 @@ test.describe('utilisateurs', () => {
 
   test('tabs filter by role', async ({ page }) => {
     const table = page.getByRole('table', { name: 'Liste des utilisateurs' });
-    await page.getByRole('tab', { name: /administrateurs/i }).click();
+    await page.getByRole('radio', { name: /administrateurs/i }).click();
     await expect(table.locator('tbody tr').filter({ hasText: 'Agent' })).toHaveCount(0);
-    await page.getByRole('tab', { name: /agents/i }).click();
+    await page.getByRole('radio', { name: /agents/i }).click();
     await expect(table.locator('tbody tr').filter({ hasText: 'Administrateur' })).toHaveCount(0);
   });
 

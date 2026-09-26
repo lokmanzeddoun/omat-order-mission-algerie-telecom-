@@ -26,7 +26,7 @@ const count = (label: string) =>
 const n = (v: string) => (v === '' ? 0 : Number(v));
 
 /** Meals / nights the agent is entitled to for the declared schedule. */
-export const entitlements = (departureDate: string, v: { heure_sortie: string; date_retour: string; heure_retour: string }) =>
+const entitlements = (departureDate: string, v: { heure_sortie: string; date_retour: string; heure_retour: string }) =>
   departureDate && v.heure_sortie && v.date_retour && v.heure_retour
     ? calculateMealsAndAccommodation(departureDate, v.heure_sortie, v.date_retour, v.heure_retour)
     : { meals: 0, accommodations: 0 };

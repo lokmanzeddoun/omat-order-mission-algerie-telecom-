@@ -65,6 +65,7 @@ test.describe('décomptes', () => {
 
   test('status strip filters and CSV export', async ({ page }) => {
     await page.goto('dashboard/admins/decomptes');
+    await page.waitForLoadState('networkidle');
     await page.getByRole('button', { name: /En attente/ }).click();
     const rows = page.locator('tbody tr');
     const n = await rows.count();

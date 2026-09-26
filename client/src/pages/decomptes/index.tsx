@@ -73,6 +73,7 @@ export default function DecomptesPage() {
         toolbar={
           isAdmin && (
             <Tabs
+              label="Périmètre"
               value={tab}
               onValueChange={(v) => setTab(v as 'all' | 'mine')}
               items={[

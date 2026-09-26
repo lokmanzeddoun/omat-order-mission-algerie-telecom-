@@ -19,7 +19,7 @@ test('archive a service, view it in the archive and restore it', async ({ page }
   await expect(row).toHaveCount(0);
 
   await page.goto('dashboard/admins/archive');
-  await page.getByRole('tab', { name: /Services/ }).click();
+  await page.getByRole('radio', { name: /Services/ }).click();
   await page.getByRole('searchbox', { name: 'Filtrer Code' }).fill(code);
   const archived = page.getByRole('table', { name: 'Services archivés' }).locator('tbody tr').filter({ hasText: code });
   await expect(archived).toHaveCount(1);
@@ -46,7 +46,7 @@ test('archive tabs list each kind', async ({ page }) => {
     ['Utilisateurs', 'Utilisateurs archivés'],
     ['Services', 'Services archivés'],
   ]) {
-    await page.getByRole('tab', { name: new RegExp(tab) }).click();
+    await page.getByRole('radio', { name: new RegExp(tab) }).click();
     await expect(page.getByRole('table', { name: caption })).toBeVisible();
   }
 });

@@ -13,7 +13,7 @@ test('analytics follows the header exercice and can show all exercices', async (
   await expect(page.getByText(/INPROGRESS|REGECTED|COMPLETED/)).toHaveCount(0);
   await expect(page.getByRole('table', { name: /par direction/i })).toContainText('Nord');
 
-  await page.getByRole('tab', { name: 'Tous les exercices' }).click();
+  await page.getByRole('radio', { name: 'Tous les exercices' }).click();
   await expect(page.getByText('Indicateurs de tous les exercices.')).toBeVisible();
   await expect(kpis).toBeVisible();
   await page.getByRole('banner').getByRole('combobox').selectOption({ index: 0 });
