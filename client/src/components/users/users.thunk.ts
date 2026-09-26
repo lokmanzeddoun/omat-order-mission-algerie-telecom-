@@ -223,7 +223,7 @@ export const updateUser =
   };
 
 export const changePassword =
-  (token: string | null, body: ChangePasswordDto) => async (dispatch: AppDispatch) => {
+  (token: string | null, body: ChangePasswordDto) => async (dispatch: AppDispatch): Promise<boolean> => {
     try {
       const res = await http.post(`/users/changePassword`, body, {
         headers: {
@@ -232,11 +232,12 @@ export const changePassword =
         },
       });
       if (res.data) {
-        await dispatch(setAlert({ msg: 'Password Updated ', type: AlertTypes.SUCCESS }));
+        await dispatch(setAlert({ msg: 'Mot de passe modifié avec succès', type: AlertTypes.SUCCESS }));
         dispatch(editUser(res.data));
-      } else {
-        dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+        return true;
       }
+      dispatch(setAlert({ msg: 'Erreur lors de la modification du mot de passe', type: AlertTypes.ERROR }));
+      return false;
     } catch (error) {
       let errorMessage = 'An error occurred';
 
@@ -249,7 +250,7 @@ export const changePassword =
       }
 
       dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
-      console.error('Error:', errorMessage);
+      return false;
     }
   };
 

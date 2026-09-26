@@ -38,12 +38,12 @@ export function Field({ label, children, hint, error, required, className, full 
           </span>
         )}
       </label>
+      {control}
       {hint && (
         <p id={hintId} className="text-xs text-fg-subtle">
           {hint}
         </p>
       )}
-      {control}
       {error && (
         <p id={errorId} role="alert" className="text-xs font-medium text-danger">
           {error}
