@@ -1,24 +1,8 @@
-import { useState } from 'react';
-import {
-  Box,
-  Card,
-  Typography,
-  Container,
-  Chip,
-  alpha,
-} from '@mui/material';
-import {
-  TableChart as TableChartIcon,
-  Restaurant as RestaurantIcon,
-  Hotel as HotelIcon,
-  DirectionsCar as DirectionsCarIcon,
-} from '@mui/icons-material';
-import { GridColDef } from '@mui/x-data-grid';
-import SmartTable from 'components/common/SmartTable';
-import NoData from 'components/users/NoData';
+import { useTranslation } from 'react-i18next';
+import { PageHeader, Panel } from 'components/ui';
 import baremJson from 'data/barem.json';
+import paths from 'routes/paths';
 
-// Define the interface for barem data
 interface BaremData {
   id: string;
   libelle: string;
@@ -29,168 +13,72 @@ interface BaremData {
   montant_km: number;
 }
 
-// Columns for the DataGrid with enhanced styling
-const columns: GridColDef[] = [
-  {
-    field: 'id',
-    headerName: 'Catégorie',
-    flex: 0.8,
-    minWidth: 100,
-    hideable: false,
-    renderCell: (params) => (
-      <Chip
-        label={`#${params.value}`}
-        size="small"
-        color="primary"
-        variant="outlined"
-        sx={{ fontWeight: 600 }}
-      />
-    ),
-  },
-  {
-    field: 'libelle',
-    headerName: 'Libellé',
-    flex: 1.5,
-    minWidth: 200,
-    hideable: false,
-    renderCell: (params) => (
-      <Typography variant="body2" fontWeight={500} color="text.primary">
-        {params.value}
-      </Typography>
-    ),
-  },
-  {
-    field: 'repas_nord',
-    headerName: 'Repas Nord',
-    flex: 1,
-    minWidth: 130,
-    hideable: false,
-    renderCell: (params) => (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <RestaurantIcon sx={{ fontSize: 16, color: 'text.primary' }} />
-        <Typography variant="body2" sx={{ color: 'text.primary' }} fontWeight={500}>
-          {params.value?.toLocaleString()} DZD
-        </Typography>
-      </Box>
-    ),
-  },
-  {
-    field: 'hebergement_nord',
-    headerName: 'Hébergement Nord',
-    flex: 1,
-    minWidth: 160,
-    hideable: false,
-    renderCell: (params) => (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <HotelIcon sx={{ fontSize: 16, color: 'text.primary' }} />
-        <Typography variant="body2" sx={{ color: 'text.primary' }} fontWeight={500}>
-          {params.value?.toLocaleString()} DZD
-        </Typography>
-      </Box>
-    ),
-  },
-  {
-    field: 'repas_sud',
-    headerName: 'Repas Sud',
-    flex: 1,
-    minWidth: 130,
-    hideable: false,
-    renderCell: (params) => (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <RestaurantIcon sx={{ fontSize: 16, color: 'warning.main' }} />
-        <Typography variant="body2" sx={{ color: 'warning.main' }} fontWeight={500}>
-          {params.value?.toLocaleString()} DZD
-        </Typography>
-      </Box>
-    ),
-  },
-  {
-    field: 'hebergement_sud',
-    headerName: 'Hébergement Sud',
-    flex: 1,
-    minWidth: 160,
-    hideable: false,
-    renderCell: (params) => (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <HotelIcon sx={{ fontSize: 16, color: 'warning.main' }} />
-        <Typography variant="body2" sx={{ color: 'warning.main' }} fontWeight={500}>
-          {params.value?.toLocaleString()} DZD
-        </Typography>
-      </Box>
-    ),
-  },
-  {
-    field: 'montant_km',
-    headerName: 'Montant/km',
-    flex: 1,
-    minWidth: 130,
-    hideable: false,
-    renderCell: (params) => (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <DirectionsCarIcon sx={{ fontSize: 16, color: 'success.main' }} />
-        <Typography variant="body2" sx={{ color: 'success.main' }} fontWeight={500}>
-          {params.value?.toLocaleString()} DZD
-        </Typography>
-      </Box>
-    ),
-  },
-];
+const rows: BaremData[] = baremJson;
 
+const amount = new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 });
+const da = (value: number) => `${amount.format(value)} DA`;
+
+const th = 'border border-border px-3 py-2 font-semibold';
+const td = 'border border-border px-3 py-2 tabular-nums';
+
+/** Read-only official rate table (per catégorie and Direction). */
 export default function BaremTable() {
-  const [rows] = useState<BaremData[]>(baremJson);
-
+  const { t } = useTranslation();
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Header Section */}
-      <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-          <TableChartIcon sx={{ fontSize: 40, color: 'primary.main' }} />
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="h4" fontWeight="600">
-              Barème des Frais de Mission
-            </Typography>
-            <Typography variant="body1" color="text.secondary">
-              Consultez les tarifs applicables pour les frais de repas, d'hébergement et de transport
-            </Typography>
-          </Box>
-        </Box>
-      </Box>
-
-      {/* Table Card */}
-      <Card
-        elevation={0}
-        sx={{
-          border: '1px solid',
-          borderColor: 'divider',
-          borderRadius: 2,
-          overflow: 'hidden',
-          '& .MuiDataGrid-root': {
-            border: 'none',
-          },
-          '& .MuiDataGrid-columnHeaders': {
-            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.04),
-            borderBottom: '2px solid',
-            borderColor: 'divider',
-          },
-          '& .MuiDataGrid-columnHeaderTitle': {
-            fontWeight: 600,
-          },
-          '& .MuiDataGrid-row:hover': {
-            backgroundColor: (theme) => alpha(theme.palette.primary.main, 0.02),
-          },
-        }}
-      >
-        <SmartTable<BaremData>
-          columns={columns}
-          rows={rows}
-          rowCount={rows.length}
-          getRowId={(row) => row.id}
-          loading={false}
-          noRowsOverlay={NoData as any}
-          enableHeaderSearch={false}
-          contextMenuItems={[]}
-        />
-      </Card>
-    </Container>
+    <>
+      <PageHeader
+        title="Barème des frais de mission"
+        description="Tarifs applicables pour les frais de repas, d’hébergement et de transport, par catégorie et par direction."
+        breadcrumbs={[{ label: t('nav.home'), to: paths.admins }, { label: t('nav.barem') }]}
+      />
+      <Panel bodyClassName="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <caption className="sr-only">Barème des frais de mission par catégorie</caption>
+            <thead className="bg-surface-header text-fg">
+              <tr>
+                <th scope="col" rowSpan={2} className={`${th} text-start`}>
+                  Catégorie
+                </th>
+                <th scope="col" rowSpan={2} className={`${th} text-start`}>
+                  Libellé
+                </th>
+                <th scope="colgroup" colSpan={2} className={`${th} text-center`}>
+                  Direction Nord
+                </th>
+                <th scope="colgroup" colSpan={2} className={`${th} text-center`}>
+                  Direction Sud
+                </th>
+                <th scope="col" rowSpan={2} className={`${th} text-end`}>
+                  Indemnité kilométrique
+                </th>
+              </tr>
+              <tr>
+                <th scope="col" className={`${th} text-end`}>Repas</th>
+                <th scope="col" className={`${th} text-end`}>Hébergement</th>
+                <th scope="col" className={`${th} text-end`}>Repas</th>
+                <th scope="col" className={`${th} text-end`}>Hébergement</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="even:bg-surface-muted">
+                  <th scope="row" className={`${td} text-start font-medium`}>
+                    {row.id}
+                  </th>
+                  <td className={td}>{row.libelle}</td>
+                  <td className={`${td} text-end`}>{da(row.repas_nord)}</td>
+                  <td className={`${td} text-end`}>{da(row.hebergement_nord)}</td>
+                  <td className={`${td} text-end`}>{da(row.repas_sud)}</td>
+                  <td className={`${td} text-end`}>{da(row.hebergement_sud)}</td>
+                  <td className={`${td} text-end`}>{da(row.montant_km)} / km</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+      <p className="mt-3 text-xs text-fg-subtle">Montants exprimés en dinars algériens (DA).</p>
+    </>
   );
 }
