@@ -1,7 +1,7 @@
 import { TypographyOptions } from '@mui/material/styles/createTypography';
 
 const typography: TypographyOptions = {
-  fontFamily: ['Plus Jakarta Sans', 'sans-serif'].join(','),
+  fontFamily: ['IBM Plex Sans', 'Segoe UI', 'Arial', 'sans-serif'].join(','),
   h1: {
     fontSize: '3rem',
     fontWeight: 700,

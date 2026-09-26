@@ -3,7 +3,13 @@ import { createRoot } from "react-dom/client";
 import { Provider } from "react-redux";
 import { store } from "store";
 import { restoreSession } from 'components/auth/auth.thunk';
+import "./i18n";
 import AppWithTheme from "./AppWithTheme";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/500.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-sans/700.css";
+import "./styles/app.css";
 
 // Attempt to restore session from httpOnly refresh cookie on startup
 store.dispatch<any>(restoreSession());
