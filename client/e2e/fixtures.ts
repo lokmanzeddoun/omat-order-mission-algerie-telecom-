@@ -24,7 +24,7 @@ export const adminRoutes = [
   { path: 'dashboard/admins/structures', title: /^services$/i },
   { path: 'dashboard/admins/barem', title: /barème/i },
   { path: 'dashboard/admins/decomptes', title: /décomptes/i },
-  { path: 'dashboard/admins/archive', title: /archive/i },
+  { path: 'dashboard/admins/archive', title: /^archive$/i },
   { path: 'dashboard/admins/support', title: /commentaires/i },
   { path: 'dashboard/admins/analytics', title: /analytique/i },
   { path: 'dashboard/me', title: /profil/i },
