@@ -14,3 +14,15 @@ export const categoryLabels: Record<string, string> = {
 
 export const toOptions = (labels: Record<string, string>) =>
   Object.entries(labels).map(([value, label]) => ({ value, label }));
+
+export const transportLabels: Record<string, string> = {
+  SERVICE_CAR: 'Véhicule de service',
+  TRANSPORT_ENTREPRISE: 'Autre moyen de transport pris en charge par l’entreprise',
+  TRANSPORT_EMPLOYEE: 'Moyen de transport pris en charge par le travailleur',
+  PERSONAL_CAR: 'Véhicule personnel (usage exceptionnel, à la demande de la hiérarchie)',
+};
+
+export const directionLabels: Record<string, string> = {
+  NORD: 'Nord',
+  SUD: 'Sud',
+};

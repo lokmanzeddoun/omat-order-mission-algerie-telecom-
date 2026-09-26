@@ -8,7 +8,7 @@ import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import { toggleTheme } from 'store/theme.slice';
 import { addOrder } from 'components/orders/orderthunk';
-import MissionModal from 'components/orders/CreateOrder';
+import MissionFormDialog from 'components/orders/MissionFormDialog';
 import type { IMission } from 'components/orders/orderReducer';
 import { Button } from 'components/ui';
 import { cn } from 'lib/utils';
@@ -197,7 +197,7 @@ export default function AppShell({ children }: PropsWithChildren) {
         {t('app.footer')}
       </footer>
 
-      <MissionModal open={missionOpen} onClose={() => setMissionOpen(false)} onSubmit={submitMission} />
+      <MissionFormDialog open={missionOpen} mode="create" onClose={() => setMissionOpen(false)} onSubmit={submitMission} />
     </div>
   );
 }

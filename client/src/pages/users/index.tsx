@@ -18,7 +18,7 @@ import UserFormDialog, { type UserFormMode, type UserFormValues } from 'componen
 import ResetPasswordDialog from 'components/users/ResetPasswordDialog';
 import { addOrder } from 'components/orders/orderthunk';
 import type { IMission } from 'components/orders/orderReducer';
-import MissionModal from 'components/orders/CreateOrder';
+import MissionFormDialog from 'components/orders/MissionFormDialog';
 import FileImportButton from 'components/common/FileImportButton';
 import {
   Badge,
@@ -245,7 +245,13 @@ export default function UsersPage() {
           await refresh();
         }}
       />
-      <MissionModal open={missionFor !== null} onClose={() => setMissionFor(null)} onSubmit={submitMission} />
+      <MissionFormDialog
+        open={missionFor !== null}
+        mode="create"
+        target={missionFor}
+        onClose={() => setMissionFor(null)}
+        onSubmit={submitMission}
+      />
     </>
   );
 }

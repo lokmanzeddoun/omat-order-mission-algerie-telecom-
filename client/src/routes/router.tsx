@@ -17,6 +17,7 @@ const NotFoundPage = lazy(() => import('pages/not-found'));
 const UserDashboard = lazy(() => import('pages/UserDashboard'));
 const MyProfile = lazy(() => import('pages/userProfile'));
 const OrderDashboard = lazy(() => import('pages/ordres'));
+const OrdreDetail = lazy(() => import('pages/ordres/detail'));
 const DataGridWithJson = lazy(() => import('pages/barem'));
 const Archive = lazy(() => import('pages/archive'));
 const DecomptesPage = lazy(() => import('pages/decomptes'));
@@ -70,6 +71,7 @@ const router = createBrowserRouter(
           element: shell(['ADMIN', 'SUPER_ADMIN']),
           children: [
             { index: true, element: <OrderDashboard /> },
+            { path: 'ordres/:id', element: <OrdreDetail /> },
             { path: 'users', element: <Users /> },
             { path: 'structures', element: <Structures /> },
             { path: 'barem', element: <DataGridWithJson /> },
@@ -82,7 +84,10 @@ const router = createBrowserRouter(
         {
           path: paths.users,
           element: shell(['USER']),
-          children: [{ index: true, element: <UserDashboard /> }],
+          children: [
+            { index: true, element: <UserDashboard /> },
+            { path: 'ordres/:id', element: <OrdreDetail /> },
+          ],
         },
         {
           path: paths.me,
