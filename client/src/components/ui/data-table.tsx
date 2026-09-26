@@ -23,11 +23,7 @@ import { Input, Select } from './input';
 import { ContextMenu, DropdownMenu, type MenuAction } from './menu';
 import { EmptyState, Skeleton } from './page';
 
-export type ColumnFilter =
-  | false
-  | 'text'
-  | 'date'
-  | { type: 'select'; options: { value: string; label: string }[] };
+export type ColumnFilter = false | 'text' | 'date' | { type: 'select'; options: { value: string; label: string }[] };
 
 export interface DataColumn<Row> {
   /** Unique id; also the default property read from the row. */
@@ -162,7 +158,10 @@ export function DataTable<Row extends RowData>({
   const { t } = useTranslation();
   const [filters, setFilters] = useState<Filters>({});
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [clientPagination, setClientPagination] = useState<PaginationState>({ pageIndex: 0, pageSize: initialPageSize });
+  const [clientPagination, setClientPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: initialPageSize,
+  });
   const [visibility, setVisibility] = useState<ColumnVisibilityState>(() => {
     const saved = readVisibility(tableId);
     if (saved) return saved;
@@ -242,7 +241,8 @@ export function DataTable<Row extends RowData>({
   const to = Math.min(total, (pagination.pageIndex + 1) * pagination.pageSize);
   const hasFilters = Object.values(filters).some(Boolean);
   const colSpan = visibleColumns.length + (rowActions ? 1 : 0);
-  const alignClass = (a?: DataColumn<Row>['align']) => (a === 'center' ? 'text-center' : a === 'end' ? 'text-end' : 'text-start');
+  const alignClass = (a?: DataColumn<Row>['align']) =>
+    a === 'center' ? 'text-center' : a === 'end' ? 'text-end' : 'text-start';
 
   const chooser: MenuAction[] = columns
     .filter((c) => !c.alwaysVisible)
@@ -253,29 +253,31 @@ export function DataTable<Row extends RowData>({
 
   return (
     <div className="omat-ui flex flex-col rounded-sm border border-border bg-surface">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
-        <div className="flex items-center gap-2">
-          {hasFilters && (
-            <Button size="sm" variant="ghost" onClick={() => setFilters({})}>
-              <FilterX />
-              {t('table.clearFilters')}
-            </Button>
-          )}
-          {chooser.length > 0 && (
-            <DropdownMenu
-              actions={chooser}
-              trigger={
-                <Button size="sm" variant="secondary">
-                  <Columns3 />
-                  {t('table.columns')}
-                </Button>
-              }
-            />
-          )}
+      {/* Toolbar (only when it has something to show) */}
+      {(toolbar || hasFilters || chooser.length > 0) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
+          <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
+          <div className="flex items-center gap-2">
+            {hasFilters && (
+              <Button size="sm" variant="ghost" onClick={() => setFilters({})}>
+                <FilterX />
+                {t('table.clearFilters')}
+              </Button>
+            )}
+            {chooser.length > 0 && (
+              <DropdownMenu
+                actions={chooser}
+                trigger={
+                  <Button size="sm" variant="secondary">
+                    <Columns3 />
+                    {t('table.columns')}
+                  </Button>
+                }
+              />
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
@@ -318,7 +320,10 @@ export function DataTable<Row extends RowData>({
                 );
               })}
               {rowActions && (
-                <th scope="col" className="w-px border border-border px-2 py-2 text-center font-semibold whitespace-nowrap">
+                <th
+                  scope="col"
+                  className="w-px border border-border px-2 py-2 text-center font-semibold whitespace-nowrap"
+                >
                   {t('table.actions')}
                 </th>
               )}
@@ -333,9 +338,20 @@ export function DataTable<Row extends RowData>({
                   return (
                     <td key={column.id} className="border border-border p-1">
                       {col.filter === false ? null : col.filter === 'date' ? (
-                        <Input type="date" aria-label={label} value={value} onChange={(e) => set(e.target.value)} className="h-7 px-1.5 text-xs" />
+                        <Input
+                          type="date"
+                          aria-label={label}
+                          value={value}
+                          onChange={(e) => set(e.target.value)}
+                          className="h-7 px-1.5 text-xs"
+                        />
                       ) : typeof col.filter === 'object' ? (
-                        <Select aria-label={label} value={value} onChange={(e) => set(e.target.value)} className="h-7 px-1.5 text-xs">
+                        <Select
+                          aria-label={label}
+                          value={value}
+                          onChange={(e) => set(e.target.value)}
+                          className="h-7 px-1.5 text-xs"
+                        >
                           <option value="">{t('table.all')}</option>
                           {col.filter.options.map((o) => (
                             <option key={o.value} value={o.value}>
@@ -344,7 +360,13 @@ export function DataTable<Row extends RowData>({
                           ))}
                         </Select>
                       ) : (
-                        <Input type="search" aria-label={label} value={value} onChange={(e) => set(e.target.value)} className="h-7 px-1.5 text-xs" />
+                        <Input
+                          type="search"
+                          aria-label={label}
+                          value={value}
+                          onChange={(e) => set(e.target.value)}
+                          className="h-7 px-1.5 text-xs"
+                        />
                       )}
                     </td>
                   );
@@ -389,7 +411,10 @@ export function DataTable<Row extends RowData>({
                       {visibleColumns.map((column) => {
                         const col = colById.get(column.id)!;
                         return (
-                          <td key={column.id} className={cn('border border-border px-2 py-1.5 align-middle', alignClass(col.align))}>
+                          <td
+                            key={column.id}
+                            className={cn('border border-border px-2 py-1.5 align-middle', alignClass(col.align))}
+                          >
                             {col.cell ? col.cell(original) : toText(valueOf(col, original)) || '—'}
                           </td>
                         );
@@ -466,4 +491,3 @@ export function DataTable<Row extends RowData>({
     </div>
   );
 }
-

@@ -21,7 +21,7 @@ export async function login(page: Page, who: AccountKey) {
 export const adminRoutes = [
   { path: 'dashboard/admins', title: /ordres de mission/i },
   { path: 'dashboard/admins/users', title: /utilisateurs/i },
-  { path: 'dashboard/admins/structures', title: /services|structures/i },
+  { path: 'dashboard/admins/structures', title: /^services$/i },
   { path: 'dashboard/admins/barem', title: /barème/i },
   { path: 'dashboard/admins/decomptes', title: /décomptes/i },
   { path: 'dashboard/admins/archive', title: /archive/i },
