@@ -37,3 +37,21 @@ _Avoid_: Comment, message (in UI text)
 **Direction**:
 An organisational unit of Algérie Télécom (Nord or Sud).
 _Avoid_: confusing it with text direction (LTR/RTL)
+
+**Exercice**:
+The fiscal year that scopes ordres de mission and décomptes; one exercice is always selected, defaulting to the current one.
+_Avoid_: Year, Année (as a free-standing filter)
+
+**Barème**:
+The per-category rates (meals, lodging, per-km) applied to a décompte, differing by Direction.
+_Avoid_: Barem, grille, tarif
+
+## Status labels
+
+| Code | Shown as |
+| --- | --- |
+| Ordre `INPROGRESS` | En cours |
+| Ordre `COMPLETED` | Validé |
+| Décompte `PENDING` | En attente |
+| Décompte `ACCEPTED` | Accepté |
+| Décompte `REGECTED` | Rejeté |
