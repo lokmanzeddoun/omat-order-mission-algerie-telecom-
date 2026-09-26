@@ -20,6 +20,9 @@
   --omat-primary-soft: #e7eef7;
   --omat-on-primary: #ffffff;
   --omat-accent: #3aaa35;
+  /* Official header band stays deep blue in both themes */
+  --omat-band: #0b3c73;
+  --omat-band-strong: #082d57;
 
   --omat-page: #f2f4f7;
   --omat-surface: #ffffff;
@@ -51,6 +54,8 @@
   --omat-primary-soft: #16263a;
   --omat-on-primary: #0b1523;
   --omat-accent: #5cc257;
+  --omat-band: #0d2a4d;
+  --omat-band-strong: #0a2140;
 
   --omat-page: #0f141b;
   --omat-surface: #161c24;
@@ -81,6 +86,8 @@
   --color-primary-soft: var(--omat-primary-soft);
   --color-on-primary: var(--omat-on-primary);
   --color-accent: var(--omat-accent);
+  --color-band: var(--omat-band);
+  --color-band-strong: var(--omat-band-strong);
 
   --color-page: var(--omat-page);
   --color-surface: var(--omat-surface);

@@ -7,7 +7,7 @@ const AuthLayout = ({ children }: PropsWithChildren) => {
   const { t } = useTranslation();
   return (
     <div className="omat-ui flex min-h-screen flex-col bg-page text-fg">
-      <header className="border-b-4 border-accent bg-primary text-white">
+      <header className="border-b-4 border-accent bg-band text-white">
         <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
           <span className="flex h-11 w-32 items-center justify-center overflow-hidden rounded-xs bg-white">
             <img src={atLogo} alt="Algérie Télécom" className="h-full w-full scale-[1.12] object-contain" />

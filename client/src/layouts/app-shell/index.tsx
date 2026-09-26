@@ -101,7 +101,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       </a>
 
       {/* Official header band */}
-      <header className="border-b-4 border-accent bg-primary text-white">
+      <header className="border-b-4 border-accent bg-band text-white">
         <div className="flex h-16 items-center gap-3 px-3 sm:px-4">
           <button
             type="button"
@@ -126,7 +126,7 @@ export default function AppShell({ children }: PropsWithChildren) {
             <Button
               size="sm"
               onClick={() => setMissionOpen(true)}
-              className="border-white bg-white text-primary hover:bg-white/90"
+              className="border-white bg-white text-band hover:bg-white/90"
             >
               <Plus />
               <span className="hidden md:inline">{t('actions.addMission')}</span>
@@ -177,7 +177,7 @@ export default function AppShell({ children }: PropsWithChildren) {
               aria-describedby={undefined}
               className="omat-ui fixed inset-y-0 start-0 z-[1400] w-72 border-e border-border bg-surface text-fg lg:hidden"
             >
-              <div className="flex items-center justify-between border-b-4 border-accent bg-primary px-4 py-3 text-white">
+              <div className="flex items-center justify-between border-b-4 border-accent bg-band px-4 py-3 text-white">
                 <RadixDialog.Title className="text-sm font-semibold">{t('app.title')}</RadixDialog.Title>
                 <RadixDialog.Close aria-label={t('actions.close')} className="cursor-pointer rounded-xs p-1 hover:bg-white/10">
                   <X className="size-4" />

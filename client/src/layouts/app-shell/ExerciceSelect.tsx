@@ -35,7 +35,7 @@ export default function ExerciceSelect() {
         value={value}
         onChange={(e) => dispatch(setSelectedYear(Number(e.target.value)))}
         disabled={years.length === 0}
-        className="h-8 cursor-pointer rounded-xs border border-white/40 bg-primary-hover px-2 text-sm font-medium text-white tabular-nums focus-visible:outline-3 focus-visible:outline-focus"
+        className="h-8 cursor-pointer rounded-xs border border-white/40 bg-band-strong px-2 text-sm font-medium text-white tabular-nums focus-visible:outline-3 focus-visible:outline-focus"
       >
         {years.length === 0 && <option value="">—</option>}
         {years.map((y) => (
