@@ -13,7 +13,17 @@ import {
   type RowData,
   type SortingState,
 } from '@tanstack/react-table';
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Columns3, Ellipsis, FilterX } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  ChevronLeft,
+  ChevronRight,
+  Columns3,
+  Ellipsis,
+  FileSpreadsheet,
+  FilterX,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import dayjs from 'helpers/date';
 import { cn } from 'lib/utils';
@@ -45,6 +55,8 @@ export interface DataColumn<Row> {
   defaultHidden?: boolean;
   /** Always visible; not listed in the "Colonnes" menu. */
   alwaysVisible?: boolean;
+  /** Text written to the CSV export (defaults to the accessor value). */
+  exportValue?: (row: Row) => string;
 }
 
 export interface RowActions {
@@ -82,6 +94,8 @@ interface DataTableProps<Row> {
   /** When set, pagination is done by the server and `rows` is the current page. */
   server?: ServerPagination;
   showFilters?: boolean;
+  /** Adds an "Exporter (CSV)" button exporting the filtered rows and visible columns. */
+  exportFileName?: string;
 }
 
 type Filters = Record<string, string>;
@@ -105,6 +119,19 @@ const compareValues = (a: unknown, b: unknown): number => {
   if (!Number.isNaN(da) && !Number.isNaN(db)) return da - db;
   return collator.compare(toText(a), toText(b));
 };
+
+const csvCell = (value: string) => (/[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+
+/** Semicolon-separated CSV with a BOM so Excel (French locale) opens accents and columns correctly. */
+function downloadCsv(fileName: string, header: string[], lines: string[][]) {
+  const body = [header, ...lines].map((cells) => cells.map(csvCell).join(';')).join('\r\n');
+  const url = URL.createObjectURL(new Blob(['\ufeff' + body], { type: 'text/csv;charset=utf-8' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName.endsWith('.csv') ? fileName : `${fileName}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 function readVisibility(tableId: string | undefined): ColumnVisibilityState | null {
   if (!tableId) return null;
@@ -154,6 +181,7 @@ export function DataTable<Row extends RowData>({
   initialPageSize = 25,
   server,
   showFilters = true,
+  exportFileName,
 }: DataTableProps<Row>) {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<Filters>({});
@@ -244,6 +272,16 @@ export function DataTable<Row extends RowData>({
   const alignClass = (a?: DataColumn<Row>['align']) =>
     a === 'center' ? 'text-center' : a === 'end' ? 'text-end' : 'text-start';
 
+  const exportCsv = () => {
+    if (!exportFileName) return;
+    const cols = visibleColumns.map((c) => colById.get(c.id)!);
+    downloadCsv(
+      exportFileName,
+      cols.map((c) => c.header),
+      filteredRows.map((row) => cols.map((c) => (c.exportValue ? c.exportValue(row) : toText(valueOf(c, row))))),
+    );
+  };
+
   const chooser: MenuAction[] = columns
     .filter((c) => !c.alwaysVisible)
     .map((c) => ({
@@ -254,7 +292,7 @@ export function DataTable<Row extends RowData>({
   return (
     <div className="omat-ui flex flex-col rounded-sm border border-border bg-surface">
       {/* Toolbar (only when it has something to show) */}
-      {(toolbar || hasFilters || chooser.length > 0) && (
+      {(toolbar || hasFilters || chooser.length > 0 || exportFileName) && (
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
           <div className="flex flex-wrap items-center gap-2">{toolbar}</div>
           <div className="flex items-center gap-2">
@@ -264,7 +302,13 @@ export function DataTable<Row extends RowData>({
                 {t('table.clearFilters')}
               </Button>
             )}
-            {chooser.length > 0 && (
+            {exportFileName && (
+            <Button size="sm" variant="secondary" onClick={exportCsv} disabled={filteredRows.length === 0}>
+              <FileSpreadsheet />
+              Exporter (CSV)
+            </Button>
+          )}
+          {chooser.length > 0 && (
               <DropdownMenu
                 actions={chooser}
                 trigger={
