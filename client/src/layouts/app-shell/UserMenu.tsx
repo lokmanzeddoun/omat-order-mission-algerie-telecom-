@@ -53,7 +53,7 @@ export default function UserMenu() {
             <span className="text-sm font-medium">{fullName || '—'}</span>
             <span className="text-xs text-white/75">{user ? (roleLabel[user.role] ?? user.role) : ''}</span>
           </span>
-          <ChevronDown aria-hidden="true" className="size-4 text-white/80" />
+          <ChevronDown aria-hidden="true" className="hidden size-4 text-white/80 sm:block" />
         </button>
       }
     />

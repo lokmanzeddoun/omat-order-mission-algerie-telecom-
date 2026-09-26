@@ -113,7 +113,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           </button>
           <Link to={homeFor(user?.role)} className="flex min-w-0 items-center gap-3">
             {/* The official SVG has wide built-in margins; crop them by scaling inside a fixed frame */}
-            <span className="flex h-11 w-32 items-center justify-center overflow-hidden rounded-xs bg-white">
+            <span className="flex h-10 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xs bg-white sm:h-11 sm:w-32">
               <img src={atLogo} alt="Algérie Télécom" className="h-full w-full scale-[1.12] object-contain" />
             </span>
             <span className="hidden min-w-0 flex-col leading-tight sm:flex">
@@ -122,7 +122,7 @@ export default function AppShell({ children }: PropsWithChildren) {
             </span>
           </Link>
 
-          <div className="ms-auto flex items-center gap-2 sm:gap-3">
+          <div className="ms-auto flex min-w-0 items-center gap-1.5 sm:gap-3">
             <Button
               size="sm"
               onClick={() => setMissionOpen(true)}
