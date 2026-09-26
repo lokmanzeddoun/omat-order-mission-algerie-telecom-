@@ -21,6 +21,7 @@ const OrdreDetail = lazy(() => import('pages/ordres/detail'));
 const DataGridWithJson = lazy(() => import('pages/barem'));
 const Archive = lazy(() => import('pages/archive'));
 const DecomptesPage = lazy(() => import('pages/decomptes'));
+const DecompteDetail = lazy(() => import('pages/decomptes/detail'));
 const AdminComments = lazy(() => import('pages/admin/Comments'));
 const AnalyticsDashboard = lazy(() => import('pages/admin/AnalyticsDashboard'));
 
@@ -76,6 +77,7 @@ const router = createBrowserRouter(
             { path: 'structures', element: <Structures /> },
             { path: 'barem', element: <DataGridWithJson /> },
             { path: 'decomptes', element: <DecomptesPage /> },
+            { path: 'decomptes/:id', element: <DecompteDetail /> },
             { path: 'support', element: <AdminComments /> },
             { path: 'archive', element: <Archive /> },
             { path: 'analytics', element: <AnalyticsDashboard /> },
