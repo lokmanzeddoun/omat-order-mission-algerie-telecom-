@@ -3,7 +3,6 @@ import path from 'path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import svgr from 'vite-plugin-svgr';
 import { visualizer } from 'rollup-plugin-visualizer';
 
 export default defineConfig(({ mode }) => {
@@ -15,7 +14,6 @@ export default defineConfig(({ mode }) => {
       react(),
       tailwindcss(),
       tsconfigPaths(),
-      svgr(),
       // `ANALYZE=1 npm run build` writes dist/stats.html (bundle treemap)
       !!process.env.ANALYZE && visualizer({ filename: 'dist/stats.html', gzipSize: true }),
     ],
@@ -46,8 +44,7 @@ export default defineConfig(({ mode }) => {
           manualChunks: {
             react: ['react', 'react-dom', 'react-router-dom'],
             redux: ['@reduxjs/toolkit', 'react-redux', 'redux-persist'],
-            mui: ['@mui/material', '@emotion/react', '@emotion/styled'],
-            'mui-data-grid': ['@mui/x-data-grid'],
+            ui: ['radix-ui', '@tanstack/react-table', 'react-hook-form', 'zod'],
           },
         },
       },

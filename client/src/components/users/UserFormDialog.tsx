@@ -88,6 +88,9 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
     if (open && structures.length === 0) void dispatch(getAllStructures());
   }, [open, structures.length, dispatch]);
 
+  // Reset once the services are available too: a native <select> drops a value
+  // whose <option> does not exist yet, which would clear the user's service on save.
+  const servicesReady = structures.length > 0;
   useEffect(() => {
     if (open)
       reset({
@@ -96,7 +99,7 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
         matricule: initial?.matricule ? String(initial.matricule) : '',
         serviceId: initial?.serviceId ?? '',
       });
-  }, [open, initial, reset]);
+  }, [open, initial, reset, servicesReady]);
 
   return (
     <Dialog

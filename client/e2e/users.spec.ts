@@ -79,6 +79,14 @@ test.describe('utilisateurs', () => {
     await expect(table.getByRole('row').filter({ hasText: matricule })).toHaveCount(0);
   });
 
+  test('edit dialog shows the user’s current service (regression)', async ({ page }) => {
+    await page.getByRole('searchbox', { name: 'Filtrer Matricule' }).fill('1002');
+    const row = page.locator('tbody tr').filter({ hasText: '1002' });
+    await row.getByRole('button', { name: 'Modifier' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Modifier l’utilisateur' });
+    await expect(dialog.getByLabel('Service')).not.toHaveValue('');
+  });
+
   test('export downloads a file and import opens a file chooser', async ({ page }) => {
     const download = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Exporter' }).click();

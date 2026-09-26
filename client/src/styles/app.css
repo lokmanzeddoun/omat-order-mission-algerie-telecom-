@@ -1,14 +1,5 @@
-/*
- * OMAT design system — institutional style.
- *
- * Layer order: MUI (wrapped in `@layer mui` by StyledEngineProvider) sits below Tailwind's
- * utilities so new components always win while both styling systems coexist. Preflight is
- * intentionally not imported until MUI is removed (MUI's CssBaseline still provides the reset).
- */
-@layer theme, base, mui, components, utilities;
-
-@import 'tailwindcss/theme.css' layer(theme);
-@import 'tailwindcss/utilities.css' layer(utilities);
+/* OMAT design system — institutional style (Tailwind v4 with the full preflight reset). */
+@import 'tailwindcss';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -116,7 +107,7 @@
   --radius-md: 4px;
 }
 
-/* ---------- Base (scoped so it does not fight MUI while both exist) ---------- */
+/* ---------- Base ---------- */
 @layer base {
   html {
     font-family: var(--font-sans);

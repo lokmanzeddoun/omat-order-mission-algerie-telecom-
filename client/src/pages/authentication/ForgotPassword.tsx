@@ -1,24 +1,20 @@
-import { useState } from 'react';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import FormControl from '@mui/material/FormControl';
-import OutlinedInput from '@mui/material/OutlinedInput';
-import Typography from '@mui/material/Typography';
-import PageLoader from 'components/loader/PageLoader';
+import { useState, type FormEvent } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import http from 'helpers/http';
-import { useNavigate } from 'react-router-dom';
-import { rootPaths } from 'routes/paths';
 import { useApiHandler } from 'components/hooks/useErrorHandler';
+import { Button, Field, Input } from 'components/ui';
+import paths from 'routes/paths';
 
+/** Sends a password-reset request to the administrators (same request as before). */
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  // local guard to prevent double-submit from multiple clicks
+  // Guard against double submission; stays locked when a request is already pending.
   const [submittedOnce, setSubmittedOnce] = useState(false);
   const { handleError, handleSuccess } = useApiHandler();
   const navigate = useNavigate();
 
-  const submit = async (e: any) => {
+  const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (loading || submittedOnce) return;
     setLoading(true);
@@ -26,53 +22,36 @@ const ForgotPassword = () => {
     try {
       await http.post('/comments', { title: 'Forgot password request', type: 'FORGET_PASSWORD', email });
       handleSuccess('Demande envoyée avec succès');
-      navigate(rootPaths.root);
-    } catch (err: any) {
-      // Use the centralized error handler
+      navigate(paths.signin);
+    } catch (err) {
       handleError(err);
-
-      // If server explicitly says there is already a pending request, keep form disabled
-      const msg = err?.response?.data?.message || err.message || '';
-      const isPending = msg?.toLowerCase?.().includes('pending');
-
-      if (!isPending) {
-        // Allow retry on other errors
-        setSubmittedOnce(false);
-      }
+      const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ?? (err as Error)?.message ?? '';
+      if (!msg.toLowerCase().includes('pending')) setSubmittedOnce(false);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) return <PageLoader />;
-
   return (
-    <Stack gap={2} component="form" onSubmit={submit} sx={{ maxWidth: 480, margin: '0 auto', px: 2 }}>
-      <Typography variant="h3" align="center">Mot de passe oublié</Typography>
-      <FormControl required fullWidth variant="outlined">
-        {/* <InputLabel htmlFor="forgot-email">Votre email</InputLabel> */}
-        <OutlinedInput
-          id="forgot-email"
-          placeholder="ex: vous@exemple.com"
-          type="email"
-          autoComplete="email"
-          aria-describedby="forgot-email-helper"
-        //   label="Votre email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        {/* <FormHelperText id="forgot-email-helper">Nous créerons un ticket pour les administrateurs — ils vous contacteront.</FormHelperText> */}
-      </FormControl>
-      <Button type="submit" variant="contained" fullWidth disabled={loading || submittedOnce || !email.trim()}>Envoyer la demande</Button>
-      <Button
-        variant="text"
-        fullWidth
-        onClick={() => navigate(rootPaths.root)}
-        sx={{ textTransform: 'none' }}
-      >
-        Retour à la connexion
-      </Button>
-    </Stack>
+    <>
+      <div className="border-b border-border bg-surface-header px-6 py-4">
+        <h1 className="text-lg font-semibold">Mot de passe oublié</h1>
+        <p className="mt-1 text-sm text-fg-muted">
+          Indiquez votre adresse e-mail : une demande est transmise aux administrateurs, qui vous recontacteront.
+        </p>
+      </div>
+      <form onSubmit={submit} className="flex flex-col gap-4 px-6 py-5">
+        <Field label="Adresse e-mail" required>
+          <Input type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <Button type="submit" variant="primary" className="w-full" disabled={loading || submittedOnce || !email.trim()}>
+          {loading ? 'Envoi…' : 'Envoyer la demande'}
+        </Button>
+        <Link to={paths.signin} className="self-start text-sm text-primary underline underline-offset-2 hover:no-underline">
+          Retour à la connexion
+        </Link>
+      </form>
+    </>
   );
 };
 
