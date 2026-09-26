@@ -1,4 +1,5 @@
-import { forwardRef, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useState, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { cn } from 'lib/utils';
 
 const fieldBase =
@@ -35,3 +36,25 @@ export const Checkbox = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HT
   ),
 );
 Checkbox.displayName = 'Checkbox';
+
+/** Password field with a show/hide toggle; label/ARIA props reach the <input>. */
+export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>>(
+  ({ className, ...props }, ref) => {
+    const [visible, setVisible] = useState(false);
+    return (
+      <div className="relative">
+        <input ref={ref} type={visible ? 'text' : 'password'} className={cn(fieldBase, 'h-9 pe-10', className)} {...props} />
+        <button
+          type="button"
+          onClick={() => setVisible((v) => !v)}
+          aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+          aria-pressed={visible}
+          className="absolute inset-y-0 end-0 flex w-9 cursor-pointer items-center justify-center text-fg-muted hover:text-fg"
+        >
+          {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+        </button>
+      </div>
+    );
+  },
+);
+PasswordInput.displayName = 'PasswordInput';

@@ -1,11 +1,15 @@
-import { Outlet } from "react-router-dom";
+import { Outlet } from 'react-router-dom';
+import { Toaster } from 'components/ui';
+import AlertBridge from 'layouts/app-shell/AlertBridge';
 
 function App() {
-	return (
-		<>
-			<Outlet />
-		</>
-	);
+  return (
+    <>
+      <Outlet />
+      <AlertBridge />
+      <Toaster />
+    </>
+  );
 }
 
 export default App;

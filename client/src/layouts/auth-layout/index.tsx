@@ -1,45 +1,29 @@
-import { PropsWithChildren } from "react";
-import { useSelector } from 'react-redux';
-import { RootState } from 'store/rootReducer';
-import { useNavigate } from 'react-router-dom';
-import Stack from "@mui/material/Stack";
-import Paper from "@mui/material/Paper";
-import ButtonBase from "@mui/material/ButtonBase";
-import Typography from "@mui/material/Typography";
-import AppAlert from "components/alert";
-import LogoImg from "assets/Logo.png";
-import Image from "components/base/Image";
+import { PropsWithChildren } from 'react';
+import { useTranslation } from 'react-i18next';
+import atLogo from 'assets/Logo_Algérie_Télécom.svg';
+
+/** Public pages (sign-in, password recovery): official band + centred form panel. */
 const AuthLayout = ({ children }: PropsWithChildren) => {
-	const navigate = useNavigate();
-	const { loading } = useSelector((s: RootState) => s.auth);
-
-	const handleLogoClick = (e: any) => {
-		e.preventDefault();
-		if (loading) return; // ignore clicks while restoring session
-		navigate('/');
-	};
-
-	return (
-			<Stack
-			component="main"
-			alignItems="center"
-			justifyContent="center"
-			px={1}
-			py={7}
-			width={1}
-			minHeight="100vh"
-			position="relative"
-		>
-			<AppAlert />
-			<ButtonBase disableRipple sx={{ position: "absolute", top: 28, left: 24 }} onClick={handleLogoClick}>
-				<Image src={LogoImg} alt="logo" height={60} width={60} sx={{ mr: 1 }} />
-				<Typography variant="h3" color="text.primary" letterSpacing={1}>
-					OMAT
-				</Typography>
-			</ButtonBase>
-			<Paper sx={{ px: 2, py: 3, width: 1, maxWidth: 380 }}>{children}</Paper>
-		</Stack>
-	);
+  const { t } = useTranslation();
+  return (
+    <div className="omat-ui flex min-h-screen flex-col bg-page text-fg">
+      <header className="border-b-4 border-accent bg-primary text-white">
+        <div className="mx-auto flex h-16 max-w-5xl items-center gap-3 px-4">
+          <span className="flex h-11 w-32 items-center justify-center overflow-hidden rounded-xs bg-white">
+            <img src={atLogo} alt="Algérie Télécom" className="h-full w-full scale-[1.12] object-contain" />
+          </span>
+          <span className="flex flex-col leading-tight">
+            <span className="text-xs tracking-wide text-white/80 uppercase">{t('app.institution')}</span>
+            <span className="text-base font-semibold">{t('app.title')}</span>
+          </span>
+        </div>
+      </header>
+      <main id="main" className="flex flex-1 items-start justify-center px-4 py-12">
+        <div className="w-full max-w-md rounded-sm border border-border bg-surface shadow-sm">{children}</div>
+      </main>
+      <footer className="border-t border-border bg-surface px-4 py-3 text-center text-xs text-fg-subtle">{t('app.footer')}</footer>
+    </div>
+  );
 };
 
 export default AuthLayout;

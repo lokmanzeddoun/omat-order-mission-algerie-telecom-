@@ -132,6 +132,20 @@
   :where(.omat-ui) :where(button, input, select, textarea) {
     font: inherit;
     color: inherit;
+    margin: 0;
+  }
+
+  /* Neutralise native button chrome (normally done by Tailwind's preflight) */
+  :where(.omat-ui) :where(button, [type='button'], [type='submit'], [type='reset']) {
+    background-color: transparent;
+    background-image: none;
+    padding: 0;
+    appearance: button;
+  }
+
+  :where(.omat-ui) :where(table) {
+    border-collapse: collapse;
+    text-indent: 0;
   }
 
   :where(.omat-ui) :where(h1, h2, h3, h4, p, ul, ol, dl, dd, table) {

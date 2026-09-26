@@ -49,41 +49,30 @@ export const restoreSession = () => async (dispatch: AppDispatch) => {
   }
 };
 
-export const login = (payload: ReqLogin) => async (dispatch: any) => {
-  try {
-    console.info('[auth.thunk] login called', payload);
-    const res = await http.post(`/auth/login`, payload);
-    const data = res.data;
-    if (res.status === 200 && data) {
-      // server sets refresh cookie; client receives access token in body
-      http.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-      dispatch(loginSuccess(data));
-      dispatch(
-        setAlert({
-          msg: 'You are logged in!',
-          type: AlertTypes.SUCCESS,
-        }),
-      );
-      return;
+export type LoginResult = { ok: true } | { ok: false; reason: 'invalid' | 'error' };
+
+export const login =
+  (payload: ReqLogin) =>
+  async (dispatch: any): Promise<LoginResult> => {
+    try {
+      const res = await http.post(`/auth/login`, payload);
+      const data = res.data;
+      if (res.status === 200 && data) {
+        // server sets refresh cookie; client receives access token in body
+        http.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        dispatch(loginSuccess(data));
+        dispatch(setAlert({ msg: 'Connexion réussie', type: AlertTypes.SUCCESS }));
+        return { ok: true };
+      }
+      dispatch(authFailed());
+      return { ok: false, reason: 'invalid' };
+    } catch (error) {
+      dispatch(authFailed());
+      const status = (error as { response?: { status?: number } })?.response?.status;
+      // 400/401/403/404: wrong credentials; anything else is a technical failure
+      return { ok: false, reason: status && status >= 400 && status < 500 ? 'invalid' : 'error' };
     }
-    setAlert({
-      msg: 'Authentication Error',
-      type: AlertTypes.ERROR,
-      desc: 'Please check you email or password',
-    });
-    return dispatch(authFailed());
-  } catch (error) {
-    console.error(error);
-    dispatch(
-      setAlert({
-        msg: 'Authentication Error',
-        type: AlertTypes.ERROR,
-        desc: 'Please check you email or password',
-      }),
-    );
-    return dispatch(authFailed());
-  }
-};
+  };
 
 export const logout = () => async (dispatch: any) => {
   try {
@@ -103,7 +92,7 @@ export const logout = () => async (dispatch: any) => {
   dispatch(logoutSuccess());
   dispatch(
     setAlert({
-      msg: 'You are logged out!',
+      msg: 'Vous êtes déconnecté',
       type: AlertTypes.WARNING,
     }),
   );

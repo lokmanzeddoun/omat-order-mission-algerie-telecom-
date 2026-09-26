@@ -1,12 +1,6 @@
-import Stack from "@mui/material/Stack";
-import CircularProgress from "@mui/material/CircularProgress";
+import { Loader } from 'components/ui';
 
-const Splash = () => {
-	return (
-		<Stack alignItems="center" justifyContent="center" width={1} height="100vh">
-			<CircularProgress />
-		</Stack>
-	);
-};
+// Fills its container only (the previous 100vh version overflowed under the header).
+const Splash = () => <Loader />;
 
 export default Splash;

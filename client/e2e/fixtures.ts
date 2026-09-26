@@ -12,8 +12,8 @@ export type AccountKey = keyof typeof accounts;
 export async function login(page: Page, who: AccountKey) {
   const { email, password, home } = accounts[who];
   await page.goto('./');
-  await page.getByPlaceholder(/email/i).fill(email);
-  await page.getByPlaceholder(/mot de pass/i).fill(password);
+  await page.getByLabel(/adresse e-mail/i).fill(email);
+  await page.getByLabel(/^mot de passe/i).fill(password);
   await page.getByRole('button', { name: /se connecter/i }).click();
   await expect(page).toHaveURL(home);
 }

@@ -26,7 +26,6 @@ import { RootState } from 'store/rootReducer';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { changePassword } from 'components/users/users.thunk';
-import AppAlert from 'components/alert';
 import ProfileIcon from 'assets/icons/pajamas--profile.svg?react';
 import LockIcon from 'assets/icons/hugeicons--lock-key.svg?react';
 import EditIcon from 'assets/icons/material-symbols--edit-rounded.svg?react';
@@ -119,7 +118,6 @@ export default function MyProfile() {
         </Typography>
       </Breadcrumbs>
 
-      <AppAlert />
 
       <Typography
         component="h1"

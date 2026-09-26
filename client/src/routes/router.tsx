@@ -1,14 +1,12 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { Navigate, Outlet, createBrowserRouter } from 'react-router-dom';
 import AuthLayout from 'layouts/auth-layout';
-import Splash from 'components/loader/Splash';
-import PageLoader from 'components/loader/PageLoader';
-import MainLayout from 'layouts/main-layout';
+import AppShell from 'layouts/app-shell';
+import { Loader } from 'components/ui';
 import paths, { rootPaths } from './paths';
 
 import HomeOrSignin from './HomeOrSignin';
 import ProtectedRoute from 'ProtectedRoute';
-import UserLayout from 'layouts/user-layout';
 import RedirectBasedOnRole from 'RedirectBasedRole';
 
 const App = lazy(() => import('App'));
@@ -25,11 +23,22 @@ const DecomptesPage = lazy(() => import('pages/decomptes'));
 const AdminComments = lazy(() => import('pages/admin/Comments'));
 const AnalyticsDashboard = lazy(() => import('pages/admin/AnalyticsDashboard'));
 
+/** Authenticated page area: role guard + shell + lazy page boundary. */
+const shell = (allowedRoles?: string[]): ReactNode => (
+  <ProtectedRoute allowedRoles={allowedRoles}>
+    <AppShell>
+      <Suspense fallback={<Loader />}>
+        <Outlet />
+      </Suspense>
+    </AppShell>
+  </ProtectedRoute>
+);
+
 const router = createBrowserRouter(
   [
     {
       element: (
-        <Suspense fallback={<Splash />}>
+        <Suspense fallback={<Loader />}>
           <App />
         </Suspense>
       ),
@@ -38,20 +47,14 @@ const router = createBrowserRouter(
           path: '/',
           element: (
             <AuthLayout>
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<Loader />}>
                 <Outlet />
               </Suspense>
             </AuthLayout>
           ),
-            children: [
-            {
-              index: true,
-              element: <HomeOrSignin />,
-            },
-            {
-              path: 'authentication/forgot-password',
-              element: <ForgotPassword />,
-            },
+          children: [
+            { index: true, element: <HomeOrSignin /> },
+            { path: 'authentication/forgot-password', element: <ForgotPassword /> },
           ],
         },
         {
@@ -63,91 +66,38 @@ const router = createBrowserRouter(
           ),
         },
         {
-          path: `${rootPaths.dashboard}/admins`, // This is the parent route for admins
-          element: (
-            <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
-              <MainLayout>
-                <Suspense fallback={<PageLoader />}>
-                  <Outlet />
-                </Suspense>
-              </MainLayout>
-            </ProtectedRoute>
-          ),
+          path: paths.admins,
+          element: shell(['ADMIN', 'SUPER_ADMIN']),
           children: [
-            {
-              path: 'users', // Relative path, starting with the parent's path
-              element: <Users />,
-            },
-            {
-              path: 'structures', // Relative path, starting with the parent's path
-              element: <Structures />,
-            },
-            {
-              path: '', // Relative path, starting with the parent's path
-              element: <OrderDashboard />,
-            },
-            {
-              path: "barem",
-              element: <DataGridWithJson />,
-            },
-            {
-              path: 'decomptes',
-              element: <DecomptesPage />,
-            },
-            {
-              path: 'support',
-              element: <AdminComments />,
-            },
-            {
-              path: 'archive',
-              element: <Archive />,
-            },
-            {
-              path: 'analytics',
-              element: <AnalyticsDashboard />,
-            },
+            { index: true, element: <OrderDashboard /> },
+            { path: 'users', element: <Users /> },
+            { path: 'structures', element: <Structures /> },
+            { path: 'barem', element: <DataGridWithJson /> },
+            { path: 'decomptes', element: <DecomptesPage /> },
+            { path: 'support', element: <AdminComments /> },
+            { path: 'archive', element: <Archive /> },
+            { path: 'analytics', element: <AnalyticsDashboard /> },
           ],
         },
         {
-          path: `${rootPaths.dashboard}/users`, // This is the parent route for regular users
-          element: (
-            <ProtectedRoute allowedRoles={['USER']}>
-              <UserLayout>
-                <Suspense fallback={<PageLoader />}>
-                  <Outlet />
-                </Suspense>
-              </UserLayout>
-            </ProtectedRoute>
-          ),
-          children: [
-            {
-              path: '', // Represents the home route under users
-              element: <UserDashboard />, // Main dashboard for users
-            },
-          ],
+          path: paths.users,
+          element: shell(['USER']),
+          children: [{ index: true, element: <UserDashboard /> }],
         },
         {
           path: paths.me,
-          element: (
-            <ProtectedRoute>
-              <Suspense fallback={<PageLoader />}>
-                <MyProfile />
-              </Suspense>
-            </ProtectedRoute>
-          ),
+          element: shell(),
+          children: [{ index: true, element: <MyProfile /> }],
         },
         {
           path: paths.notFound,
           element: (
-            <Suspense fallback={<PageLoader />}>
+            <Suspense fallback={<Loader />}>
               <NotFoundPage />
             </Suspense>
           ),
         },
-        {
-          path: '*',
-          element: <Navigate to={paths.notFound} replace />,
-        },
+        { path: '*', element: <Navigate to={paths.notFound} replace /> },
       ],
     },
   ],

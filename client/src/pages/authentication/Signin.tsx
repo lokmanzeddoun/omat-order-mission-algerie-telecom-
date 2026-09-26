@@ -1,145 +1,72 @@
-import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
-import Link from '@mui/material/Link';
-import Stack from '@mui/material/Stack';
-import Button from '@mui/material/Button';
-import InputAdornment from '@mui/material/InputAdornment';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Typography from '@mui/material/Typography';
-import IconButton from '@mui/material/IconButton';
-import TextField from '@mui/material/TextField';
-import Checkbox from '@mui/material/Checkbox';
-import IconifyIcon from 'components/base/IconifyIcon';
-import { useDispatch, useSelector } from 'react-redux';
-import { AppDispatch } from 'store';
-import { RootState } from 'store/rootReducer';
+import { useState, type FormEvent } from 'react';
+import { useDispatch } from 'react-redux';
+import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { TriangleAlert } from 'lucide-react';
+import type { AppDispatch } from 'store';
 import { login } from 'components/auth/auth.thunk';
-import { useNavigate } from 'react-router-dom';
-import Splash from 'components/loader/Splash';
 import { normalizeEmail } from 'helpers/utils';
-import MailIcon from 'assets/icons/hugeicons--mail-at-sign-02.svg?react';
-import LockIcon from 'assets/icons/hugeicons--lock-key.svg?react';
-import ViewIcon from 'assets/icons/fluent-mdl2--view.svg?react';
-import HideIcon from 'assets/icons/fluent-mdl2--hide-3.svg?react';
+import { Button, Field, Input, PasswordInput } from 'components/ui';
+import paths from 'routes/paths';
 
 const Signin = () => {
-  const [isLoading, setIsLoading] = useState(false); // Track loading state
+  const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
-  const navigate = useNavigate();
-  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
-  useEffect(() => {
-    if (isAuthenticated) {
-      // Redirect to dashboard or any other route if the user is authenticated
-      navigate('/dashboard'); // You can change '/dashboard' to your desired route
-    } else {
-      setIsLoading(false); // Finish loading if not authenticated
-    }
-  }, [isAuthenticated, navigate]);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const [userData, setUser] = useState<ReqLogin>({ email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-
-  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setUser({ ...userData, [e.target.name]: e.target.value });
-  };
-
+  // Redirection after success is handled by HomeOrSignin once auth state changes.
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Normalize email to convert punycode domains (e.g., xn--algrietelecom-dhb.dz)
-    // back to Unicode (algérietelecom.dz) for Chrome compatibility
-    const normalizedData = {
-      ...userData,
-      email: normalizeEmail(userData.email),
-    };
-    console.info('[signin] submitting login', normalizedData);
-    await dispatch(login(normalizedData));
+    setError(null);
+    setSubmitting(true);
+    // Normalize punycode domains (xn--algrietelecom-dhb.dz) back to Unicode for Chrome autofill
+    const result = await dispatch(login({ email: normalizeEmail(email), password }));
+    setSubmitting(false);
+    if (!result.ok) setError(t(result.reason === 'invalid' ? 'auth.invalid' : 'auth.error'));
   };
-  if (isLoading) {
-    return <Splash />; // Fallback UI while checking authentication
-  }
+
   return (
     <>
-      <Typography align="center" variant="h4">
-        Se Connecter
-      </Typography>
-      <Typography mt={1.5} align="center" variant="body2">
-        Connextion à OMAT
-      </Typography>
-
-      <Stack component="form" mt={3} onSubmit={handleSubmit} direction="column" gap={2}>
-        <TextField
-          id="email"
-          name="email"
-          type="text"
-          inputMode="email"
-          value={userData.email}
-          onChange={handleInputChange}
-          variant="filled"
-          placeholder="Votre nom Email"
-          autoComplete="email"
-          fullWidth
-          autoFocus
-          required
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <IconifyIcon icon={MailIcon} />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <TextField
-          id="password"
-          name="password"
-          type={showPassword ? 'text' : 'password'}
-          value={userData.password}
-          onChange={handleInputChange}
-          variant="filled"
-          placeholder="Votre mot de pass"
-          autoComplete="current-password"
-          fullWidth
-          required
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <IconifyIcon icon={LockIcon} />
-              </InputAdornment>
-            ),
-            endAdornment: (
-              <InputAdornment
-                position="end"
-                sx={{
-                  opacity: userData.password ? 1 : 0,
-                  pointerEvents: userData.password ? 'auto' : 'none',
-                }}
-              >
-                <IconButton
-                  aria-label="toggle password visibility"
-                  onClick={() => setShowPassword(!showPassword)}
-                  sx={{ border: 'none', bgcolor: 'transparent !important' }}
-                  edge="end"
-                >
-                  <IconifyIcon icon={showPassword ? ViewIcon : HideIcon} color="neutral.light" />
-                </IconButton>
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        <Stack  alignItems="center" justifyContent="space-between">
-          {/* <FormControlLabel
-            control={<Checkbox id="checkbox" name="checkbox" size="small" color="primary" />}
-            label="Se souvenir de moi"
-            sx={{ ml: -1 }}
-          /> */}
-                  <Link component="button" type="button" onClick={() => navigate('/authentication/forgot-password')} fontSize="body2.fontSize">
-                    Mot de pass oublié?
-                  </Link>
-        </Stack>
-
-        <Button type="submit" variant="contained" size="medium" fullWidth>
-          Se connecter
+      <div className="border-b border-border bg-surface-header px-6 py-4">
+        <h1 className="text-lg font-semibold">{t('auth.signInTitle')}</h1>
+        <p className="mt-1 text-sm text-fg-muted">{t('auth.signInSubtitle')}</p>
+      </div>
+      <form onSubmit={handleSubmit} noValidate={false} className="flex flex-col gap-4 px-6 py-5">
+        {error && (
+          <div role="alert" className="flex items-start gap-2 border-s-4 border-danger bg-danger-soft px-3 py-2 text-sm text-danger">
+            <TriangleAlert aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            {error}
+          </div>
+        )}
+        <Field label={t('auth.email')} required>
+          <Input
+            name="email"
+            type="text"
+            inputMode="email"
+            autoComplete="email"
+            autoFocus
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <Field label={t('auth.password')} required>
+          <PasswordInput
+            name="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </Field>
+        <Link to={paths.forgotPassword} className="self-start text-sm text-primary underline underline-offset-2 hover:no-underline">
+          {t('auth.forgot')}
+        </Link>
+        <Button type="submit" variant="primary" disabled={submitting} className="w-full">
+          {submitting ? t('table.loading') : t('auth.signIn')}
         </Button>
-      </Stack>
+      </form>
     </>
   );
 };
