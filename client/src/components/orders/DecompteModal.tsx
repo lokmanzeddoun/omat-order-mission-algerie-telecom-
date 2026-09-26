@@ -9,7 +9,7 @@ import {
   Stack,
   Chip,
 } from '@mui/material';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import { IMission } from './orderReducer';
 import { calculateMealsAndAccommodation } from 'helpers/utils';
 
@@ -39,9 +39,9 @@ const normalizeDateValue = (value: unknown): string => {
   if (value == null) return '';
   const raw = String(value).trim();
   if (!raw) return '';
-  const parsed = moment(raw, ['YYYY-MM-DD', moment.ISO_8601], true);
+  const parsed = dayjs(raw, 'YYYY-MM-DD', true);
   if (parsed.isValid()) return parsed.format('YYYY-MM-DD');
-  const fallback = moment(raw);
+  const fallback = dayjs(raw);
   return fallback.isValid() ? fallback.format('YYYY-MM-DD') : '';
 };
 
@@ -62,13 +62,13 @@ const buildDecompteFormData = (order: IMission, base?: IDecompte): IDecompte => 
   heure_sortie: normalizeTimeValue(
     base?.heure_sortie ??
       order?.heure_sortie ??
-      (order?.date_sortie ? moment(order.date_sortie).format('HH:mm') : ''),
+      (order?.date_sortie ? dayjs(order.date_sortie).format('HH:mm') : ''),
   ),
   date_retour: normalizeDateValue(base?.date_retour ?? order?.date_retour),
   heure_retour: normalizeTimeValue(
     base?.heure_retour ??
       order?.heure_retour ??
-      (order?.date_retour ? moment(order.date_retour).format('HH:mm') : ''),
+      (order?.date_retour ? dayjs(order.date_retour).format('HH:mm') : ''),
   ),
   hebergement_sans_pec: base?.hebergement_sans_pec,
   repas_sans_pec: base?.repas_sans_pec,
@@ -187,9 +187,9 @@ const DecompteModal: React.FC<DecompteModalProps> = ({
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const retourMoment = moment(formData.date_retour, 'YYYY-MM-DD', true);
+    const retourMoment = dayjs(formData.date_retour, 'YYYY-MM-DD', true);
     const sortieMoment = missionDepartureDate
-      ? moment(missionDepartureDate, 'YYYY-MM-DD', true)
+      ? dayjs(missionDepartureDate, 'YYYY-MM-DD', true)
       : null;
 
     const newErrors = {

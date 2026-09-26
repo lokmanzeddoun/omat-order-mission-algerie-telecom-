@@ -10,7 +10,7 @@ import {
   Chip,
   Divider,
 } from '@mui/material';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 
 interface ViewCommentsDialogProps {
   open: boolean;
@@ -45,7 +45,7 @@ const ViewCommentsDialog: React.FC<ViewCommentsDialogProps> = ({
                       color={msg.status === 'REJECTED' ? 'error' : msg.status === 'ACCEPTED' ? 'success' : 'default'}
                     />
                     <Typography variant="caption" color="text.secondary">
-                      {moment(msg.createdAt).format('DD/MM/YYYY HH:mm')}
+                      {dayjs(msg.createdAt).format('DD/MM/YYYY HH:mm')}
                     </Typography>
                     {msg.user && (
                       <Typography variant="caption" color="text.secondary">

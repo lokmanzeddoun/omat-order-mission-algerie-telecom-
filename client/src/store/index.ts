@@ -6,6 +6,9 @@ import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, 
 const persistConfig = {
   key: 'root',
   storage,
+  // Only persist small, session-level state. Data lists (orders, users, decomptes...)
+  // are refetched on mount; persisting them made every dispatch serialize the whole store.
+  whitelist: ['auth', 'theme', 'exercice'],
 };
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 

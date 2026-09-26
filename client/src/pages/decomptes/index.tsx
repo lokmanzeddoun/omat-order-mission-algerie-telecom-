@@ -32,7 +32,7 @@ import {
   rejectDecompte,
   archiveDecompte,
 } from 'components/orders/decompte.thunk';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import SmartTable, { SmartTableColumn } from 'components/common/SmartTable';
 import RenderDecompteDownload from 'components/orders/RenderDecompteDownload';
 import AcceptDecompteDialog from 'components/orders/AcceptDecompteDialog';
@@ -120,7 +120,7 @@ const DecomptesPage = () => {
       headerSearchable: false,
       renderCell: (p: any) => {
         const v = p?.row?.createdAt;
-        return v ? moment(v).format('YYYY/MM/DD') : '-';
+        return v ? dayjs(v).format('YYYY/MM/DD') : '-';
       },
     },
     {
@@ -143,7 +143,7 @@ const DecomptesPage = () => {
       headerSearchable: false,
       renderCell: (p: any) => {
         const v = p?.row?.mission?.date_sortie;
-        return v ? moment(v).format('YYYY/MM/DD') : '-';
+        return v ? dayjs(v).format('YYYY/MM/DD') : '-';
       },
     },
     {
@@ -208,7 +208,7 @@ const DecomptesPage = () => {
       headerSearchable: false,
       renderCell: (p: any) => {
         const v = p?.row?.mission?.date_sortie;
-        return v ? moment(v).format('YYYY/MM/DD') : '-';
+        return v ? dayjs(v).format('YYYY/MM/DD') : '-';
       },
     },
     {
@@ -220,7 +220,7 @@ const DecomptesPage = () => {
       headerSearchable: false,
       renderCell: (p: any) => {
         const v = p?.row?.mission?.date_retour;
-        return v ? moment(v).format('YYYY/MM/DD') : '-';
+        return v ? dayjs(v).format('YYYY/MM/DD') : '-';
       },
     },
     {
@@ -259,7 +259,7 @@ const DecomptesPage = () => {
       headerSearchable: false,
       renderCell: (p: any) => {
         const v = p?.row?.mission?.date_sortie;
-        return v ? moment(v).format('HH:mm') : '-';
+        return v ? dayjs(v).format('HH:mm') : '-';
       },
     },
     {
@@ -271,7 +271,7 @@ const DecomptesPage = () => {
       headerSearchable: false,
       renderCell: (p: any) => {
         const v = p?.row?.mission?.date_retour;
-        return v ? moment(v).format('HH:mm') : '-';
+        return v ? dayjs(v).format('HH:mm') : '-';
       },
     },
     {

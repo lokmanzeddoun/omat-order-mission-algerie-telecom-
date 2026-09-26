@@ -19,7 +19,7 @@ import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import { IMission } from './orderReducer';
 import DirectionIcon from 'assets/icons/ri--direction-line.svg?react';
 import GoalIcon from 'assets/icons/octicon--goal-16.svg?react';
@@ -126,18 +126,18 @@ const MissionModal: React.FC<MissionModalProps> = ({
         // Use human-readable label for the select
         transport: asLabel,
         date_sortie: initialData.date_sortie
-          ? moment(initialData.date_sortie).format('YYYY-MM-DD')
+          ? dayjs(initialData.date_sortie).format('YYYY-MM-DD')
           : '',
         date_retour: initialData.date_retour
-          ? moment(initialData.date_retour).format('YYYY-MM-DD')
+          ? dayjs(initialData.date_retour).format('YYYY-MM-DD')
           : '',
         // Prefill time fields from DateTime if legacy heure_* not present
         heure_sortie:
           initialData.heure_sortie ??
-          (initialData.date_sortie ? moment(initialData.date_sortie).format('HH:mm') : ''),
+          (initialData.date_sortie ? dayjs(initialData.date_sortie).format('HH:mm') : ''),
         heure_retour:
           initialData.heure_retour ??
-          (initialData.date_retour ? moment(initialData.date_retour).format('HH:mm') : ''),
+          (initialData.date_retour ? dayjs(initialData.date_retour).format('HH:mm') : ''),
       });
     }
   }, [isEdit, initialData]);

@@ -4,9 +4,14 @@ import { extractErrorMessage } from './errorHandler';
 // Use the Vite proxy in dev (/api -> backend) to avoid CORS. In prod, prefer VITE_API_URL or fallback to '/api'.
 const baseURL = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL ?? '/api');
 
+// Fail fast instead of spinning forever; file downloads (PDF/Excel exports) get more time.
+const DEFAULT_TIMEOUT_MS = 15_000;
+const DOWNLOAD_TIMEOUT_MS = 60_000;
+
 const http = axios.create({
     baseURL,
     withCredentials: true,
+    timeout: DEFAULT_TIMEOUT_MS,
 });
 
 if (typeof window !== 'undefined') {
@@ -16,6 +21,9 @@ if (typeof window !== 'undefined') {
 
 // Debug logs for requests/responses (dev only)
 http.interceptors.request.use((config) => {
+    if (config.responseType === 'blob' && config.timeout === DEFAULT_TIMEOUT_MS) {
+        config.timeout = DOWNLOAD_TIMEOUT_MS;
+    }
     if (import.meta.env.DEV) {
         const method = (config.method || 'get').toUpperCase();
         const fullUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
@@ -91,8 +99,10 @@ http.interceptors.response.use(
                     window.localStorage.removeItem('user');
                     window.localStorage.removeItem('persist:root');
                     // Optionally redirect to login
-                    if (!window.location.pathname.includes('/signin')) {
-                        window.location.href = '/signin';
+                    // Sign-in lives at the app root ('/' under the '/omat' basename)
+                    const signInPath = import.meta.env.BASE_URL;
+                    if (window.location.pathname !== signInPath) {
+                        window.location.href = signInPath;
                     }
                 }
                 return Promise.reject(error);

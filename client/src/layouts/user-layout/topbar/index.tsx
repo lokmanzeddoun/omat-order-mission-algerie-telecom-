@@ -34,15 +34,15 @@ const Topbar = () => {
     if (isAuthenticated) {
       // Redirect based on role similar to RedirectBasedOnRole
       if (user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') {
-        navigate(`${rootPaths.dashboard}/admins`);
+        navigate(paths.admins);
         return;
       }
       if (user?.role === 'USER') {
-        navigate(`${rootPaths.dashboard}/users`);
+        navigate(paths.users);
         return;
       }
       // default to dashboard
-      navigate(rootPaths.dashboard);
+      navigate(`/${rootPaths.dashboard}`);
       return;
     }
     // not authenticated -> go to sign-in

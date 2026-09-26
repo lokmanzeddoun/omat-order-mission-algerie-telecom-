@@ -13,7 +13,7 @@ import {
 	Divider,
 } from '@mui/material';
 import { CheckCircle as CheckCircleIcon } from '@mui/icons-material';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import { IMission } from './orderReducer';
 import { calculateMealsAndAccommodation } from 'helpers/utils';
 
@@ -40,9 +40,9 @@ const normalizeDateValue = (value: unknown): string => {
 	if (value == null) return '';
 	const raw = String(value).trim();
 	if (!raw) return '';
-	const parsed = moment(raw, ['YYYY-MM-DD', moment.ISO_8601], true);
+	const parsed = dayjs(raw, 'YYYY-MM-DD', true);
 	if (parsed.isValid()) return parsed.format('YYYY-MM-DD');
-	const fallback = moment(raw);
+	const fallback = dayjs(raw);
 	return fallback.isValid() ? fallback.format('YYYY-MM-DD') : '';
 };
 
@@ -61,11 +61,11 @@ const normalizeTimeValue = (value: unknown): string => {
 
 const buildDecompteFormData = (mission: IMission): IDecompte => ({
 	heure_sortie: normalizeTimeValue(
-		mission?.date_sortie ? moment(mission.date_sortie).format('HH:mm') : ''
+		mission?.date_sortie ? dayjs(mission.date_sortie).format('HH:mm') : ''
 	),
 	date_retour: normalizeDateValue(mission?.date_retour),
 	heure_retour: normalizeTimeValue(
-		mission?.date_retour ? moment(mission.date_retour).format('HH:mm') : ''
+		mission?.date_retour ? dayjs(mission.date_retour).format('HH:mm') : ''
 	),
 	hebergement_sans_pec: undefined,
 	repas_sans_pec: undefined,
@@ -185,9 +185,9 @@ const ValidateMissionDialog: React.FC<ValidateMissionDialogProps> = ({
 	const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 
-		const retourMoment = moment(formData.date_retour, 'YYYY-MM-DD', true);
+		const retourMoment = dayjs(formData.date_retour, 'YYYY-MM-DD', true);
 		const sortieMoment = missionDepartureDate
-			? moment(missionDepartureDate, 'YYYY-MM-DD', true)
+			? dayjs(missionDepartureDate, 'YYYY-MM-DD', true)
 			: null;
 
 		const newErrors = {

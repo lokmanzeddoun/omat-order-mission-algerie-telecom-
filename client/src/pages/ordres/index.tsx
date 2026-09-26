@@ -33,7 +33,7 @@ import {
   archiveMission,
 } from 'components/orders/orderthunk';
 import SmartTable, { SmartTableColumn } from 'components/common/SmartTable';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import NoData from 'components/users/NoData';
 import Splash from 'components/loader/Splash';
 import RenderCellDownload from 'components/orders/RenderCellDownload';
@@ -128,7 +128,7 @@ const OrderDashboard = () => {
       headerSearchable: true,
       renderCell: (params: any) => {
         const value = params?.row?.date_sortie;
-        return value ? moment(value).format('YYYY/MM/DD') : '-';
+        return value ? dayjs(value).format('YYYY/MM/DD') : '-';
       },
     },
     {
@@ -140,7 +140,7 @@ const OrderDashboard = () => {
       headerSearchable: false,
       renderCell: (params: any) => {
         const ds = params?.row?.date_sortie;
-        return ds ? moment(ds).format('HH:mm') : '-';
+        return ds ? dayjs(ds).format('HH:mm') : '-';
       },
     },
     {
@@ -152,7 +152,7 @@ const OrderDashboard = () => {
       headerSearchable: true,
       renderCell: (params: any) => {
         const value = params?.row?.date_retour;
-        return value ? moment(value).format('YYYY/MM/DD') : '-';
+        return value ? dayjs(value).format('YYYY/MM/DD') : '-';
       },
     },
     {
@@ -164,7 +164,7 @@ const OrderDashboard = () => {
       headerSearchable: false,
       renderCell: (params: any) => {
         const dr = params?.row?.date_retour;
-        return dr ? moment(dr).format('HH:mm') : '-';
+        return dr ? dayjs(dr).format('HH:mm') : '-';
       },
     },
     {
@@ -226,11 +226,10 @@ const OrderDashboard = () => {
       renderCell: (params: any) => {
         const { date_sortie, date_retour } = params?.row || {};
         if (!date_sortie || !date_retour) return '-';
-        const startDate = moment(date_sortie);
-        const endDate = moment(date_retour);
-        const duration = moment.duration(endDate.diff(startDate));
-        const hoursLeft = Math.floor(duration.asHours());
-        const daysLeft = Math.floor(duration.asDays());
+        const startDate = dayjs(date_sortie);
+        const endDate = dayjs(date_retour);
+        const hoursLeft = Math.floor(endDate.diff(startDate, 'hour', true));
+        const daysLeft = Math.floor(endDate.diff(startDate, 'day', true));
         return <span>{daysLeft > 0 ? `${daysLeft} jour(s)` : `${hoursLeft} heure(s)`}</span>;
       },
     },

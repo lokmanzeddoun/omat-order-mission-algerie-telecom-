@@ -17,7 +17,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { AppDispatch } from 'store';
 import { RootState } from 'store/rootReducer';
 import { fetchUserDecompte, addCommentToDecompte } from './decompte.thunk';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import ViewCommentsDialog from './ViewCommentsDialog';
 import AddCommentDialog from './AddCommentDialog';
 
@@ -196,7 +196,7 @@ const DecompteCommentsButton = () => {
                         {lastMessage.title}
                       </Typography>
                       <Typography variant="caption" color="text.disabled">
-                        {moment(lastMessage.createdAt).format('DD/MM/YYYY HH:mm')}
+                        {dayjs(lastMessage.createdAt).format('DD/MM/YYYY HH:mm')}
                       </Typography>
                     </>
                   )}

@@ -6,7 +6,7 @@ import { Box, TextField } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import DataGridFooter from 'components/common/DataGridFooter';
 import ActionMenu from './ActionMenu';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import RenderCellDownload from './RenderCellDownload';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppDispatch } from 'store';
@@ -93,12 +93,12 @@ const initialColumns: GridColDef<IMission>[] = [
     filterable: true,
     valueGetter: (params: any) => {
       const v = params?.value;
-      return v ? moment(v).format('YYYY-MM-DD') : '';
+      return v ? dayjs(v).format('YYYY-MM-DD') : '';
     },
     renderCell: (params: any) => {
       const value = (params?.row as any)?.date_sortie;
       return value ? (
-        moment(value).format('YYYY/MM/DD')
+        dayjs(value).format('YYYY/MM/DD')
       ) : (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
           <Chip label={null} size="small" color="default" />
@@ -118,7 +118,7 @@ const initialColumns: GridColDef<IMission>[] = [
     renderCell: (params: any) => {
       const row: any = params?.row || {};
       const ds = row.date_sortie;
-      const label = ds ? moment(ds).format('HH:mm') : '';
+      const label = ds ? dayjs(ds).format('HH:mm') : '';
       return label ? (
         label
       ) : (
@@ -139,12 +139,12 @@ const initialColumns: GridColDef<IMission>[] = [
     filterable: true,
     valueGetter: (params: any) => {
       const v = params?.value;
-      return v ? moment(v).format('YYYY-MM-DD') : '';
+      return v ? dayjs(v).format('YYYY-MM-DD') : '';
     },
     renderCell: (params: any) => {
       const value = (params?.row as any)?.date_retour;
       return value ? (
-        moment(value).format('YYYY/MM/DD')
+        dayjs(value).format('YYYY/MM/DD')
       ) : (
         <Stack direction="column" alignItems="center" justifyContent="center" height={1}>
           <Chip label={null} size="small" color="default" />
@@ -164,7 +164,7 @@ const initialColumns: GridColDef<IMission>[] = [
     renderCell: (params: any) => {
       const row: any = params?.row || {};
       const dr = row.date_retour;
-      const label = dr ? moment(dr).format('HH:mm') : '';
+      const label = dr ? dayjs(dr).format('HH:mm') : '';
       return label ? (
         label
       ) : (
@@ -271,11 +271,10 @@ const initialColumns: GridColDef<IMission>[] = [
           </Stack>
         );
       }
-      const startDate = moment(date_sortie);
-      const endDate = moment(date_retour);
-      const duration = moment.duration(endDate.diff(startDate));
-      const hoursLeft = Math.floor(duration.asHours());
-      const daysLeft = Math.floor(duration.asDays());
+      const startDate = dayjs(date_sortie);
+      const endDate = dayjs(date_retour);
+      const hoursLeft = Math.floor(endDate.diff(startDate, 'hour', true));
+      const daysLeft = Math.floor(endDate.diff(startDate, 'day', true));
       return <span>{daysLeft > 0 ? `${daysLeft} jour(s)` : `${hoursLeft} heure(s)`}</span>;
     },
   },

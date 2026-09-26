@@ -2,8 +2,7 @@ import { useMemo } from "react";
 import { useSelector } from "react-redux";
 import { getTheme } from "theme/theme";
 import { RouterProvider } from "react-router-dom";
-import { ThemeProvider } from "@emotion/react";
-import { CssBaseline } from "@mui/material";
+import { CssBaseline, ThemeProvider } from "@mui/material";
 import { RootState } from "store/rootReducer";
 import router from "routes/router";
 

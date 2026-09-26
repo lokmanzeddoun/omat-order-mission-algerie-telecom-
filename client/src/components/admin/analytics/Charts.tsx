@@ -1,6 +1,22 @@
 import React from 'react';
-import ReactECharts from 'echarts-for-react';
+import ReactEChartsCore from 'echarts-for-react/lib/core';
+import * as echarts from 'echarts/core';
+import { BarChart as EBarChart, LineChart as ELineChart, PieChart as EPieChart } from 'echarts/charts';
+import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
 import { Box, Paper, Typography, useTheme } from '@mui/material';
+
+// Register only what these charts use, instead of the full echarts bundle.
+echarts.use([
+  EBarChart,
+  ELineChart,
+  EPieChart,
+  GridComponent,
+  LegendComponent,
+  TitleComponent,
+  TooltipComponent,
+  CanvasRenderer,
+]);
 
 interface PieChartProps {
   title: string;
@@ -70,7 +86,7 @@ export const PieChart: React.FC<PieChartProps> = ({ title, data, height = 350 })
 
   return (
     <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-      <ReactECharts option={option} style={{ height: `${height}px` }} />
+      <ReactEChartsCore echarts={echarts} option={option} style={{ height: `${height}px` }} />
     </Paper>
   );
 };
@@ -178,7 +194,7 @@ export const BarChart: React.FC<BarChartProps> = ({
 
   return (
     <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-      <ReactECharts option={option} style={{ height: `${height}px` }} />
+      <ReactEChartsCore echarts={echarts} option={option} style={{ height: `${height}px` }} />
     </Paper>
   );
 };
@@ -282,7 +298,7 @@ export const LineChart: React.FC<LineChartProps> = ({
 
   return (
     <Paper elevation={2} sx={{ p: 2, height: '100%' }}>
-      <ReactECharts option={option} style={{ height: `${height}px` }} />
+      <ReactEChartsCore echarts={echarts} option={option} style={{ height: `${height}px` }} />
     </Paper>
   );
 };

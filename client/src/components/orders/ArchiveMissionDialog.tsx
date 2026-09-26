@@ -10,7 +10,7 @@ import {
   Box,
 } from '@mui/material';
 import { Warning as WarningIcon, Room as DestinationIcon, DirectionsCar as TransportIcon } from '@mui/icons-material';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import { IMission } from './orderReducer';
 
 interface ArchiveMissionDialogProps {
@@ -22,7 +22,7 @@ interface ArchiveMissionDialogProps {
 
 const formatDateTime = (value?: string | null) => {
   if (!value) return '-';
-  const date = moment(value);
+  const date = dayjs(value);
   if (!date.isValid()) return '-';
   return date.format('DD/MM/YYYY HH:mm');
 };

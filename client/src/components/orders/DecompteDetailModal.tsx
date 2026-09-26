@@ -12,7 +12,7 @@ import {
   Box,
   Chip,
 } from '@mui/material';
-import moment from 'moment';
+import dayjs from 'helpers/date';
 import IconifyIcon from 'components/base/IconifyIcon';
 import DestinationIcon from 'assets/icons/majesticons--map-simple-destination.svg?react';
 import GoalIcon from 'assets/icons/octicon--goal-16.svg?react';
@@ -101,7 +101,7 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
               <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                 <TextField
                   label="Date Décompte"
-                  value={decompte.createdAt ? moment(decompte.createdAt).format('DD/MM/YYYY') : '-'}
+                  value={decompte.createdAt ? dayjs(decompte.createdAt).format('DD/MM/YYYY') : '-'}
                   InputProps={{ readOnly: true }}
                   fullWidth
                 />
@@ -199,7 +199,7 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
                   label="Date Sortie"
                   value={
                     mission.date_sortie
-                      ? moment(mission.date_sortie).format('DD/MM/YYYY')
+                      ? dayjs(mission.date_sortie).format('DD/MM/YYYY')
                       : '-'
                   }
                   InputProps={{ readOnly: true }}
@@ -209,7 +209,7 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
                   label="Heure Sortie"
                   value={
                     mission.date_sortie
-                      ? moment(mission.date_sortie).format('HH:mm')
+                      ? dayjs(mission.date_sortie).format('HH:mm')
                       : '-'
                   }
                   InputProps={{ readOnly: true }}
@@ -221,7 +221,7 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
                   label="Date Retour"
                   value={
                     mission.date_retour
-                      ? moment(mission.date_retour).format('DD/MM/YYYY')
+                      ? dayjs(mission.date_retour).format('DD/MM/YYYY')
                       : '-'
                   }
                   InputProps={{ readOnly: true }}
@@ -231,7 +231,7 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
                   label="Heure Retour"
                   value={
                     mission.date_retour
-                      ? moment(mission.date_retour).format('HH:mm')
+                      ? dayjs(mission.date_retour).format('HH:mm')
                       : '-'
                   }
                   InputProps={{ readOnly: true }}
@@ -328,7 +328,7 @@ const DecompteDetailModal: React.FC<DecompteDetailModalProps> = ({ open, onClose
                     }}
                   >
                     <Typography variant="caption" color="text.secondary">
-                      {moment(msg.createdAt).format('DD/MM/YYYY HH:mm')}
+                      {dayjs(msg.createdAt).format('DD/MM/YYYY HH:mm')}
                     </Typography>
                     <Typography variant="body2" sx={{ mt: 0.5 }}>
                       {msg.content}

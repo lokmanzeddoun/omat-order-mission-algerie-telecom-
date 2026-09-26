@@ -1,22 +1,15 @@
 export const rootPaths = {
   root: '/',
-  pageRoot: 'pages',
   authRoot: 'authentication',
-  errorRoot: 'error',
   dashboard: 'dashboard',
 };
 
+// Must mirror the routes declared in routes/router.tsx
 export default {
-  orders: `/${rootPaths.dashboard}/orders`,
-  users: `/${rootPaths.dashboard}/users`,
-  structures: `/${rootPaths.dashboard}/structures`,
-  barem: `/${rootPaths.dashboard}/barem`,
-  analytics: `/${rootPaths.dashboard}/admins/analytics`,
-  home: `/${rootPaths.dashboard}/home`,
-  me: `/${rootPaths.dashboard}/me`,
-  messages: `/${rootPaths.pageRoot}/messages`,
-  settings: `/${rootPaths.pageRoot}/settings`,
-  signin: `/${rootPaths.authRoot}/signin`,
+  signin: rootPaths.root,
   forgotPassword: `/${rootPaths.authRoot}/forgot-password`,
+  admins: `/${rootPaths.dashboard}/admins`,
+  users: `/${rootPaths.dashboard}/users`,
+  me: `/${rootPaths.dashboard}/me`,
   notFound: '/not-found',
 };

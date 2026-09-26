@@ -6,23 +6,24 @@ import PageLoader from 'components/loader/PageLoader';
 import MainLayout from 'layouts/main-layout';
 import paths, { rootPaths } from './paths';
 
-const App = lazy(() => import('App'));
 import HomeOrSignin from './HomeOrSignin';
-import ForgotPassword from 'pages/authentication/ForgotPassword';
-import Users from 'pages/users';
 import ProtectedRoute from 'ProtectedRoute';
-import Structures from 'pages/structures';
-import NotFoundPage from 'pages/not-found';
 import UserLayout from 'layouts/user-layout';
-import UserDashboard from 'pages/UserDashboard';
 import RedirectBasedOnRole from 'RedirectBasedRole';
-import MyProfile from 'pages/userProfile';
-import OrderDashboard from 'pages/ordres';
-import DataGridWithJson from 'pages/barem';
-import Archive from 'pages/archive';
-import DecomptesPage from 'pages/decomptes';
-import AdminComments from 'pages/admin/Comments';
-import AnalyticsDashboard from 'pages/admin/AnalyticsDashboard';
+
+const App = lazy(() => import('App'));
+const ForgotPassword = lazy(() => import('pages/authentication/ForgotPassword'));
+const Users = lazy(() => import('pages/users'));
+const Structures = lazy(() => import('pages/structures'));
+const NotFoundPage = lazy(() => import('pages/not-found'));
+const UserDashboard = lazy(() => import('pages/UserDashboard'));
+const MyProfile = lazy(() => import('pages/userProfile'));
+const OrderDashboard = lazy(() => import('pages/ordres'));
+const DataGridWithJson = lazy(() => import('pages/barem'));
+const Archive = lazy(() => import('pages/archive'));
+const DecomptesPage = lazy(() => import('pages/decomptes'));
+const AdminComments = lazy(() => import('pages/admin/Comments'));
+const AnalyticsDashboard = lazy(() => import('pages/admin/AnalyticsDashboard'));
 
 const router = createBrowserRouter(
   [
@@ -129,13 +130,19 @@ const router = createBrowserRouter(
           path: paths.me,
           element: (
             <ProtectedRoute>
-              <MyProfile />
+              <Suspense fallback={<PageLoader />}>
+                <MyProfile />
+              </Suspense>
             </ProtectedRoute>
           ),
         },
         {
           path: paths.notFound,
-          element: <NotFoundPage />,
+          element: (
+            <Suspense fallback={<PageLoader />}>
+              <NotFoundPage />
+            </Suspense>
+          ),
         },
         {
           path: '*',
