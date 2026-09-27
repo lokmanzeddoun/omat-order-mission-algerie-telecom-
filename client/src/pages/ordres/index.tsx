@@ -8,6 +8,7 @@ import type { RootState } from 'store/rootReducer';
 import { fetchAllOrders, fetchUserOrders } from 'components/orders/orderthunk';
 import type { IMission } from 'components/orders/orderReducer';
 import { useMissionActions } from 'components/orders/useMissionActions';
+import { useBulkArchive } from 'components/common/useBulkArchive';
 import { agentName, formatDateTime, missionDuration } from 'components/orders/format';
 import { DataTable, IconButton, PageHeader, StatusBadge, SummaryStrip, Tabs, type DataColumn } from 'components/ui';
 import { missionStatus } from 'constants/statusLabels';
@@ -68,6 +69,14 @@ export default function OrdresPage() {
 
   const detailPath = (m: IMission) => `${paths.admins}/ordres/${m.n_mission}`;
   const { actionsFor, dialogs } = useMissionActions({ admin: isAdmin, onChanged: refresh, detailPath });
+  const bulk = useBulkArchive<MissionRow>({
+    entity: 'missions',
+    mode: 'archive',
+    idOf: (m) => m.n_mission,
+    labelOf: (m) => `N° ${m.n_mission} · ${agentName(m.user)} · ${m.destination ?? '—'}`,
+    noun: ['ordre de mission', 'ordres de mission'],
+    onDone: refresh,
+  });
 
   const scoped = useMemo(
     () => (tab === 'mine' ? orders.filter((m) => m.user?.matricule === user?.matricule) : orders),
@@ -119,8 +128,10 @@ export default function OrdresPage() {
         }
         onRowDoubleClick={(m) => navigate(detailPath(m))}
         rowActions={actionsFor}
+        bulkActions={isAdmin ? bulk.actions : undefined}
       />
       {dialogs}
+      {bulk.dialog}
     </>
   );
 }

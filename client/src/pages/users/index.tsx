@@ -20,6 +20,7 @@ import { addOrder } from 'components/orders/orderthunk';
 import type { IMission } from 'components/orders/orderReducer';
 import MissionFormDialog from 'components/orders/MissionFormDialog';
 import FileImportButton from 'components/common/FileImportButton';
+import { useBulkArchive } from 'components/common/useBulkArchive';
 import {
   Badge,
   Button,
@@ -109,6 +110,14 @@ export default function UsersPage() {
   }, [dispatch]);
 
   const refresh = () => dispatch(getAllUsers());
+  const bulk = useBulkArchive<UserRow>({
+    entity: 'users',
+    mode: 'archive',
+    idOf: (u) => u.matricule,
+    labelOf: (u) => `${u.prenom} ${u.nom} (${u.matricule})`,
+    noun: ['utilisateur', 'utilisateurs'],
+    onDone: refresh,
+  });
 
   const rows = useMemo(() => {
     if (tab === 'users') return users.filter((u) => u.role === 'USER');
@@ -213,7 +222,9 @@ export default function UsersPage() {
             { label: t('actions.archive'), icon: <Archive />, tone: 'danger', onSelect: () => setToArchive(u) },
           ],
         })}
+        bulkActions={bulk.actions}
       />
+      {bulk.dialog}
 
       <UserFormDialog
         open={form !== null}
