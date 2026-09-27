@@ -64,7 +64,9 @@ function DrtLine({ label, value }: { label: string; value: string }) {
       >
         {label}
       </RP.Text>
-      <RP.Text style={{ fontSize: size.small, fontWeight: 700, color: color.ink }}>
+      <RP.Text
+        style={{ fontSize: size.small, fontWeight: 700, color: color.ink }}
+      >
         : {value}
       </RP.Text>
     </Row>
@@ -130,8 +132,13 @@ export function DocReference({
       </RP.Text>
       <RP.Text style={{ fontSize: size.lead, color: color.ink, marginTop: 1 }}>
         N° <RP.Text style={{ fontWeight: 700 }}>{numero}</RP.Text>
-        <RP.Text style={{ fontSize: size.body, color: color.muted }}> du </RP.Text>
-        <RP.Text style={{ fontWeight: 600, fontSize: size.value }}>{date}</RP.Text>
+        <RP.Text style={{ fontSize: size.body, color: color.muted }}>
+          {' '}
+          du{' '}
+        </RP.Text>
+        <RP.Text style={{ fontWeight: 600, fontSize: size.value }}>
+          {date}
+        </RP.Text>
       </RP.Text>
       {caption ? (
         <RP.Text

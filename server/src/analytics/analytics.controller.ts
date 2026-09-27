@@ -17,7 +17,7 @@ export class AnalyticsController {
   constructor(private readonly analyticsService: AnalyticsService) {}
 
   @Get()
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   @ApiOperation({ summary: 'Get analytics dashboard data' })
   @ApiQuery({
     name: 'exerciceId',

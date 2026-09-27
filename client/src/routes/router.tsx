@@ -25,6 +25,7 @@ const DecomptesPage = lazy(() => import('pages/decomptes'));
 const DecompteDetail = lazy(() => import('pages/decomptes/detail'));
 const AdminComments = lazy(() => import('pages/admin/Comments'));
 const AnalyticsDashboard = lazy(() => import('pages/admin/AnalyticsDashboard'));
+const ChangePassword = lazy(() => import('pages/authentication/ChangePassword'));
 
 /** Authenticated page area: role guard + shell + lazy page boundary. */
 const shell = (allowedRoles?: string[]): ReactNode => (
@@ -59,6 +60,16 @@ const router = createBrowserRouter(
             { index: true, element: <HomeOrSignin /> },
             { path: 'authentication/forgot-password', element: <ForgotPassword /> },
           ],
+        },
+        {
+          path: paths.changePassword,
+          element: (
+            <ProtectedRoute allowTemporaryPassword>
+              <Suspense fallback={<Loader />}>
+                <ChangePassword />
+              </Suspense>
+            </ProtectedRoute>
+          ),
         },
         {
           path: rootPaths.dashboard,

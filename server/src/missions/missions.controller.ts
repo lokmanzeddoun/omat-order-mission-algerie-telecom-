@@ -17,6 +17,7 @@ import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { Prisma, User } from '@prisma/client';
 import { Response } from 'express';
 import { BadRequestException } from '@nestjs/common';
+import { ReopenDto } from 'src/common/dto/reopen.dto';
 // Removed destination validator import - now just using string validation
 // import { isValidDestination } from '../utils/destination-validator';
 @Controller('missions')
@@ -154,5 +155,15 @@ export class MissionsController {
     @GetUser() actor: User,
   ) {
     return this.missionsService.downloadOrdre(+id, res, actor);
+  }
+
+  @Post(':id/reopen')
+  @Auth('SUPER_ADMIN')
+  reopen(
+    @Param('id') id: string,
+    @Body() body: ReopenDto,
+    @GetUser() actor: User,
+  ) {
+    return this.missionsService.reopen(+id, body.reason, actor);
   }
 }

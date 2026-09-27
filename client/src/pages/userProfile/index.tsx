@@ -26,7 +26,7 @@ const categoryLabel: Record<string, string> = {
 const passwordSchema = z
   .object({
     currentPassword: z.string().min(1, 'Saisissez votre mot de passe actuel.'),
-    password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères.'),
+    password: z.string().min(12, 'Le mot de passe doit contenir au moins 12 caractères.'),
     passwordConfirm: z.string().min(1, 'Confirmez le nouveau mot de passe.'),
   })
   .refine((v) => v.password === v.passwordConfirm, {
@@ -92,7 +92,7 @@ export default function MyProfile() {
               <PasswordInput autoComplete="current-password" {...register('currentPassword')} />
             </Field>
             <FormGrid>
-              <Field label="Nouveau mot de passe" hint="8 caractères minimum." error={errors.password?.message} required>
+              <Field label="Nouveau mot de passe" hint="12 caractères minimum." error={errors.password?.message} required>
                 <PasswordInput autoComplete="new-password" {...register('password')} />
               </Field>
               <Field label="Confirmer le mot de passe" error={errors.passwordConfirm?.message} required>

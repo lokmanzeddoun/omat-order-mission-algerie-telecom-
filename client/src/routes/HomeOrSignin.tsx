@@ -13,6 +13,9 @@ const HomeOrSignin: React.FC = () => {
   if (loading) return <PageLoader />;
 
   if (isAuthenticated) {
+    if (user?.mustChangePassword) {
+      return <Navigate to="/change-password" replace />;
+    }
     // Back to a scanned QR link after sign-in. Limited to /scan/ so a new user
     // on a shared machine isn't sent to the previous user's page.
     if (typeof from === 'string' && from.startsWith('/scan/')) {

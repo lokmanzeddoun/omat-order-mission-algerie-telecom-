@@ -1,12 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
-import { Category, Prisma } from '@prisma/client';
+import { Category } from '@prisma/client';
+import { CreateBaremDto, UpdateBaremDto } from './dto/barem.dto';
 
 @Injectable()
 export class BaremService {
   constructor(private readonly databaseService: DatabaseService) {}
 
-  create(createBaremDto: Prisma.BaremCreateInput) {
+  create(createBaremDto: CreateBaremDto) {
     return this.databaseService.barem.create({
       data: {
         ...createBaremDto,
@@ -26,7 +27,7 @@ export class BaremService {
     });
   }
 
-  update(id: number, updateBaremDto: Prisma.BaremUpdateInput) {
+  update(id: number, updateBaremDto: UpdateBaremDto) {
     return this.databaseService.barem.update({
       where: {
         id,

@@ -68,6 +68,8 @@ const ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 /** A random single-use password, e.g. `k7Qm-4xZp-Rt9w-hN3c` (~94 bits). */
 export function temporaryPassword(): string {
   return Array.from({ length: 4 }, () =>
-    Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join(''),
+    Array.from({ length: 4 }, () => ALPHABET[randomInt(ALPHABET.length)]).join(
+      '',
+    ),
   ).join('-');
 }

@@ -15,6 +15,7 @@ import { ExercicesService } from 'src/exercices/exercices.service';
 import { PdfService } from 'src/pdf/pdf.service';
 import { CommentsService } from 'src/comments/comments.service';
 import { AccessPolicy } from 'src/common/policy/access-policy';
+import { AuditService } from 'src/audit/audit.service';
 
 const barem = {
   id: 1,
@@ -103,6 +104,7 @@ describe('DecompteService', () => {
         },
         { provide: CommentsService, useValue: comments },
         { provide: PdfService, useValue: {} },
+        { provide: AuditService, useValue: { record: jest.fn() } },
       ],
     }).compile();
 
@@ -323,10 +325,7 @@ describe('DecompteService', () => {
     });
 
     it('stores parcours 0 as null and missing fees as 0', async () => {
-      await runCreate(
-        overnightDto({ fees_transport: undefined }),
-        N_MISSION,
-      );
+      await runCreate(overnightDto({ fees_transport: undefined }), N_MISSION);
       expect(createdData().parcours).toBeNull();
       expect(createdData().fees_transport).toBe(0);
     });
@@ -334,7 +333,7 @@ describe('DecompteService', () => {
 
   describe('acceptDecompte', () => {
     it('throws when the decompte does not exist', async () => {
-      db.decompte.findUnique.mockResolvedValue(null);
+      db.decompte.findFirst.mockResolvedValue(null);
       await expect(service.acceptDecompte(1, user)).rejects.toThrow(
         'Decompte with ID 1 not found.',
       );
@@ -353,15 +352,18 @@ describe('DecompteService', () => {
       await service.acceptDecompte(1, user, '   ');
       expect(db.decompte.update).toHaveBeenCalledWith({
         where: { n_decompte: 1 },
-        data: { status: DecompteStatus.ACCEPTED },
+        data: expect.objectContaining({
+          status: DecompteStatus.ACCEPTED,
+          decidedById: 42,
+        }),
       });
-      expect(comments.create).not.toHaveBeenCalled();
+      expect(comments.recordStatusComment).not.toHaveBeenCalled();
     });
 
     it('adds a comment by the admin when a message is given', async () => {
       givenDecompte(DecompteStatus.PENDING);
       await service.acceptDecompte(1, user, 'ok');
-      expect(comments.create).toHaveBeenCalledWith(
+      expect(comments.recordStatusComment).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Decompte #1 accepted: ok',
           status: 'ACCEPTED',
@@ -374,7 +376,7 @@ describe('DecompteService', () => {
 
   describe('rejectDecompte', () => {
     it('throws when the decompte does not exist', async () => {
-      db.decompte.findUnique.mockResolvedValue(null);
+      db.decompte.findFirst.mockResolvedValue(null);
       await expect(service.rejectDecompte(1, user, 'no')).rejects.toThrow(
         'Decompte with ID 1 not found.',
       );
@@ -393,9 +395,12 @@ describe('DecompteService', () => {
       await service.rejectDecompte(1, user, 'missing receipts');
       expect(db.decompte.update).toHaveBeenCalledWith({
         where: { n_decompte: 1 },
-        data: { status: DecompteStatus.REGECTED },
+        data: expect.objectContaining({
+          status: DecompteStatus.REGECTED,
+          decidedById: 42,
+        }),
       });
-      expect(comments.create).toHaveBeenCalledWith(
+      expect(comments.recordStatusComment).toHaveBeenCalledWith(
         expect.objectContaining({
           title: 'Decompte #1 rejected: missing receipts',
           status: 'REJECTED',
@@ -408,9 +413,9 @@ describe('DecompteService', () => {
   describe('create: which ordres can be validated', () => {
     it('404s on an unknown ordre', async () => {
       db.mission.findUnique.mockResolvedValue(null);
-      await expect(
-        runCreate(overnightDto(), N_MISSION),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(runCreate(overnightDto(), N_MISSION)).rejects.toBeInstanceOf(
+        NotFoundException,
+      );
     });
 
     it.each([
@@ -419,36 +424,36 @@ describe('DecompteService', () => {
       ['already has a décompte', { _count: { decompte: 1 } }],
     ])('refuses an ordre that is %s', async (_label, over) => {
       db.mission.findUnique.mockResolvedValue(mission(over));
-      await expect(
-        runCreate(overnightDto(), N_MISSION),
-      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(runCreate(overnightDto(), N_MISSION)).rejects.toBeInstanceOf(
+        BadRequestException,
+      );
       expect(db.$transaction).not.toHaveBeenCalled();
     });
   });
 
   describe('update', () => {
     beforeEach(() => {
-      db.decompte.findUniqueOrThrow = jest.fn();
+      db.decompte.findFirst = jest.fn();
     });
 
     it('refuses a décompte that is no longer pending', async () => {
-      db.decompte.findUniqueOrThrow.mockResolvedValue({
+      db.decompte.findFirst.mockResolvedValue({
         status: DecompteStatus.ACCEPTED,
         mission: mission(),
       });
-      await expect(service.update(1, overnightDto())).rejects.toThrow(
+      await expect(service.update(1, overnightDto(), user)).rejects.toThrow(
         BadRequestException,
       );
       expect(db.$transaction).not.toHaveBeenCalled();
     });
 
     it("recomputes with the mission's agent barème", async () => {
-      db.decompte.findUniqueOrThrow.mockResolvedValue({
+      db.decompte.findFirst.mockResolvedValue({
         status: DecompteStatus.PENDING,
         missionId: N_MISSION,
         mission: mission(),
       });
-      await service.update(1, overnightDto());
+      await service.update(1, overnightDto(), user);
       expect(db.barem.findFirstOrThrow).toHaveBeenCalledWith({
         where: { libell: Category.CADRE },
       });
@@ -465,21 +470,25 @@ describe('DecompteService', () => {
               n_decompte: 1,
               status: DecompteStatus.PENDING,
               soft_delete: false,
+              mission: { userId: 1 },
             },
             {
               n_decompte: 2,
               status: DecompteStatus.ACCEPTED,
               soft_delete: false,
+              mission: { userId: 1 },
             },
             {
               n_decompte: 3,
               status: DecompteStatus.PENDING,
               soft_delete: true,
+              mission: { userId: 1 },
             },
             {
               n_decompte: 4,
               status: DecompteStatus.PENDING,
               soft_delete: false,
+              mission: { userId: 1 },
             },
           ]),
           updateMany: jest.fn(),
@@ -495,7 +504,7 @@ describe('DecompteService', () => {
       const result = await service.bulkSetStatus(
         [1, 2, 3, 4, 5],
         'reject',
-        42,
+        user,
         'Justificatifs manquants',
       );
       expect(result).toEqual({
@@ -508,7 +517,10 @@ describe('DecompteService', () => {
       });
       expect(tx.decompte.updateMany).toHaveBeenCalledWith({
         where: { n_decompte: { in: [1, 4] } },
-        data: { status: DecompteStatus.REGECTED },
+        data: expect.objectContaining({
+          status: DecompteStatus.REGECTED,
+          decidedById: 42,
+        }),
       });
       expect(tx.commentaire.createMany.mock.calls[0][0].data).toEqual([
         expect.objectContaining({
@@ -522,15 +534,17 @@ describe('DecompteService', () => {
     });
 
     it('accepts without writing comments when there is no message', async () => {
-      await service.bulkSetStatus([1, 4], 'accept', 42);
+      await service.bulkSetStatus([1, 4], 'accept', user);
       expect(tx.decompte.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { status: DecompteStatus.ACCEPTED } }),
+        expect.objectContaining({
+          data: expect.objectContaining({ status: DecompteStatus.ACCEPTED }),
+        }),
       );
       expect(tx.commentaire.createMany).not.toHaveBeenCalled();
     });
 
     it('does not write anything when nothing is pending', async () => {
-      await service.bulkSetStatus([2, 3], 'accept', 42, 'ok');
+      await service.bulkSetStatus([2, 3], 'accept', user, 'ok');
       expect(tx.decompte.updateMany).not.toHaveBeenCalled();
       expect(tx.commentaire.createMany).not.toHaveBeenCalled();
     });

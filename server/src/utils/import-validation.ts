@@ -1,7 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import { ClassConstructor, plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import * as xlsx from 'xlsx';
+import ExcelJS from 'exceljs';
+import { Readable } from 'stream';
 import { MAX_IMPORT_ROWS } from './upload';
 
 /** One problem found in an imported spreadsheet. `row` is the Excel line number (header = 1). */
@@ -57,39 +58,67 @@ const clean = (v: unknown) => {
  * Reads the first sheet of an .xlsx or .csv file: finds each of `columns` in the header row,
  * then returns the non-empty rows keyed by DTO field.
  */
-export function readRows(
+export async function readRows(
   buffer: Buffer,
   columns: ImportColumn[],
   filename = '',
-): ImportRow[] {
-  let wb: xlsx.WorkBook;
+): Promise<ImportRow[]> {
+  const workbook = new ExcelJS.Workbook();
+  const isCsv = /\.csv$/i.test(filename);
   try {
-    wb = /\.csv$/i.test(filename)
-      ? // CSV: decode as UTF-8 (Excel omits the BOM) and keep cells as text ("012" stays "012").
-        xlsx.read(buffer.toString('utf8').replace(/^\uFEFF/, ''), {
-          type: 'string',
-          raw: true,
-        })
-      : xlsx.read(buffer, { type: 'buffer' });
-  } catch {
+    if (isCsv) {
+      await workbook.csv.read(
+        Readable.from(buffer.toString('utf8').replace(/^\uFEFF/, '')),
+        { map: (value) => value },
+      );
+    } else {
+      if (
+        buffer.length < 4 ||
+        buffer[0] !== 0x50 ||
+        buffer[1] !== 0x4b ||
+        buffer[2] !== 0x03 ||
+        buffer[3] !== 0x04
+      ) {
+        throw new BadRequestException('Signature XLSX invalide.');
+      }
+      await workbook.xlsx.load(buffer as unknown as ExcelJS.Buffer);
+    }
+  } catch (error) {
+    if (error instanceof BadRequestException) throw error;
     throw new BadRequestException('Fichier illisible.');
   }
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  if (!sheet?.['!ref']) throw new BadRequestException('Le fichier est vide.');
 
-  const lines = xlsx.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    blankrows: true,
-    defval: undefined,
-  });
-  if (lines.length - 1 > MAX_IMPORT_ROWS) {
+  const sheet = workbook.worksheets[0];
+  if (!sheet || sheet.rowCount === 0) {
+    throw new BadRequestException('Le fichier est vide.');
+  }
+  if (sheet.rowCount - 1 > MAX_IMPORT_ROWS) {
     throw new BadRequestException(
       `Trop de lignes (maximum ${MAX_IMPORT_ROWS}).`,
     );
   }
 
-  // Columns are matched by header name, so column order and extra columns don't matter.
-  const header = (lines[0] ?? []).map(normalize);
+  const valueOf = (cell: ExcelJS.Cell): unknown => {
+    const value = cell.value;
+    if (
+      cell.type === ExcelJS.ValueType.Formula ||
+      (value && typeof value === 'object' && 'formula' in value)
+    ) {
+      throw new BadRequestException(
+        `Les formules sont interdites (ligne ${cell.row}, colonne ${cell.col}).`,
+      );
+    }
+    if (value instanceof Date) return value.toISOString();
+    if (value && typeof value === 'object') return cell.text;
+    return value;
+  };
+
+  const headerRow = sheet.getRow(1);
+  const header: string[] = [];
+  for (let col = 1; col <= sheet.actualColumnCount; col += 1) {
+    header.push(normalize(valueOf(headerRow.getCell(col))));
+  }
+
   const index = columns.map((col) =>
     header.findIndex((h) => col.headers.map(normalize).includes(h)),
   );
@@ -103,18 +132,28 @@ export function readRows(
   if (headerErrors.length) throw new ImportValidationError(headerErrors);
 
   const rows: ImportRow[] = [];
-  lines.slice(1).forEach((line, n) => {
+  for (let rowNumber = 2; rowNumber <= sheet.rowCount; rowNumber += 1) {
+    const row = sheet.getRow(rowNumber);
     const data: Record<string, unknown> = {};
-    columns.forEach((col, i) => {
-      if (index[i] !== -1) data[col.field] = clean(line?.[index[i]]);
+    columns.forEach((column, i) => {
+      if (index[i] !== -1) {
+        data[column.field] = clean(valueOf(row.getCell(index[i] + 1)));
+      }
     });
-    if (Object.values(data).some((v) => v !== undefined)) {
-      rows.push({ row: n + 2, data });
+    if (Object.values(data).some((value) => value !== undefined)) {
+      rows.push({ row: rowNumber, data });
     }
-  });
-  if (!rows.length)
+  }
+  if (!rows.length) {
     throw new BadRequestException('Le fichier ne contient aucune ligne.');
+  }
   return rows;
+}
+
+/** Neutralizes spreadsheet formula injection in CSV/XLSX exports. */
+export function sanitizeCell(value: unknown): unknown {
+  if (typeof value !== 'string') return value;
+  return /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
 }
 
 /** Validates each row against `dto`; returns the typed rows and every failure. */

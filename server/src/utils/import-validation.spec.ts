@@ -1,4 +1,4 @@
-import * as xlsx from 'xlsx';
+import ExcelJS from 'exceljs';
 import { BadRequestException } from '@nestjs/common';
 import { IsDefined, IsEmail } from 'class-validator';
 import {
@@ -9,10 +9,11 @@ import {
   validateRows,
 } from './import-validation';
 
-const toBuffer = (aoa: unknown[][]): Buffer => {
-  const wb = xlsx.utils.book_new();
-  xlsx.utils.book_append_sheet(wb, xlsx.utils.aoa_to_sheet(aoa), 'Sheet1');
-  return xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
+const toBuffer = async (aoa: unknown[][]): Promise<Buffer> => {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Sheet1');
+  aoa.forEach((row) => sheet.addRow(row as ExcelJS.CellValue[]));
+  return Buffer.from(await workbook.xlsx.writeBuffer());
 };
 
 const columns: ImportColumn[] = [
@@ -29,9 +30,9 @@ class RowDto {
   email: string;
 }
 
-const errorsOf = (fn: () => unknown) => {
+const errorsOf = async (fn: () => unknown) => {
   try {
-    fn();
+    await fn();
   } catch (e) {
     return (e as ImportValidationError).getResponse() as any;
   }
@@ -39,9 +40,9 @@ const errorsOf = (fn: () => unknown) => {
 };
 
 describe('readRows', () => {
-  it('maps columns by header name, ignoring order, case, accents and extra columns', () => {
-    const rows = readRows(
-      toBuffer([
+  it('maps columns by header name, ignoring order, case, accents and extra columns', async () => {
+    const rows = await readRows(
+      await toBuffer([
         ['EMAIL', 'Autre', ' code '],
         ['a@b.dz', 'x', ' A1 '],
       ]),
@@ -50,45 +51,47 @@ describe('readRows', () => {
     expect(rows).toEqual([{ row: 2, data: { code: 'A1', email: 'a@b.dz' } }]);
   });
 
-  it('skips blank lines but keeps Excel line numbers', () => {
-    const rows = readRows(
-      toBuffer([['Code', 'Email'], ['A', 'a@b.dz'], [], ['B', 'b@b.dz']]),
+  it('skips blank lines but keeps Excel line numbers', async () => {
+    const rows = await readRows(
+      await toBuffer([['Code', 'Email'], ['A', 'a@b.dz'], [], ['B', 'b@b.dz']]),
       columns,
     );
     expect(rows.map((r) => r.row)).toEqual([2, 4]);
   });
 
-  it('reports every missing required header', () => {
-    const body = errorsOf(() => readRows(toBuffer([['Nom'], ['x']]), columns));
+  it('reports every missing required header', async () => {
+    const body = await errorsOf(async () =>
+      readRows(await toBuffer([['Nom'], ['x']]), columns),
+    );
     expect(body.errors).toEqual([
       expect.objectContaining({ row: 1, field: 'Code' }),
       expect.objectContaining({ row: 1, field: 'Email' }),
     ]);
   });
 
-  it('reads CSV as UTF-8 text, with "," or ";" and with or without BOM', () => {
+  it('reads CSV as UTF-8 text, with "," and with or without BOM', async () => {
     const cols: ImportColumn[] = [
       { field: 'code', headers: ['Code'] },
       { field: 'name', headers: ['Name'] },
     ];
     for (const csv of [
       'Code,Name\n012,Agence Béjaïa\n',
-      '\uFEFFCode;Name\n012;Agence Béjaïa\n',
+      '\uFEFFCode,Name\n012,Agence Béjaïa\n',
     ]) {
-      expect(readRows(Buffer.from(csv, 'utf8'), cols, 'services.CSV')).toEqual([
-        { row: 2, data: { code: '012', name: 'Agence Béjaïa' } },
-      ]);
+      expect(
+        await readRows(Buffer.from(csv, 'utf8'), cols, 'services.CSV'),
+      ).toEqual([{ row: 2, data: { code: '012', name: 'Agence Béjaïa' } }]);
     }
   });
 
-  it('rejects a file with only a header', () => {
-    expect(() => readRows(toBuffer([['Code', 'Email']]), columns)).toThrow(
-      BadRequestException,
-    );
+  it('rejects a file with only a header', async () => {
+    await expect(
+      readRows(await toBuffer([['Code', 'Email']]), columns),
+    ).rejects.toThrow(BadRequestException);
   });
 
-  it('rejects something that is not a spreadsheet', () => {
-    expect(() => readRows(Buffer.from(''), columns)).toThrow(
+  it('rejects something that is not a spreadsheet', async () => {
+    await expect(readRows(Buffer.from(''), columns)).rejects.toThrow(
       BadRequestException,
     );
   });

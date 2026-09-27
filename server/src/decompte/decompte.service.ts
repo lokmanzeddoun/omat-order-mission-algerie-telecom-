@@ -22,6 +22,7 @@ import { Response as ExpressResponse } from 'express';
 import { PdfService } from 'src/pdf/pdf.service';
 import { toDecomptePdfData } from 'src/pdf/mappers/decompte.mapper';
 import { AccessPolicy } from 'src/common/policy/access-policy';
+import { AuditService } from 'src/audit/audit.service';
 
 /** Comment titles written when a décompte is accepted or rejected. */
 export const statusCommentTitle = {
@@ -41,7 +42,37 @@ export class DecompteService {
     private readonly commentsService: CommentsService,
     private readonly pdfService: PdfService,
     private readonly accessPolicy: AccessPolicy,
+    private readonly audit: AuditService,
   ) {}
+
+  async reopen(id: number, reason: string, actor: User) {
+    const current = await this.databaseService.decompte.findUnique({
+      where: { n_decompte: id },
+    });
+    if (!current)
+      throw new NotFoundException(`Decompte with ID ${id} not found.`);
+    if (current.status === DecompteStatus.PENDING) {
+      throw new BadRequestException('Ce décompte est déjà en attente.');
+    }
+    const updated = await this.databaseService.decompte.update({
+      where: { n_decompte: id },
+      data: {
+        status: DecompteStatus.PENDING,
+        decidedById: null,
+        decidedAt: null,
+      },
+    });
+    await this.audit.record({
+      actorMatricule: actor.matricule,
+      action: 'DECOMPTE_REOPENED',
+      entity: 'Decompte',
+      entityId: id,
+      before: current,
+      after: updated,
+      reason,
+    });
+    return updated;
+  }
 
   private async getCurrentExerciceId(): Promise<number | null> {
     await this.exercicesService.ensureCurrentForNow();
@@ -51,11 +82,7 @@ export class DecompteService {
     return ex?.id ?? null;
   }
 
-  async create(
-    createDecompteDto: CreateDecompteDto,
-    id: number,
-    actor: User,
-  ) {
+  async create(createDecompteDto: CreateDecompteDto, id: number, actor: User) {
     const mission = await this.databaseService.mission.findUnique({
       where: {
         n_mission: id,

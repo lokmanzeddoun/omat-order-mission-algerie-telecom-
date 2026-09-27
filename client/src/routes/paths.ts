@@ -8,6 +8,7 @@ export const rootPaths = {
 export default {
   signin: rootPaths.root,
   forgotPassword: `/${rootPaths.authRoot}/forgot-password`,
+  changePassword: '/change-password',
   admins: `/${rootPaths.dashboard}/admins`,
   users: `/${rootPaths.dashboard}/users`,
   me: `/${rootPaths.dashboard}/me`,

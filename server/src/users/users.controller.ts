@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   UploadedFile,
   UseInterceptors,
   HttpException,
@@ -50,9 +49,12 @@ export class UsersController {
   }
 
   @Post('upload')
-  @Auth('SUPER_ADMIN')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @UseInterceptors(FileInterceptor('file', multerOptions))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @GetUser() actor: AuthenticatedUser,
+  ) {
     if (!file) {
       throw new HttpException(
         `Please provide correct file name with extension ${JSON.stringify(SUPPORTED_FILES)}`,
@@ -64,7 +66,7 @@ export class UsersController {
       buffer: file.buffer, // Store the file buffer to process the Excel file
     };
     // file is the uploaded file
-    return this.usersService.uploadUsers(importUsers);
+    return this.usersService.uploadUsers(importUsers, actor);
   }
 
   @Get('export')

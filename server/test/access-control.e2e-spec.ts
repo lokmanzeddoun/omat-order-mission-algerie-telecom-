@@ -212,14 +212,22 @@ describe('Access control (e2e)', () => {
       request(server())
         .post('/comments')
         .set(s.userA.auth)
-        .send({ title: 'question', type: 'OTHER', decompteId: fix.decomptes.userA })
+        .send({
+          title: 'question',
+          type: 'OTHER',
+          decompteId: fix.decomptes.userA,
+        })
         .expect(201));
 
     it("a user cannot comment on another user's décompte (404)", () =>
       request(server())
         .post('/comments')
         .set(s.userB.auth)
-        .send({ title: 'snoop', type: 'OTHER', decompteId: fix.decomptes.userA })
+        .send({
+          title: 'snoop',
+          type: 'OTHER',
+          decompteId: fix.decomptes.userA,
+        })
         .expect(404));
 
     it('a client-set status is ignored (server forces PENDING)', async () => {

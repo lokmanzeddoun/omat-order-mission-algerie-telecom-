@@ -7,7 +7,7 @@ import { PrismaModule, loggingMiddleware } from 'nestjs-prisma';
 import config from './common/configs/config';
 import { validateEnv } from './common/configs/env.validation';
 import { pinoParams } from './common/configs/logger';
-import { Logger, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AppThrottlerGuard } from './auth/guards/app-throttler.guard';
@@ -25,6 +25,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './roles/roles.guard';
 import { PolicyModule } from './common/policy/policy.module';
 import { PasswordChangeGuard } from './auth/guards/password-change.guard';
+import { AuditModule } from './audit/audit.module';
 @Module({
   imports: [
     // First: it loads .env, which pinoParams() below reads.
@@ -34,6 +35,7 @@ import { PasswordChangeGuard } from './auth/guards/password-change.guard';
       validate: validateEnv,
     }),
     PolicyModule,
+    AuditModule,
     PinoLoggerModule.forRoot(pinoParams()),
     // Default: 300 requests per minute per client IP. Credential routes are
     // stricter (see AuthController).
@@ -47,7 +49,7 @@ import { PasswordChangeGuard } from './auth/guards/password-change.guard';
         middlewares: [
           // configure your prisma middleware
           loggingMiddleware({
-            logger: new Logger('PrismaMiddleware'),
+            logger: console,
             logLevel: 'log',
           }),
         ],

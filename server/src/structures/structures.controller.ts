@@ -5,7 +5,6 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
   UseInterceptors,
   UploadedFile,
   HttpException,
@@ -45,7 +44,7 @@ export class StructuresController {
   }
 
   @Get('export')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   @ApiOperation({
     summary: 'EXPORT STRUCTURES TO EXCEL',
     description: 'Export all structures from database to Excel file',
@@ -73,7 +72,7 @@ export class StructuresController {
   }
 
   @Patch(':id/archive')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   @ApiOperation({
     summary: 'ARCHIVE STRUCTURE',
     description: 'Archive a structure by setting soft_delete to true',

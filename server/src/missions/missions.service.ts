@@ -16,6 +16,7 @@ import { Response as ExpressResponse } from 'express';
 import { PdfService } from 'src/pdf/pdf.service';
 import { toOrdrePdfData } from 'src/pdf/mappers/ordre.mapper';
 import { AccessPolicy } from 'src/common/policy/access-policy';
+import { AuditService } from 'src/audit/audit.service';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 @Injectable()
 export class MissionsService {
@@ -26,7 +27,37 @@ export class MissionsService {
     private readonly exercicesService: ExercicesService,
     private readonly pdfService: PdfService,
     private readonly accessPolicy: AccessPolicy,
+    private readonly audit: AuditService,
   ) {}
+
+  async reopen(id: number, reason: string, actor: User) {
+    const current = await this.databaseService.mission.findUnique({
+      where: { n_mission: id },
+    });
+    if (!current)
+      throw new NotFoundException(`Ordre de mission ${id} introuvable.`);
+    if (current.status !== MissionStatus.COMPLETED) {
+      throw new BadRequestException('Seul un ordre validé peut être rouvert.');
+    }
+    const updated = await this.databaseService.mission.update({
+      where: { n_mission: id },
+      data: {
+        status: MissionStatus.INPROGRESS,
+        validatedById: null,
+        validatedAt: null,
+      },
+    });
+    await this.audit.record({
+      actorMatricule: actor.matricule,
+      action: 'MISSION_REOPENED',
+      entity: 'Mission',
+      entityId: id,
+      before: current,
+      after: updated,
+      reason,
+    });
+    return updated;
+  }
   private async getCurrentExerciceId(): Promise<number | null> {
     await this.exercicesService.ensureCurrentForNow();
     const ex = await this.databaseService['exercice'].findFirst({
@@ -337,39 +368,29 @@ export class MissionsService {
   }
 
   async remove(id: number, user: User) {
-    try {
-      // Scope first: an ADMIN only sees their structure, a USER only their own
-      // (ADR 0001) — an out-of-scope id is a 404, not a hint that it exists.
-      const mission = await this.databaseService.mission.findFirst({
-        where: { n_mission: id, ...this.accessPolicy.scopeMissions(user) },
-      });
+    // Scope first: an ADMIN only sees their structure, a USER only their own
+    // (ADR 0001) — an out-of-scope id is a 404, not a hint that it exists.
+    const mission = await this.databaseService.mission.findFirst({
+      where: { n_mission: id, ...this.accessPolicy.scopeMissions(user) },
+    });
 
-      if (!mission) {
-        throw new NotFoundException(`Mission with ID ${id} not found`);
-      }
-
-      // Agents may only cancel their own ordres, and only before validation.
-      if (user.role === 'USER' && mission.status === MissionStatus.COMPLETED) {
-        throw new ForbiddenException('You cannot cancel this mission');
-      }
-
-      if (mission.soft_delete) {
-        throw new BadRequestException(
-          `Mission with ID ${id} is already deleted`,
-        );
-      }
-
-      return await this.databaseService.mission.update({
-        where: {
-          n_mission: id,
-        },
-        data: archiveStamp(user.matricule),
-      });
-    } catch (error) {
-      // HTTP exceptions pass through; anything else goes to the global
-      // filters, which never echo the internal message to the client.
-      throw error;
+    if (!mission) {
+      throw new NotFoundException(`Mission with ID ${id} not found`);
     }
+
+    // Agents may only cancel their own ordres, and only before validation.
+    if (user.role === 'USER' && mission.status === MissionStatus.COMPLETED) {
+      throw new ForbiddenException('You cannot cancel this mission');
+    }
+
+    if (mission.soft_delete) {
+      throw new BadRequestException(`Mission with ID ${id} is already deleted`);
+    }
+
+    return this.databaseService.mission.update({
+      where: { n_mission: id },
+      data: archiveStamp(user.matricule),
+    });
   }
   async downloadOrdre(id: number, res: ExpressResponse, actor: User) {
     // A PDF is business data: only render it for a mission in the caller's scope.

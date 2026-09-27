@@ -7,7 +7,6 @@ import {
 } from '@nestjs/common';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
-import * as xlsx from 'xlsx';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
 import { Response } from 'express';
 import {
@@ -18,6 +17,7 @@ import {
   validateRows,
 } from 'src/utils/import-validation';
 import { ImportStructureDto } from './dto/import-structure.dto';
+import { exportWorkbook } from 'src/utils/export-workbook';
 
 /** Expected columns of the services spreadsheet, matched by header name (same as the export). */
 const STRUCTURE_IMPORT_COLUMNS: ImportColumn[] = [
@@ -81,7 +81,11 @@ export class StructuresService {
    * if anything is wrong nothing is written and every problem is returned as a 400.
    */
   async uploadStructure(file: ImportExcel) {
-    const rows = readRows(file.buffer, STRUCTURE_IMPORT_COLUMNS, file.originalname);
+    const rows = await readRows(
+      file.buffer,
+      STRUCTURE_IMPORT_COLUMNS,
+      file.originalname,
+    );
     const { items, errors } = await validateRows(
       rows,
       ImportStructureDto,
@@ -136,9 +140,6 @@ export class StructuresService {
         ],
       });
 
-      // Create workbook and worksheet
-      const workbook = xlsx.utils.book_new();
-
       // Prepare data for Excel export
       const structuresData = structures.map((structure) => ({
         Code: structure.code,
@@ -146,17 +147,7 @@ export class StructuresService {
         'Number of Users': structure.users.length,
       }));
 
-      // Convert data to worksheet
-      const worksheet = xlsx.utils.json_to_sheet(structuresData);
-
-      // Add worksheet to workbook
-      xlsx.utils.book_append_sheet(workbook, worksheet, 'Structures');
-
-      // Generate Excel buffer
-      const excelBuffer = xlsx.write(workbook, {
-        type: 'buffer',
-        bookType: 'xlsx',
-      });
+      const excelBuffer = await exportWorkbook('Structures', structuresData);
 
       // Set response headers for file download
       const filename = `structures_export_${new Date().toISOString().split('T')[0]}.xlsx`;

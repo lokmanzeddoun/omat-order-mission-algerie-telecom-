@@ -18,6 +18,7 @@ import { RejectDecompteDto } from './dto/reject-decompte.dto';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { User } from '@prisma/client';
+import { ReopenDto } from 'src/common/dto/reopen.dto';
 import { BulkAcceptDto, BulkRejectDto } from './dto/bulk-status.dto';
 import { Response } from 'express';
 
@@ -140,5 +141,15 @@ export class DecompteController {
       user,
       rejectDecompteDto.message,
     );
+  }
+
+  @Post(':id/reopen')
+  @Auth('SUPER_ADMIN')
+  reopen(
+    @Param('id') id: string,
+    @Body() body: ReopenDto,
+    @GetUser() actor: User,
+  ) {
+    return this.decompteService.reopen(+id, body.reason, actor);
   }
 }

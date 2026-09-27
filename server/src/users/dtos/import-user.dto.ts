@@ -6,10 +6,9 @@ import {
   IsOptional,
   IsPositive,
   IsString,
-  MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { Category, Role } from '@prisma/client';
+import { Category } from '@prisma/client';
 
 const REQUIRED = { message: 'Champ obligatoire' };
 const toText = ({ value }: { value: unknown }) =>
@@ -17,8 +16,8 @@ const toText = ({ value }: { value: unknown }) =>
 const toUpper = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim().toUpperCase() : value;
 
-/** One row of the users spreadsheet. Password is checked in the service (only required for new users). */
-export class importUserDto {
+/** Importable user fields. Role and password columns are deliberately ignored. */
+export class ImportUserRowDto {
   @IsDefined(REQUIRED)
   @Transform(({ value }) =>
     typeof value === 'string' && /^\d+$/.test(value.trim())
@@ -42,20 +41,6 @@ export class importUserDto {
   @IsDefined(REQUIRED)
   @IsEmail({}, { message: 'Adresse email invalide' })
   email: string;
-
-  @IsOptional()
-  @Transform(toText)
-  @MinLength(6, {
-    message: 'Le mot de passe doit contenir au moins 6 caractères',
-  })
-  password?: string;
-
-  @IsDefined(REQUIRED)
-  @Transform(toUpper)
-  @IsEnum(Role, {
-    message: `Rôle invalide (valeurs acceptées : ${Object.values(Role).join(', ')})`,
-  })
-  role: Role;
 
   @IsDefined(REQUIRED)
   @Transform(toUpper)

@@ -20,7 +20,10 @@ describe('Public-route metadata (e2e)', () => {
       imports: [AppModule, DiscoveryModule],
     })
       .overrideProvider(PdfService)
-      .useValue({ renderOrdre: async () => Buffer.from(''), renderDecompte: async () => Buffer.from('') })
+      .useValue({
+        renderOrdre: async () => Buffer.from(''),
+        renderDecompte: async () => Buffer.from(''),
+      })
       .compile();
     app = moduleRef.createNestApplication({ logger: false });
     await app.init();
@@ -39,10 +42,11 @@ describe('Public-route metadata (e2e)', () => {
       const proto = Object.getPrototypeOf(instance);
       const classPublic = reflector.get<boolean>(IS_PUBLIC_KEY, metatype);
       for (const method of Object.getOwnPropertyNames(proto)) {
-        if (method === 'constructor' || typeof proto[method] !== 'function') {
+        const handler = Object.getOwnPropertyDescriptor(proto, method)?.value;
+        if (method === 'constructor' || typeof handler !== 'function') {
           continue;
         }
-        const handlerPublic = reflector.get<boolean>(IS_PUBLIC_KEY, proto[method]);
+        const handlerPublic = reflector.get<boolean>(IS_PUBLIC_KEY, handler);
         if (classPublic || handlerPublic) {
           publicRoutes.push(`${metatype.name}.${method}`);
         }

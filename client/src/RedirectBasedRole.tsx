@@ -9,6 +9,9 @@ const RedirectBasedOnRole = () => {
   if (!isAuthenticated) {
     return <Navigate to="/" replace />; // Redirect to login if not authenticated
   }
+  if (user.mustChangePassword) {
+    return <Navigate to={paths.changePassword} replace />;
+  }
 
   // Redirect based on role
   if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN') {

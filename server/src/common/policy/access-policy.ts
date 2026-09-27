@@ -48,6 +48,19 @@ export class AccessPolicy {
     return { userId: actor.matricule };
   }
 
+  scopeUsers(actor: Actor): Prisma.UserWhereInput {
+    if (this.isSuper(actor)) return {};
+    if (this.isAdmin(actor)) {
+      return { serviceId: this.adminStructure(actor) };
+    }
+    return { matricule: actor.matricule };
+  }
+
+  scopeStructures(actor: Actor): Prisma.StructureWhereInput {
+    if (this.isSuper(actor)) return {};
+    return { code: actor.serviceId ?? NO_STRUCTURE };
+  }
+
   scopeDecomptes(actor: Actor): Prisma.DecompteWhereInput {
     if (this.isSuper(actor)) return {};
     if (this.isAdmin(actor))
@@ -68,6 +81,17 @@ export class AccessPolicy {
     if (this.isAdmin(actor))
       return Boolean(actor.serviceId && actor.serviceId === targetServiceId);
     return false;
+  }
+
+  canAccessUser(
+    actor: Actor,
+    target: Pick<User, 'matricule' | 'serviceId'>,
+  ): boolean {
+    if (this.isSuper(actor)) return true;
+    if (this.isAdmin(actor)) {
+      return Boolean(actor.serviceId && actor.serviceId === target.serviceId);
+    }
+    return actor.matricule === target.matricule;
   }
 
   /**

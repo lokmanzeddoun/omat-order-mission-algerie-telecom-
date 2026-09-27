@@ -176,6 +176,22 @@ model Exercice {
   decomptes Decompte[]
 }
 
+model AuditLog {
+  id              Int      @id @default(autoincrement())
+  actorMatricule  Int?
+  action          String
+  entity          String
+  entityId        String
+  before          Json?
+  after           Json?
+  reason          String?
+  ip              String?
+  at              DateTime @default(now())
+
+  @@index([actorMatricule, at])
+  @@index([entity, entityId, at])
+}
+
 
 enum Role {
   USER

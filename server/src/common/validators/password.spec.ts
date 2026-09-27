@@ -32,7 +32,12 @@ describe('password policy', () => {
   });
 
   it('refuses a password built from who the user is', () => {
-    const user = { nom: 'Benali', prenom: 'Ahmed', email: 'ahmed.benali@at.dz', matricule: 12345 };
+    const user = {
+      nom: 'Benali',
+      prenom: 'Ahmed',
+      email: 'ahmed.benali@at.dz',
+      matricule: 12345,
+    };
     expect(personalPasswordProblem('my-benali-2026-pass', user)).not.toBeNull();
     expect(personalPasswordProblem('ahmed.benali-rocks', user)).not.toBeNull();
     expect(personalPasswordProblem('pass-12345-word!', user)).not.toBeNull();

@@ -1,13 +1,26 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { DatabaseService } from 'src/database/database.service';
+import { Role, User } from '@prisma/client';
+import ExcelJS from 'exceljs';
+import { AccessPolicy } from 'src/common/policy/access-policy';
+
+const SUPER_ADMIN = {
+  matricule: 999,
+  role: Role.SUPER_ADMIN,
+  serviceId: null,
+} as User;
 
 describe('UsersService', () => {
   let service: UsersService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      providers: [UsersService, { provide: DatabaseService, useValue: {} }],
+      providers: [
+        UsersService,
+        AccessPolicy,
+        { provide: DatabaseService, useValue: {} },
+      ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
@@ -19,7 +32,6 @@ describe('UsersService', () => {
 });
 
 describe('UsersService.uploadUsers', () => {
-  const xlsx = require('xlsx');
   const HEADER = [
     'Matricule',
     'Nom',
@@ -31,16 +43,13 @@ describe('UsersService.uploadUsers', () => {
     'Grade',
     'ServiceId',
   ];
-  const file = (...rows: unknown[][]) => {
-    const wb = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(
-      wb,
-      xlsx.utils.aoa_to_sheet([HEADER, ...rows]),
-      'S',
-    );
+  const file = async (...rows: unknown[][]) => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet('S');
+    [HEADER, ...rows].forEach((row) => sheet.addRow(row));
     return {
       originalname: 'u.xlsx',
-      buffer: xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }),
+      buffer: Buffer.from(await workbook.xlsx.writeBuffer()),
     };
   };
 
@@ -56,7 +65,7 @@ describe('UsersService.uploadUsers', () => {
       structure: { findMany: jest.fn().mockResolvedValue([{ code: 'S1' }]) },
       $transaction: jest.fn().mockResolvedValue([]),
     };
-    service = new UsersService(db);
+    service = new UsersService(db, new AccessPolicy());
   });
 
   const errorsOf = async (p: Promise<unknown>) => {
@@ -73,12 +82,16 @@ describe('UsersService.uploadUsers', () => {
       .mockResolvedValueOnce([{ matricule: 2 }]) // existing matricules
       .mockResolvedValueOnce([]); // email owners
     const result = await service.uploadUsers(
-      file(
+      await file(
         [1, 'A', 'B', 'a@x.dz', 'secret1', 'user', 'cadre', 'G', 'S1'],
         [2, 'C', 'D', 'c@x.dz', '', 'ADMIN', 'CADRE', 'G', ''],
       ),
+      SUPER_ADMIN,
     );
-    expect(result).toEqual({ created: 1, updated: 1 });
+    expect(result).toMatchObject({ created: 1, updated: 1 });
+    expect(result.temporaryPasswords).toEqual([
+      expect.objectContaining({ matricule: 1 }),
+    ]);
     expect(db.$transaction).toHaveBeenCalledTimes(1);
     const created = db.user.create.mock.calls[0][0].data;
     expect(created).toMatchObject({
@@ -99,11 +112,12 @@ describe('UsersService.uploadUsers', () => {
       .mockResolvedValueOnce([{ matricule: 99, email: 'taken@x.dz' }]);
     const errors = await errorsOf(
       service.uploadUsers(
-        file(
+        await file(
           ['abc', '', 'B', 'not-an-email', 'secret1', 'BOSS', 'CADRE', 'G', ''],
           [3, 'A', 'B', 'taken@x.dz', '', 'USER', 'CADRE', 'G', 'NOPE'],
           [3, 'A', 'B', 'z@x.dz', 'secret1', 'USER', 'CADRE', 'G', ''],
         ),
+        SUPER_ADMIN,
       ),
     );
     expect(errors.map((e: any) => [e.row, e.field])).toEqual(
@@ -111,8 +125,6 @@ describe('UsersService.uploadUsers', () => {
         [2, 'Matricule'],
         [2, 'Nom'],
         [2, 'Email'],
-        [2, 'Role'],
-        [3, 'Password'],
         [3, 'Email'],
         [3, 'ServiceId'],
         [4, 'Matricule'],
@@ -121,39 +133,4 @@ describe('UsersService.uploadUsers', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
     expect(db.user.create).not.toHaveBeenCalled();
   });
-});
-
-it('never echoes a rejected password back', async () => {
-  const xlsx = require('xlsx');
-  const wb = xlsx.utils.book_new();
-  xlsx.utils.book_append_sheet(
-    wb,
-    xlsx.utils.aoa_to_sheet([
-      [
-        'Matricule',
-        'Nom',
-        'Prenom',
-        'Email',
-        'Password',
-        'Role',
-        'Category',
-        'Grade',
-      ],
-      [1, 'A', 'B', 'a@x.dz', 'abc', 'USER', 'CADRE', 'G'],
-    ]),
-    'S',
-  );
-  const db: any = {
-    user: { findMany: jest.fn().mockResolvedValue([]) },
-    structure: { findMany: jest.fn().mockResolvedValue([]) },
-  };
-  const err: any = await new UsersService(db)
-    .uploadUsers({
-      originalname: 'u.xlsx',
-      buffer: xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' }),
-    })
-    .catch((e) => e);
-  const pwd = err.getResponse().errors.find((e: any) => e.field === 'Password');
-  expect(pwd.message).toMatch(/6 caractères/);
-  expect(pwd).not.toHaveProperty('value', 'abc');
 });
