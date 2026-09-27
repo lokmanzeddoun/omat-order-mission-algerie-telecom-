@@ -38,5 +38,6 @@
   "decompteArchived": "Décompte archivé avec succès",
   "commentAdded": "Commentaire ajouté avec succès",
   "missionsLoadFailed": "Impossible de charger les ordres de mission.",
-  "decomptesLoadFailed": "Impossible de charger les décomptes."
+  "decomptesLoadFailed": "Impossible de charger les décomptes.",
+  "recapExported": "Récapitulatif exporté avec succès"
 }

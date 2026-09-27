@@ -8,7 +8,7 @@
   "kpis": "Indicateurs clés",
   "validatedShare": "{{pct}} validés",
   "acceptedShare": "{{pct}} acceptés",
-  "activeAgents": "Agents actifs",
+  "activeAgents": "Employés actifs",
   "average": "Moyenne : {{amount}}",
   "acceptedAmount": "Montant accepté",
   "pendingDecomptes": "Décomptes en attente",
@@ -21,5 +21,22 @@
   "byDirection": "Par direction",
   "byDirectionCaption": "Ordres de mission et montants par direction",
   "transportModes": "Moyens de transport",
-  "topDestinations": "Principales destinations"
+  "topDestinations": "Principales destinations",
+  "monthlyRecap": {
+    "title": "Récapitulatif mensuel des décomptes",
+    "caption": "Nombre et montants des décomptes par mois et par statut",
+    "month": "Mois",
+    "count": "Nb décomptes",
+    "pending": "En attente",
+    "accepted": "Acceptés",
+    "rejected": "Rejetés",
+    "nb": "Nb",
+    "amount": "Montant",
+    "totalAmount": "Montant total",
+    "fees": "Frais transport",
+    "distance": "Km parcourus",
+    "agents": "Employés concernés",
+    "total": "Total",
+    "exportExcel": "Exporter (Excel)"
+  }
 }

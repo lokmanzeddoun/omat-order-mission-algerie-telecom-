@@ -1,7 +1,7 @@
 {
   "archivedAt": "Archivé le",
   "archivedBy": "Archivé par",
-  "attachedAgents": "Agents rattachés",
+  "attachedAgents": "Employés rattachés",
   "what": {
     "mission": "l’ordre de mission N° {{n}}",
     "decompte": "le décompte N° {{n}}",

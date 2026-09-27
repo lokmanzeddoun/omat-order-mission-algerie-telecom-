@@ -1,7 +1,7 @@
 {
   "archivedAt": "تاريخ الأرشفة",
   "archivedBy": "أرشفه",
-  "attachedAgents": "الأعوان التابعون",
+  "attachedAgents": "الموظفون التابعون",
   "what": {
     "mission": "الأمر بمهمة رقم {{n}}",
     "decompte": "كشف المصاريف رقم {{n}}",

@@ -1,5 +1,5 @@
 {
-  "description": "Comptes des agents et des administrateurs, rôles et rattachement aux services.",
+  "description": "Comptes des employés et des administrateurs, rôles et rattachement aux services.",
   "add": "Ajouter un utilisateur",
   "caption": "Liste des utilisateurs",
   "empty": "Aucun utilisateur",
@@ -11,7 +11,7 @@
   "summary": {
     "active": "Actifs",
     "admins": "Administrateurs",
-    "agents": "Agents"
+    "agents": "Employés"
   },
   "field": {
     "nom": "Nom",

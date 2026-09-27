@@ -1,4 +1,6 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Res } from '@nestjs/common';
+import { Response } from 'express';
+import { User as AuthenticatedUser } from '@prisma/client';
 import {
   ApiTags,
   ApiOperation,
@@ -9,6 +11,8 @@ import {
 import { AnalyticsService } from './analytics.service';
 import { AnalyticsResponseDto } from './dto/analytics-response.dto';
 import { Auth } from '../auth/guards/auth-role.guard';
+import { GetUser } from '../auth/decorators/getUser.decorator';
+import { MonthlyRecapDto } from './dto/monthly-recap.dto';
 
 @ApiTags('Analytics')
 @ApiBearerAuth()
@@ -35,5 +39,45 @@ export class AnalyticsController {
   ): Promise<AnalyticsResponseDto> {
     const parsedExerciceId = exerciceId ? parseInt(exerciceId, 10) : undefined;
     return this.analyticsService.getAnalytics(parsedExerciceId);
+  }
+
+  @Get('monthly')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Décomptes cumulated per month (scoped)' })
+  @ApiQuery({ name: 'exerciceId', required: false, type: Number })
+  @ApiResponse({ status: 200, type: MonthlyRecapDto })
+  getMonthlyRecap(
+    @GetUser() actor: AuthenticatedUser,
+    @Query('exerciceId') exerciceId?: string,
+  ): Promise<MonthlyRecapDto> {
+    return this.analyticsService.getMonthlyRecap(
+      actor,
+      exerciceId ? parseInt(exerciceId, 10) : undefined,
+    );
+  }
+
+  @Get('monthly/export')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @ApiOperation({ summary: 'Export the monthly décomptes recap to Excel' })
+  @ApiQuery({ name: 'exerciceId', required: false, type: Number })
+  async exportMonthlyRecap(
+    @Res() res: Response,
+    @GetUser() actor: AuthenticatedUser,
+    @Query('exerciceId') exerciceId?: string,
+  ) {
+    const buffer = await this.analyticsService.exportMonthlyRecap(
+      actor,
+      exerciceId ? parseInt(exerciceId, 10) : undefined,
+    );
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    );
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename=recap-decomptes.xlsx',
+    );
+    res.setHeader('Content-Length', buffer.length);
+    res.end(buffer);
   }
 }
