@@ -24,6 +24,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './roles/roles.guard';
 import { PolicyModule } from './common/policy/policy.module';
+import { PasswordChangeGuard } from './auth/guards/password-change.guard';
 @Module({
   imports: [
     // First: it loads .env, which pinoParams() below reads.
@@ -71,6 +72,7 @@ import { PolicyModule } from './common/policy/policy.module';
     { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PasswordChangeGuard },
   ],
 })
 export class AppModule {}

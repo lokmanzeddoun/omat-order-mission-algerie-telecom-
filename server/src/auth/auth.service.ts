@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
 import * as bcrypt from 'bcryptjs';
+import { BCRYPT_ROUNDS } from 'src/common/validators/password';
 import type { AuthConfig } from 'src/common/configs/config.interface';
 import {
   LOCK_AFTER_FAILURES,
@@ -36,6 +37,7 @@ export const PUBLIC_USER_SELECT = {
   serviceId: true,
   status: true,
   createdAt: true,
+  mustChangePassword: true,
 } as const;
 
 export interface SessionOutcome {
@@ -112,6 +114,10 @@ export class AuthService {
       data: {
         failedLoginCount: 0,
         lockedUntil: null,
+        // Hashes made with a lower cost are upgraded while the password is at hand.
+        ...(bcrypt.getRounds(user.password) < BCRYPT_ROUNDS
+          ? { password: await bcrypt.hash(password, BCRYPT_ROUNDS) }
+          : {}),
         // INACTIVE means "never signed in": the first sign-in activates.
         ...(user.status === 'INACTIVE' ? { status: 'ACTIVE' } : {}),
       },

@@ -25,6 +25,7 @@ import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { Response } from 'express';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import { AllowWithTemporaryPassword } from 'src/auth/guards/password-change.guard';
 
 @ApiTags('User')
 @Controller('users')
@@ -76,10 +77,7 @@ export class UsersController {
     status: 200,
     description: 'Excel file downloaded successfully',
   })
-  async exportUsers(
-    @Res() res: Response,
-    @GetUser() actor: AuthenticatedUser,
-  ) {
+  async exportUsers(@Res() res: Response, @GetUser() actor: AuthenticatedUser) {
     return this.usersService.exportUsers(res, actor);
   }
 
@@ -90,11 +88,9 @@ export class UsersController {
   }
 
   @Get(':id')
+  @AllowWithTemporaryPassword()
   @Auth()
-  findOne(
-    @Param('id') id: string,
-    @GetUser() actor: AuthenticatedUser,
-  ) {
+  findOne(@Param('id') id: string, @GetUser() actor: AuthenticatedUser) {
     return this.usersService.findOne(+id, actor);
   }
   @Get(':id/service')
@@ -124,10 +120,7 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User archived successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  archive(
-    @Param('id') id: string,
-    @GetUser() actor: AuthenticatedUser,
-  ) {
+  archive(@Param('id') id: string, @GetUser() actor: AuthenticatedUser) {
     return this.usersService.archive(+id, actor);
   }
   // Admin-only endpoint to reset a user's password
@@ -153,6 +146,7 @@ export class UsersController {
   }
   @Auth()
   @Post('/changePassword')
+  @AllowWithTemporaryPassword()
   changePassword(
     @Body() changePasswod: ChangePasswordDto,
     @GetUser() user: User,

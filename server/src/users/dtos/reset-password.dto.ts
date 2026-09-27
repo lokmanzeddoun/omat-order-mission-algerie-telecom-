@@ -1,14 +1,16 @@
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsOptional } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
+import { IsAcceptablePassword } from 'src/common/validators/password';
 
 export class ResetPasswordDto {
   @ApiProperty({
-    description: 'New password for the user',
-    example: 'NewSecurePassword123!',
-    minLength: 6,
+    description:
+      'Temporary password chosen by the admin. Omit it to have one generated; ' +
+      'either way the user must change it at next sign-in.',
+    required: false,
+    minLength: 12,
   })
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(6, { message: 'Password must be at least 6 characters long' })
-  newPassword: string;
+  @IsOptional()
+  @IsAcceptablePassword()
+  newPassword?: string;
 }

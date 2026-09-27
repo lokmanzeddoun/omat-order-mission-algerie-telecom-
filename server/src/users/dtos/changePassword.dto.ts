@@ -1,21 +1,21 @@
-import { IsString, MaxLength, MinLength, Matches } from 'class-validator';
+import { IsString, MaxLength } from 'class-validator';
 import { Match } from '../decorators/match.decorator';
+import {
+  IsAcceptablePassword,
+  PASSWORD_MAX,
+} from 'src/common/validators/password';
+
 export class ChangePasswordDto {
   @IsString()
+  @MaxLength(PASSWORD_MAX)
   currentPassword: string;
-  @IsString()
-  @MinLength(4)
-  @MaxLength(20)
-  //   @Matches(/((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$/, {
-  //     message: 'password too weak',
-  //   })
+
+  @IsAcceptablePassword()
   password: string;
 
   @IsString()
-  @MinLength(4)
-  @MaxLength(20)
   @Match('password', {
-    message: "confirmPassword Don't match the password",
+    message: 'La confirmation ne correspond pas au mot de passe',
   })
   passwordConfirm: string;
 }

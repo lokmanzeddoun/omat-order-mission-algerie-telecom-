@@ -36,6 +36,9 @@ model User {
   sessions Session[]
   // Access tokens issued before this instant are refused; so are sessions opened before it.
   passwordChangedAt DateTime?
+  // Set on a temporary password (creation, admin reset): every route but the
+  // password change is refused until the user picks their own.
+  mustChangePassword Boolean @default(false)
   failedLoginCount Int @default(0)
   lockedUntil DateTime?
   // TOTP MFA (ADMIN / SUPER_ADMIN). Secrets are AES-256-GCM encrypted.

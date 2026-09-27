@@ -1,6 +1,13 @@
 import { PrismaClient, Category } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
+// This seed deletes every user, ordre de mission and décompte, and creates
+// accounts with a well-known password: never on a real database.
+if (process.env.NODE_ENV === 'production') {
+    console.error('Refusing to run the development seed with NODE_ENV=production.');
+    process.exit(1);
+}
+
 const prisma = new PrismaClient();
 
 async function main() {

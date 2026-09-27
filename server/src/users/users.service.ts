@@ -17,6 +17,11 @@ import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { Response } from 'express';
 import { MAX_IMPORT_ROWS } from 'src/utils/upload';
 import { UpdateUserDto } from './dtos/update-user.dto';
+import {
+  BCRYPT_ROUNDS,
+  personalPasswordProblem,
+  temporaryPassword,
+} from 'src/common/validators/password';
 
 const SAFE_USER_SELECT = {
   matricule: true,
@@ -39,7 +44,8 @@ export class UsersService {
     if (
       actor.role === Role.ADMIN &&
       (!actor.serviceId ||
-        (createUserDto.serviceId && createUserDto.serviceId !== actor.serviceId) ||
+        (createUserDto.serviceId &&
+          createUserDto.serviceId !== actor.serviceId) ||
         createUserDto.role !== Role.USER)
     ) {
       throw new ForbiddenException(
@@ -62,22 +68,26 @@ export class UsersService {
     // Check Role
     if (createUserDto.category && !Category[createUserDto.category])
       throw new BadRequestException('Invalid category');
-    // Initial password derived from the name (users change it from their profile)
-    const password = `${createUserDto.nom.toLowerCase()}_${createUserDto.prenom.toLowerCase()}13`;
-    //Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Random single-use password, returned once to the admin; the user must
+    // choose their own at first sign-in.
+    const password = temporaryPassword();
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
     try {
-      return await this.databaseService.user.create({
+      const created = await this.databaseService.user.create({
         data: {
           ...createUserDto,
           role: actor.role === Role.ADMIN ? Role.USER : createUserDto.role,
           serviceId:
-            actor.role === Role.ADMIN ? actor.serviceId : createUserDto.serviceId,
+            actor.role === Role.ADMIN
+              ? actor.serviceId
+              : createUserDto.serviceId,
           password: hashedPassword,
+          mustChangePassword: true,
           userSince: userSince ?? undefined, // Will be set only if userSince is defined
         },
         select: SAFE_USER_SELECT,
       });
+      return { ...created, temporaryPassword: password };
     } catch (error) {
       // Check if the error is from Prisma and specifically a unique constraint violation
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -142,7 +152,9 @@ export class UsersService {
     });
     if (!user) throw new NotFoundException('User not found');
     if (!this.canAccessUser(actor, user)) {
-      throw new ForbiddenException('You cannot access users in another structure.');
+      throw new ForbiddenException(
+        'You cannot access users in another structure.',
+      );
     }
     if (!user.serviceId) {
       throw new BadRequestException(
@@ -187,14 +199,18 @@ export class UsersService {
       throw new BadRequestException("You can't modify user's matricule");
     }
     if (!this.canAccessUser(actor, existing)) {
-      throw new ForbiddenException('You cannot update a user in another structure.');
+      throw new ForbiddenException(
+        'You cannot update a user in another structure.',
+      );
     }
     if (
       actor.role === Role.ADMIN &&
       updateUserDto.role !== undefined &&
       updateUserDto.role !== existing.role
     ) {
-      throw new ForbiddenException('Only super administrators may change roles.');
+      throw new ForbiddenException(
+        'Only super administrators may change roles.',
+      );
     }
     if (
       actor.role === Role.ADMIN &&
@@ -208,7 +224,8 @@ export class UsersService {
 
     // Validate serviceId if it's being updated
     if (
-      updateUserDto.serviceId !== undefined && updateUserDto.serviceId !== null
+      updateUserDto.serviceId !== undefined &&
+      updateUserDto.serviceId !== null
     ) {
       const structureExists = await this.databaseService.structure.findUnique({
         where: { code: updateUserDto.serviceId },
@@ -223,7 +240,9 @@ export class UsersService {
 
     const data: Prisma.UserUpdateInput = {
       ...(updateUserDto.nom !== undefined && { nom: updateUserDto.nom }),
-      ...(updateUserDto.prenom !== undefined && { prenom: updateUserDto.prenom }),
+      ...(updateUserDto.prenom !== undefined && {
+        prenom: updateUserDto.prenom,
+      }),
       ...(updateUserDto.email !== undefined && { email: updateUserDto.email }),
       ...(updateUserDto.grade !== undefined && { grade: updateUserDto.grade }),
       ...(updateUserDto.category !== undefined && {
@@ -257,7 +276,9 @@ export class UsersService {
     });
     if (!target) throw new NotFoundException('User not found');
     if (!this.canAccessUser(actor, target)) {
-      throw new ForbiddenException('You cannot archive a user in another structure.');
+      throw new ForbiddenException(
+        'You cannot archive a user in another structure.',
+      );
     }
     return this.databaseService.user.update({
       where: {
@@ -290,7 +311,8 @@ export class UsersService {
     try {
       const wb: WorkBook = xlsx.read(file.buffer, { type: 'buffer' });
       const sheet: WorkSheet = wb.Sheets[wb.SheetNames[0]];
-      if (!sheet?.['!ref']) throw new BadRequestException('Spreadsheet is empty.');
+      if (!sheet?.['!ref'])
+        throw new BadRequestException('Spreadsheet is empty.');
       const range = xlsx.utils.decode_range(sheet['!ref']);
       if (range.e.r - range.s.r > MAX_IMPORT_ROWS) {
         throw new BadRequestException('Spreadsheet row limit exceeded.');
@@ -340,53 +362,68 @@ export class UsersService {
   }
 
   async ChangePassword(changePassword: ChangePasswordDto, matricule: number) {
-    const user = await this.databaseService.user.findUnique({
-      where: { matricule },
+    const user = await this.databaseService.user.findFirst({
+      where: { matricule, soft_delete: false },
     });
-
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
+    if (!user) throw new NotFoundException();
 
     const passwordMatch = await bcrypt.compare(
       changePassword.currentPassword,
       user.password,
     );
-
     if (!passwordMatch) {
-      throw new BadRequestException('Invalid Password');
+      throw new BadRequestException('Mot de passe actuel incorrect');
     }
+    if (await bcrypt.compare(changePassword.password, user.password)) {
+      throw new BadRequestException(
+        'Le nouveau mot de passe doit être différent de l’actuel',
+      );
+    }
+    const personal = personalPasswordProblem(changePassword.password, user);
+    if (personal) throw new BadRequestException(personal);
 
-    const hashedPassword = await bcrypt.hash(changePassword.password, 10);
+    const hashedPassword = await bcrypt.hash(
+      changePassword.password,
+      BCRYPT_ROUNDS,
+    );
     await this.databaseService.user.update({
       where: { matricule },
       // Every earlier access token and session stops working (ADR 0002).
-      data: { password: hashedPassword, passwordChangedAt: new Date() },
+      data: {
+        password: hashedPassword,
+        passwordChangedAt: new Date(),
+        mustChangePassword: false,
+      },
     });
     return { matricule, message: 'Password changed successfully' };
   }
 
-  // Admin reset password: accept a custom password from admin
-  async resetPassword(matricule: number, newPassword: string, actor: User) {
-    const user = await this.databaseService.user.findUnique({
-      where: { matricule },
-      select: { matricule: true, serviceId: true },
+  // Admin reset: a temporary password (chosen by the admin, or generated and
+  // returned once) that the user must replace at next sign-in.
+  async resetPassword(
+    matricule: number,
+    newPassword: string | undefined,
+    actor: User,
+  ) {
+    const user = await this.databaseService.user.findFirst({
+      where: { matricule, soft_delete: false },
+      select: { matricule: true, serviceId: true, role: true },
     });
-    if (!user) throw new BadRequestException('User not found');
-    if (!this.canAccessUser(actor, user)) {
-      throw new ForbiddenException(
-        'You cannot reset a password in another structure.',
-      );
+    if (!user || !this.canAccessUser(actor, user))
+      throw new NotFoundException();
+    if (user.role === Role.SUPER_ADMIN && actor.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException();
     }
 
-    // Hash the new password provided by admin
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const password = newPassword ?? temporaryPassword();
+    const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);
     await this.databaseService.user.update({
       where: { matricule },
       // Ends the user's sessions and lifts a lockout (ADR 0002).
       data: {
         password: hashed,
         passwordChangedAt: new Date(),
+        mustChangePassword: true,
         failedLoginCount: 0,
         lockedUntil: null,
       },
@@ -396,6 +433,7 @@ export class UsersService {
       matricule,
       message: 'Password reset successfully',
       success: true,
+      ...(newPassword ? {} : { temporaryPassword: password }),
     };
   }
 
