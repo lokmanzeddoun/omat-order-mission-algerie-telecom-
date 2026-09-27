@@ -1,6 +1,6 @@
 # 01 — e2e harness against a real database
 
-Status: ready-for-agent
+Status: resolved
 Type: task
 
 Access-control and session tests (issues 03 and 04) need real JWTs and a real database. The only e2e test today is the Nest scaffold (`server/test/app.e2e-spec.ts`, `GET /` → "Hello World!").
