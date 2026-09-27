@@ -12,6 +12,7 @@ import {
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
+import { uploadSpreadsheet } from 'components/common/importFile';
 import { IUser } from './users.reducers';
 
 interface ChangePasswordDto {
@@ -83,37 +84,11 @@ export const addUser = (user: IUser) => async (dispatch: AppDispatch) => {
   }
 };
 
+/** Imports a spreadsheet; returns the per-row problems when the server rejects the file. */
 export const uploadUsers = (file: File) => async (dispatch: AppDispatch) => {
-  const formData = new FormData();
-  formData.append('file', file); // Attach the file to the request
-
-  try {
-    const res = await http.post(`/users/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data', // Ensure the correct content type for file upload
-      },
-    });
-    console.log(res);
-    if (res) {
-      await dispatch(setAlert({ msg: 'File uploaded successfully', type: AlertTypes.SUCCESS }));
-      return dispatch(getAllUsers()); // Assuming 'res.data' contains the newly created users
-    } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
-    }
-  } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
-
-    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
-    console.error('Error:', errorMessage);
-  }
+  const result = await uploadSpreadsheet('/users/upload', file, dispatch);
+  if (result?.ok) await dispatch(getAllUsers());
+  return result;
 };
 
 export const exportUsers = () => async (dispatch: AppDispatch) => {

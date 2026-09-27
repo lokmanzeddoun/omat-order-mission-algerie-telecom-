@@ -10,18 +10,46 @@ import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp } from 'src/archive/archive-stamp';
 import { createUserDto } from './dtos/create-user.dto';
 import * as xlsx from 'xlsx';
-import { WorkBook, WorkSheet } from 'xlsx';
 import * as bcrypt from 'bcryptjs';
 import { ImportExcel } from './dtos/import-Excel.dto';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { Response } from 'express';
-import { MAX_IMPORT_ROWS } from 'src/utils/upload';
+import {
+  findDuplicates,
+  ImportColumn,
+  ImportValidationError,
+  readRows,
+  validateRows,
+} from 'src/utils/import-validation';
+import { importUserDto } from './dtos/import-user.dto';
 import { UpdateUserDto } from './dtos/update-user.dto';
 import {
   BCRYPT_ROUNDS,
   personalPasswordProblem,
   temporaryPassword,
 } from 'src/common/validators/password';
+
+/** Expected columns of the users spreadsheet, matched by header name (see src/utils/AABook1.xlsx). */
+const USER_IMPORT_COLUMNS: ImportColumn[] = [
+  { field: 'matricule', headers: ['Matricule'] },
+  { field: 'nom', headers: ['Nom'] },
+  { field: 'prenom', headers: ['Prenom', 'Prénom'] },
+  { field: 'email', headers: ['Email', 'E-mail'] },
+  {
+    field: 'password',
+    headers: ['Password', 'Mot de passe'],
+    optional: true,
+    secret: true,
+  },
+  { field: 'role', headers: ['Role', 'Rôle'] },
+  { field: 'category', headers: ['Category', 'Catégorie'] },
+  { field: 'grade', headers: ['Grade'] },
+  {
+    field: 'serviceId',
+    headers: ['ServiceId', 'Code service'],
+    optional: true,
+  },
+];
 
 const SAFE_USER_SELECT = {
   matricule: true,
@@ -307,58 +335,101 @@ export class UsersService {
     }
     return actor.matricule === target.matricule;
   }
+  /**
+   * Imports users from the first sheet. Every row is validated first (format, duplicates,
+   * existing emails and services); if anything is wrong nothing is written and the whole
+   * list of problems is returned as a 400.
+   */
   async uploadUsers(file: ImportExcel) {
-    try {
-      const wb: WorkBook = xlsx.read(file.buffer, { type: 'buffer' });
-      const sheet: WorkSheet = wb.Sheets[wb.SheetNames[0]];
-      if (!sheet?.['!ref'])
-        throw new BadRequestException('Spreadsheet is empty.');
-      const range = xlsx.utils.decode_range(sheet['!ref']);
-      if (range.e.r - range.s.r > MAX_IMPORT_ROWS) {
-        throw new BadRequestException('Spreadsheet row limit exceeded.');
-      }
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        if (R === 0 || !sheet[xlsx.utils.encode_cell({ c: 0, r: R })]) {
-          continue;
-        }
-        let col = 0;
-        const userData = {
-          matricule: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // ID or unique identifier
-          nom: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // First Name
-          prenom: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Last Name
-          email: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Email
-          password: await bcrypt.hash(
-            sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v,
-            10,
-          ), // Password (hash if needed)
-          role: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Role
-          category: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Category
-          grade: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Grade
-          serviceId:
-            `${sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v}` || null, // Foreign key (convert to number)
-        };
-        // Check if user already exists by matricule
-        const existingUser = await this.databaseService.user.findUnique({
-          where: { matricule: userData.matricule },
-        });
+    const rows = readRows(file.buffer, USER_IMPORT_COLUMNS, file.originalname);
+    const { items, errors } = await validateRows(
+      rows,
+      importUserDto,
+      USER_IMPORT_COLUMNS,
+    );
+    errors.push(
+      ...findDuplicates(items, (u) => u.matricule, 'Matricule'),
+      ...findDuplicates(items, (u) => u.email, 'Email'),
+    );
 
-        if (existingUser) {
-          // Update the user if it exists
-          await this.databaseService.user.update({
-            where: { matricule: userData.matricule },
-            data: userData,
-          });
-        } else {
-          // Create a new user
-          await this.databaseService.user.create({
-            data: userData,
-          });
-        }
+    const [existing, emailOwners, structures] = await Promise.all([
+      this.databaseService.user.findMany({
+        where: { matricule: { in: items.map((i) => i.value.matricule) } },
+        select: { matricule: true },
+      }),
+      this.databaseService.user.findMany({
+        where: {
+          email: { in: items.map((i) => i.value.email), mode: 'insensitive' },
+        },
+        select: { matricule: true, email: true },
+      }),
+      this.databaseService.structure.findMany({
+        where: {
+          code: {
+            in: items.map((i) => i.value.serviceId).filter(Boolean),
+          },
+          soft_delete: false,
+        },
+        select: { code: true },
+      }),
+    ]);
+    const existingIds = new Set(existing.map((u) => u.matricule));
+    const codes = new Set(structures.map((s) => s.code));
+
+    for (const { row, value: u } of items) {
+      if (!existingIds.has(u.matricule) && !u.password) {
+        errors.push({
+          row,
+          field: 'Password',
+          message: 'Mot de passe obligatoire pour un nouvel utilisateur',
+        });
       }
-    } catch (error) {
-      console.error('Error in  Excel', error.stack);
-      throw error;
+      const owner = emailOwners.find(
+        (o) => o.email.toLowerCase() === u.email.toLowerCase(),
+      );
+      if (owner && owner.matricule !== u.matricule) {
+        errors.push({
+          row,
+          field: 'Email',
+          value: u.email,
+          message: `Email déjà utilisé par le matricule ${owner.matricule}`,
+        });
+      }
+      if (u.serviceId && !codes.has(u.serviceId)) {
+        errors.push({
+          row,
+          field: 'ServiceId',
+          value: u.serviceId,
+          message: 'Service inexistant ou archivé',
+        });
+      }
     }
+    if (errors.length) throw new ImportValidationError(errors);
+
+    const hashes = await Promise.all(
+      items.map(({ value: u }) =>
+        u.password ? bcrypt.hash(u.password, 10) : undefined,
+      ),
+    );
+    const writes = items.map(({ value: u }, i) => {
+      const { password: _, ...fields } = u;
+      const data = { ...fields, serviceId: u.serviceId ?? null };
+      return existingIds.has(u.matricule)
+        ? this.databaseService.user.update({
+            where: { matricule: u.matricule },
+            // An empty password cell keeps the current password.
+            data: hashes[i] ? { ...data, password: hashes[i] } : data,
+          })
+        : this.databaseService.user.create({
+            data: { ...data, password: hashes[i] },
+          });
+    });
+    await this.databaseService.$transaction(writes);
+
+    const updated = items.filter((i) =>
+      existingIds.has(i.value.matricule),
+    ).length;
+    return { created: items.length - updated, updated };
   }
 
   async ChangePassword(changePassword: ChangePasswordDto, matricule: number) {

@@ -1,0 +1,14 @@
+Matricule,Nom,Prenom,Email,Password,Role,Category,Grade,ServiceId
+abc,Test,Matricule,mat.test@example.dz,secret123,USER,CADRE,G,
+9101,,Nom,nom.test@example.dz,secret123,USER,CADRE,G,
+9102,Test,Email,pas-un-email,secret123,USER,CADRE,G,
+9103,Test,Role,role.test@example.dz,secret123,BOSS,CADRE,G,
+9104,Test,Categorie,cat.test@example.dz,secret123,USER,STAGIAIRE,G,
+9105,Test,Court,court.test@example.dz,abc,USER,CADRE,G,
+9106,Test,SansMdp,sansmdp.test@example.dz,,USER,CADRE,G,
+9107,Test,Service,service.test@example.dz,secret123,USER,CADRE,G,ZZZ
+9108,Test,Doublon,doublon1.test@example.dz,secret123,USER,CADRE,G,
+9108,Test,Doublon,doublon2.test@example.dz,secret123,USER,CADRE,G,
+9109,Test,EmailDouble,meme.email@example.dz,secret123,USER,CADRE,G,
+9110,Test,EmailDouble,MEME.email@example.dz,secret123,USER,CADRE,G,
+9111,Test,EmailPris,amine.test@example.dz,secret123,USER,CADRE,G,

@@ -15,6 +15,8 @@ import {
 import type { IStructure } from 'components/structures/structure.reducer';
 import StructureFormDialog, { type StructureFormMode } from 'components/structures/StructureFormDialog';
 import FileImportButton from 'components/common/FileImportButton';
+import { ImportErrorsDialog } from 'components/common/ImportErrorsDialog';
+import type { ImportRowError } from 'components/common/importFile';
 import { useBulkArchive } from 'components/common/useBulkArchive';
 import { Button, ConfirmDialog, DataTable, IconButton, PageHeader, SummaryStrip, type DataColumn } from 'components/ui';
 import paths from 'routes/paths';
@@ -30,6 +32,7 @@ export default function StructuresPage() {
   const { structures, loading } = useSelector((s: RootState) => s.structures) as { structures: IStructure[]; loading: boolean };
   const [form, setForm] = useState<{ mode: StructureFormMode; item: IStructure | null } | null>(null);
   const [toArchive, setToArchive] = useState<IStructure | null>(null);
+  const [importErrors, setImportErrors] = useState<ImportRowError[] | null>(null);
 
   useEffect(() => {
     void dispatch(getAllStructures());
@@ -71,9 +74,11 @@ export default function StructuresPage() {
           <>
             <IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={refresh} />
             <FileImportButton
+              accept=".xlsx,.csv"
               onFile={async (file) => {
-                await dispatch(uploadStructure(file));
-                await refresh();
+                const result = await dispatch(uploadStructure(file));
+                if (result && !result.ok) setImportErrors(result.errors);
+                else if (result) await refresh();
               }}
             />
             <Button onClick={() => dispatch(exportStructures())}>
@@ -127,6 +132,7 @@ export default function StructuresPage() {
         tone="danger"
         onConfirm={confirmArchive}
       />
+      <ImportErrorsDialog errors={importErrors} onClose={() => setImportErrors(null)} />
     </>
   );
 }
