@@ -72,7 +72,8 @@
     "allSelected": "Les {{total}} lignes sont sélectionnées.",
     "allMatchingSelected": "Les {{total}} lignes correspondant aux filtres sont sélectionnées.",
     "clearSelection": "Effacer la sélection",
-    "bulkActions": "Actions sur la sélection"
+    "bulkActions": "Actions sur la sélection",
+    "exportSelection": "Exporter la sélection (CSV)"
   },
   "auth": {
     "signIn": "Se connecter",

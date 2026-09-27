@@ -344,15 +344,17 @@ export function DataTable<Row extends RowData>({
   const alignClass = (a?: DataColumn<Row>['align']) =>
     a === 'center' ? 'text-center' : a === 'end' ? 'text-end' : 'text-start';
 
-  const exportCsv = () => {
-    if (!exportFileName) return;
+  // CSV of the given rows with the visible columns.
+  const exportRows = (list: Row[], fileName: string) => {
     const cols = visibleColumns.map((c) => colById.get(c.id)!);
     downloadCsv(
-      exportFileName,
+      fileName,
       cols.map((c) => c.header),
-      filteredRows.map((row) => cols.map((c) => (c.exportValue ? c.exportValue(row) : toText(valueOf(c, row))))),
+      list.map((row) => cols.map((c) => (c.exportValue ? c.exportValue(row) : toText(valueOf(c, row))))),
     );
   };
+  const exportCsv = () => exportFileName && exportRows(filteredRows, exportFileName);
+  const exportSelection = () => exportRows(selectedRows, `${exportFileName ?? tableId ?? 'export'}-selection`);
 
   const chooser: MenuAction[] = columns
     .filter((c) => !c.alwaysVisible)
@@ -417,6 +419,10 @@ export function DataTable<Row extends RowData>({
                 {a.label}
               </Button>
             ))}
+            <Button size="sm" variant="secondary" onClick={exportSelection}>
+              <FileSpreadsheet />
+              {t('table.exportSelection')}
+            </Button>
             <Button size="sm" variant="ghost" onClick={clearSelection}>
               {t('table.clearSelection')}
             </Button>

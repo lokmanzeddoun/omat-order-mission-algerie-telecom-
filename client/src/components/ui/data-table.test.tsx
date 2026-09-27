@@ -196,6 +196,29 @@ describe('DataTable', () => {
       expect(archived()).toEqual([2]);
     });
 
+    it('exports only the selected rows, with the visible columns', async () => {
+      // jsdom has no object URLs: capture the Blob instead of downloading it.
+      let blob: Blob | undefined;
+      URL.createObjectURL = vi.fn((b: Blob) => {
+        blob = b;
+        return 'blob:test';
+      });
+      URL.revokeObjectURL = vi.fn();
+      const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+      renderSelectable();
+      await userEvent.click(rowBox('Agent 02'));
+      await userEvent.click(rowBox('Agent 04'));
+      await userEvent.click(screen.getByRole('button', { name: /Exporter la sélection/ }));
+
+      // UTF-8 BOM for Excel, then the header (hidden "Depuis" left out) and the two rows.
+      const bytes = new Uint8Array(await blob!.arrayBuffer());
+      expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+      expect(await blob!.text()).toBe('Nom;Rôle\r\nAgent 02;USER\r\nAgent 04;ADMIN');
+      expect(click).toHaveBeenCalledTimes(1);
+      click.mockRestore();
+    });
+
     it('lets the action clear the selection', async () => {
       archive.mockImplementation((_ids: number[], clear: () => void) => clear());
       renderSelectable();
