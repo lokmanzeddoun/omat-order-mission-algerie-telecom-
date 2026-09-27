@@ -26,12 +26,16 @@ const barem = {
 
 // Midday UTC so toISOString() keeps the same calendar day in any timezone.
 const mission = (overrides = {}) => ({
-  n_mission: 7,
+  n_mission: N_MISSION,
   date_sortie: new Date('2026-03-10T12:00:00Z'),
   direction: Direction.NORD,
   transport: TransportType.SERVICE_CAR,
   ...overrides,
 });
+
+const N_MISSION = 7;
+// Expected NORD total for the default overnight trip: 3 meals + 1 night.
+const NORD_OVERNIGHT = 3 * 100 + 1 * 1000;
 
 const user = { matricule: 42, category: Category.CADRE } as unknown as User;
 
@@ -89,7 +93,12 @@ describe('DecompteService', () => {
   });
 
   const createdData = () => db.decompte.create.mock.calls[0][0].data;
+  const givenDecompte = (status: DecompteStatus) =>
+    db.decompte.findUnique.mockResolvedValue({ status });
 
+  // Windows come from docs/decompte-workflow.md (lunch 11-14, dinner 18-21,
+  // night 00-06). That an item counts only when its whole window, bounds
+  // included, lies inside the trip is the code's rule; the doc is silent.
   describe('create: meal and night count validation', () => {
     it('accepts a same-day trip covering lunch and dinner as 2 meals, 0 nights', async () => {
       await service.create(
@@ -99,16 +108,15 @@ describe('DecompteService', () => {
           repas_sans_pec: 2,
           hebergement_sans_pec: 0,
         }),
-        7,
+        N_MISSION,
         user,
       );
       expect(createdData().montant).toBe(200);
     });
 
     it('accepts an overnight trip as 3 meals and 1 night', async () => {
-      await expect(
-        service.create(overnightDto(), 7, user),
-      ).resolves.toBeDefined();
+      await service.create(overnightDto(), N_MISSION, user);
+      expect(db.$transaction).toHaveBeenCalledTimes(1);
     });
 
     it.each([
@@ -132,54 +140,75 @@ describe('DecompteService', () => {
           repas_sans_pec: meals,
           hebergement_sans_pec: nights,
         });
-        await expect(service.create(dto, 7, user)).resolves.toBeDefined();
+        await service.create(dto, N_MISSION, user);
+        expect(db.$transaction).toHaveBeenCalledTimes(1);
         await expect(
-          service.create({ ...dto, repas_sans_pec: meals + 1 }, 7, user),
+          service.create(
+            { ...dto, repas_sans_pec: meals + 1 },
+            N_MISSION,
+            user,
+          ),
         ).rejects.toThrow(BadRequestException);
       },
     );
 
     it('rejects a declared meal count that does not match the trip', async () => {
       await expect(
-        service.create(overnightDto({ repas_sans_pec: 4 }), 7, user),
+        service.create(overnightDto({ repas_sans_pec: 4 }), N_MISSION, user),
       ).rejects.toThrow(BadRequestException);
       expect(db.$transaction).not.toHaveBeenCalled();
     });
 
     it('rejects a declared night count that does not match the trip', async () => {
       await expect(
-        service.create(overnightDto({ hebergement_sans_pec: 2 }), 7, user),
+        service.create(
+          overnightDto({ hebergement_sans_pec: 2 }),
+          N_MISSION,
+          user,
+        ),
       ).rejects.toThrow('Le nombre de repas et hebergement non valid');
     });
 
     it('counts pec and sans_pec together against the trip', async () => {
-      await expect(
-        service.create(
-          overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
-          7,
-          user,
-        ),
-      ).resolves.toBeDefined();
+      await service.create(
+        overnightDto({
+          repas_pec: 1,
+          hebergement_pec: 1,
+          repas_sans_pec: 2,
+          hebergement_sans_pec: 0,
+        }),
+        N_MISSION,
+        user,
+      );
+      expect(db.$transaction).toHaveBeenCalledTimes(1);
     });
 
     it('treats a return before departure as 0 meals and 0 nights', async () => {
+      const dto = overnightDto({
+        date_retour: '2026-03-09',
+        repas_sans_pec: 0,
+        hebergement_sans_pec: 0,
+      });
+      await service.create(dto, N_MISSION, user);
+      expect(db.$transaction).toHaveBeenCalledTimes(1);
       await expect(
-        service.create(overnightDto({ date_retour: '2026-03-09' }), 7, user),
+        service.create({ ...dto, repas_sans_pec: 1 }, N_MISSION, user),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('create: montant', () => {
     it('NORD: pays every meal and night at the nord rates', async () => {
-      await service.create(overnightDto(), 7, user);
-      expect(createdData().montant).toBe(3 * 100 + 1 * 1000);
+      await service.create(overnightDto(), N_MISSION, user);
+      expect(createdData().montant).toBe(NORD_OVERNIGHT);
     });
 
+    // pec = 0 here, so this holds under both the code and the doc formula.
     it('SUD: pays sans_pec meals and nights at the sud rates', async () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ direction: Direction.SUD }),
       );
-      await service.create(overnightDto(), 7, user);
+      await service.create(overnightDto(), N_MISSION, user);
       expect(createdData().montant).toBe(3 * 200 + 1 * 2000);
     });
 
@@ -187,45 +216,47 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ transport: TransportType.PERSONAL_CAR }),
       );
-      await service.create(overnightDto({ parcours: 50 }), 7, user);
-      expect(createdData().montant).toBe(1300 + 50 * 10);
+      await service.create(overnightDto({ parcours: 50 }), N_MISSION, user);
+      expect(createdData().montant).toBe(NORD_OVERNIGHT + 50 * 10);
     });
 
     it('ignores parcours when the mission does not use a personal car', async () => {
-      await service.create(overnightDto({ parcours: 50 }), 7, user);
-      expect(createdData().montant).toBe(1300);
+      await service.create(overnightDto({ parcours: 50 }), N_MISSION, user);
+      expect(createdData().montant).toBe(NORD_OVERNIGHT);
     });
 
+    // Code behaviour: the doc's montant formula does not mention fees_transport.
     it('adds fees_transport on top, after any reduction', async () => {
       await service.create(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2, fees_transport: 30 }),
-        7,
+        N_MISSION,
         user,
       );
-      expect(createdData().montant).toBe(1300 * 0.25 + 30);
+      expect(createdData().montant).toBe(NORD_OVERNIGHT * 0.25 + 30);
     });
 
-    // Current behaviour: any pec item multiplies the total by 0.25, i.e. keeps
-    // 25% (the code comment says "reduce 25%"). Pinned here pending a business
-    // decision.
+    // Any pec item multiplies the total by 0.25, i.e. keeps 25%. The doc agrees
+    // ("montant * 0.25"); only the code comment says "reduce 25%". Pending a
+    // business decision.
     it('NORD with any pec item: keeps 25% of the total', async () => {
       await service.create(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
-        7,
+        N_MISSION,
         user,
       );
-      expect(createdData().montant).toBe(1300 * 0.25);
+      expect(createdData().montant).toBe(NORD_OVERNIGHT * 0.25);
     });
 
-    // Current behaviour: in SUD, pec items are excluded AND the 25% rule
-    // still applies to the remaining sans_pec items.
+    // Code behaviour that CONTRADICTS docs/decompte-workflow.md: the doc pays
+    // SUD on hebergement_total / repas_total, the code only on sans_pec, and
+    // the 25% rule still applies on top. Pending a business decision.
     it('SUD with any pec item: pays only sans_pec items, then keeps 25%', async () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ direction: Direction.SUD }),
       );
       await service.create(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
-        7,
+        N_MISSION,
         user,
       );
       expect(createdData().montant).toBe((2 * 200 + 2000) * 0.25);
@@ -239,8 +270,8 @@ describe('DecompteService', () => {
   });
 
   describe('create: persistence', () => {
-    it('completes the mission and creates the decompte in one transaction', async () => {
-      const result = await service.create(overnightDto(), 7, user);
+    it('sets the ordre to COMPLETED and creates the décompte in one transaction', async () => {
+      const result = await service.create(overnightDto(), N_MISSION, user);
 
       expect(db.$transaction).toHaveBeenCalledTimes(1);
       expect((result as any[]).map((op) => op.op)).toEqual([
@@ -248,26 +279,28 @@ describe('DecompteService', () => {
         'decompte.create',
       ]);
       const missionUpdate = db.mission.update.mock.calls[0][0];
-      expect(missionUpdate.where).toEqual({ n_mission: 7 });
+      expect(missionUpdate.where).toEqual({ n_mission: N_MISSION });
       expect(missionUpdate.data.status).toBe(MissionStatus.COMPLETED);
     });
 
     it('links the decompte to the mission and the current exercice', async () => {
-      await service.create(overnightDto(), 7, user);
-      expect(createdData().mission).toEqual({ connect: { n_mission: 7 } });
+      await service.create(overnightDto(), N_MISSION, user);
+      expect(createdData().mission).toEqual({
+        connect: { n_mission: N_MISSION },
+      });
       expect(createdData().exercice).toEqual({ connect: { id: 3 } });
     });
 
     it('omits the exercice link when there is no current exercice', async () => {
       db.exercice.findFirst.mockResolvedValue(null);
-      await service.create(overnightDto(), 7, user);
+      await service.create(overnightDto(), N_MISSION, user);
       expect(createdData()).not.toHaveProperty('exercice');
     });
 
     it('stores parcours 0 as null and missing fees as 0', async () => {
       await service.create(
         overnightDto({ fees_transport: undefined }),
-        7,
+        N_MISSION,
         user,
       );
       expect(createdData().parcours).toBeNull();
@@ -284,9 +317,7 @@ describe('DecompteService', () => {
     });
 
     it('throws when the decompte is not PENDING', async () => {
-      db.decompte.findUnique.mockResolvedValue({
-        status: DecompteStatus.ACCEPTED,
-      });
+      givenDecompte(DecompteStatus.ACCEPTED);
       await expect(service.acceptDecompte(1, user)).rejects.toThrow(
         BadRequestException,
       );
@@ -294,9 +325,7 @@ describe('DecompteService', () => {
     });
 
     it('sets ACCEPTED without a comment when the message is blank', async () => {
-      db.decompte.findUnique.mockResolvedValue({
-        status: DecompteStatus.PENDING,
-      });
+      givenDecompte(DecompteStatus.PENDING);
       await service.acceptDecompte(1, user, '   ');
       expect(db.decompte.update).toHaveBeenCalledWith({
         where: { n_decompte: 1 },
@@ -306,9 +335,7 @@ describe('DecompteService', () => {
     });
 
     it('adds a comment by the admin when a message is given', async () => {
-      db.decompte.findUnique.mockResolvedValue({
-        status: DecompteStatus.PENDING,
-      });
+      givenDecompte(DecompteStatus.PENDING);
       await service.acceptDecompte(1, user, 'ok');
       expect(comments.create).toHaveBeenCalledWith(
         expect.objectContaining({ status: 'ACCEPTED', decompteId: 1 }),
@@ -318,19 +345,23 @@ describe('DecompteService', () => {
   });
 
   describe('rejectDecompte', () => {
+    it('throws when the decompte does not exist', async () => {
+      db.decompte.findUnique.mockResolvedValue(null);
+      await expect(service.rejectDecompte(1, user, 'no')).rejects.toThrow(
+        'Decompte with ID 1 not found.',
+      );
+    });
+
     it('throws when the decompte is not PENDING', async () => {
-      db.decompte.findUnique.mockResolvedValue({
-        status: DecompteStatus.REGECTED,
-      });
+      givenDecompte(DecompteStatus.REGECTED);
       await expect(service.rejectDecompte(1, user, 'no')).rejects.toThrow(
         BadRequestException,
       );
     });
 
+    // REGECTED is the (misspelt) Prisma enum value; comments use 'REJECTED'.
     it('sets REGECTED and records the reason as a comment', async () => {
-      db.decompte.findUnique.mockResolvedValue({
-        status: DecompteStatus.PENDING,
-      });
+      givenDecompte(DecompteStatus.PENDING);
       await service.rejectDecompte(1, user, 'missing receipts');
       expect(db.decompte.update).toHaveBeenCalledWith({
         where: { n_decompte: 1 },
