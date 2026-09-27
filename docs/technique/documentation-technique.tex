@@ -1,0 +1,590 @@
+\documentclass[10.5pt,a4paper]{article}
+
+% ---------------------------------------------------------------- Préambule
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage[sfdefault]{inter}
+\usepackage[a4paper,margin=2cm,top=2.2cm,bottom=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,backgrounds,shapes.geometric,calc,shadows}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{listings}
+\usepackage[most]{tcolorbox}
+\usepackage{fontawesome5}
+\usepackage[hidelinks]{hyperref}
+\usepackage{microtype}
+
+\definecolor{atblue}{HTML}{0B4F9C}
+\definecolor{atgreen}{HTML}{2E9E47}
+\definecolor{ink}{HTML}{1F2933}
+\definecolor{muted}{HTML}{616E7C}
+\definecolor{soft}{HTML}{EEF3FA}
+\definecolor{softgreen}{HTML}{EAF6ED}
+\definecolor{softamber}{HTML}{FFF4E0}
+\definecolor{amber}{HTML}{C77700}
+\definecolor{softred}{HTML}{FCEBEB}
+\definecolor{red}{HTML}{B42318}
+\color{ink}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlist{nosep,leftmargin=1.2em,topsep=2pt}
+
+\titleformat{\section}{\Large\bfseries\color{atblue}}{\thesection}{0.6em}{}[{\color{atblue!30}\titlerule[0.8pt]}]
+\titleformat{\subsection}{\large\bfseries\color{ink}}{\thesubsection}{0.5em}{}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+\titlespacing*{\subsection}{0pt}{8pt}{3pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{muted}OMAT --- Documentation technique}
+\fancyhead[R]{\small\color{muted}Algérie Télécom}
+\fancyfoot[C]{\small\color{muted}\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{soft},
+  frame=none, breaklines=true, columns=fullflexible,
+  keywordstyle=\color{atblue}\bfseries, commentstyle=\color{muted}\itshape,
+  stringstyle=\color{atgreen}, xleftmargin=6pt, framexleftmargin=6pt,
+  aboveskip=4pt, belowskip=4pt, literate={é}{{\'e}}1 {è}{{\`e}}1 {à}{{\`a}}1
+}
+\lstdefinelanguage{TypeScript}{
+  keywords={const,let,function,return,if,export,import,from,type,interface,async,await,new,class},
+  sensitive=true, comment=[l]{//}, morecomment=[s]{/*}{*/}, string=[b]'
+}
+
+\newtcolorbox{note}[1][]{colback=soft,colframe=atblue,boxrule=0pt,leftrule=3pt,
+  arc=0pt,left=6pt,right=6pt,top=4pt,bottom=4pt,fontupper=\small,#1}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+% TikZ styles
+\tikzset{
+  box/.style={draw=atblue,fill=white,rounded corners=3pt,minimum height=0.9cm,
+    align=center,font=\small,inner sep=4pt,drop shadow={opacity=0.12}},
+  mod/.style={draw=atblue!70,fill=soft,rounded corners=2pt,minimum height=0.62cm,
+    minimum width=2.25cm,align=center,font=\scriptsize},
+  zone/.style={draw=#1,dashed,rounded corners=6pt,inner sep=8pt},
+  lbl/.style={font=\scriptsize\bfseries,text=#1},
+  arr/.style={-{Stealth[length=2.2mm]},thick,color=ink!70},
+  darr/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]},thick,color=ink!70},
+  elab/.style={font=\scriptsize,fill=white,inner sep=1.5pt},
+}
+
+% ---------------------------------------------------------------- Document
+\begin{document}
+
+% ------------------------------------------------ Page de titre (compacte)
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture,overlay]
+  \fill[atblue] (current page.north west) rectangle ([yshift=-7.2cm]current page.north east);
+  \fill[atgreen] ([yshift=-7.2cm]current page.north west) rectangle ([yshift=-7.45cm]current page.north east);
+  \node[anchor=north west,text=white,align=left] at ([xshift=2cm,yshift=-1.8cm]current page.north west)
+   {{\fontsize{34}{38}\selectfont\bfseries OMAT}\\[6pt]
+    {\Large Ordres de Mission --- Algérie Télécom}\\[14pt]
+    {\large Documentation technique de l'application}};
+\end{tikzpicture}
+\vspace*{6.6cm}
+
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\textbf{Version} & 1.0 --- livrable de fin de stage \\
+\textbf{Date} & \today \\
+\textbf{Dépôt} & \code{omat-order-mission-algerie-telecom} (monorepo npm workspaces) \\
+\textbf{Pile} & NestJS 10 · Prisma 5 · PostgreSQL 17 · React 18 · Vite · Tailwind CSS 4 · Docker · nginx \\
+\end{tabularx}
+
+\vspace{8pt}
+\begin{note}
+\textbf{Objet du document.} Ce document décrit l'architecture, la conception et la mise en
+œuvre de l'application OMAT : découpage en composants, modèle de données, flux métier,
+sécurité, génération des documents, internationalisation, tests et déploiement.
+Il s'adresse aux équipes techniques chargées de la reprise, de l'exploitation ou de l'évolution du système.
+\end{note}
+
+\vspace{2pt}
+\renewcommand{\contentsname}{Sommaire}
+{\small\setlength{\parskip}{0pt}\tableofcontents}
+
+\newpage
+% ============================================================================
+\section{Contexte et périmètre fonctionnel}
+
+OMAT dématérialise le cycle de vie d'un déplacement professionnel d'un agent d'Algérie Télécom :
+de la demande d'\textbf{ordre de mission}, à sa \textbf{validation} par un administrateur, jusqu'au
+\textbf{décompte} des frais (repas, nuitées, kilométrage) et à sa décision (acceptation ou rejet motivé).
+
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+\toprule
+Terme métier & Définition \\
+\midrule
+Ordre de mission & Demande de déplacement d'un agent ; un enregistrement par déplacement. États : \emph{En cours} (\code{INPROGRESS}), \emph{Validé} (\code{COMPLETED}). \\
+Décompte & Règlement des frais rattaché à un ordre validé. États : \emph{En attente}, \emph{Accepté}, \emph{Rejeté}. \\
+Direction & Zone de la mission : Nord, Sud, ou « Nord et Sud » (\code{MIXTE}). \\
+Barème & Taux par catégorie d'agent (repas, hébergement, indemnité kilométrique), différenciés par zone. \\
+Exercice & Année fiscale qui délimite ordres et décomptes ; un exercice est toujours sélectionné. \\
+Structure & Service/unité organisationnelle d'un agent ; délimite le périmètre d'un administrateur. \\
+\bottomrule
+\end{tabularx}
+
+\subsection*{Acteurs et rôles}
+\begin{itemize}
+  \item \textbf{USER} (agent) : crée et suit ses propres ordres de mission et décomptes.
+  \item \textbf{ADMIN} : valide les ordres, accepte/rejette les décomptes, gère les agents \emph{de sa structure}.
+  \item \textbf{SUPER\_ADMIN} : périmètre global, barèmes, structures, réouverture des dossiers verrouillés, suppression définitive, journal d'audit.
+\end{itemize}
+
+% ============================================================================
+\section{Architecture générale}
+
+L'application suit une architecture \textbf{trois tiers} conteneurisée. Un reverse-proxy nginx
+termine le TLS, sert le client React (SPA statique) et relaie \code{/api} vers l'API NestJS.
+La base PostgreSQL est placée sur un réseau Docker \emph{interne}, inaccessible depuis l'extérieur.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=1.1cm and 1.3cm]
+  % Clients
+  \node[box,minimum width=2.6cm] (browser) {\faDesktop\\Navigateur\\(agents, admins)};
+  \node[box,minimum width=2.6cm,below=0.5cm of browser] (phone) {\faMobile*\\Mobile\\(scan QR)};
+
+  % nginx
+  \node[box,minimum width=3.2cm,right=1.6cm of browser,yshift=-0.7cm,minimum height=2.3cm,fill=softgreen,draw=atgreen] (nginx)
+     {\textbf{nginx 1.29}\\[2pt]\scriptsize TLS :8443 · HSTS · CSP\\\scriptsize \code{/omat/} $\rightarrow$ SPA\\\scriptsize \code{/api/} $\rightarrow$ proxy\\\scriptsize limit\_req sur \code{/api/auth}};
+
+  % server
+  \node[box,minimum width=3.4cm,right=1.5cm of nginx,minimum height=2.3cm] (api)
+     {\textbf{API NestJS 10}\\[2pt]\scriptsize Node 24 · :8000\\\scriptsize Guards · DTO · Filtres\\\scriptsize Prisma ORM · Pino\\\scriptsize Rendu PDF (react-pdf)};
+
+  % db
+  \node[box,right=1.3cm of api,shape=cylinder,shape border rotate=90,aspect=0.25,
+        minimum width=2.1cm,minimum height=1.9cm,fill=soft] (db) {\textbf{PostgreSQL}\\\scriptsize 17-alpine\\\scriptsize volume\\\scriptsize \code{omat-db}};
+
+  \draw[arr] (browser.east) -- node[elab,above]{HTTPS} (nginx.west |- browser.east);
+  \draw[arr] (phone.east) -- node[elab,below]{HTTPS} (nginx.west |- phone.east);
+  \draw[darr] (nginx) -- node[elab,above]{HTTP} (api);
+  \draw[darr] (api) -- node[elab,above]{SQL} (db);
+
+  \begin{scope}[on background layer]
+    \node[zone=atgreen,fit=(nginx),label={[lbl=atgreen]above:réseau \code{frontend}}] (fz) {};
+    \node[zone=atblue,fit=(api)(db),label={[lbl=atblue]above:réseau \code{backend} (internal)}] {};
+  \end{scope}
+\end{tikzpicture}
+\caption{Architecture de déploiement (Docker Compose).}
+\end{figure}
+
+\subsection{Organisation du dépôt}
+Le code est un \textbf{monorepo npm workspaces} : une seule \code{package-lock.json}, des scripts
+racine (\code{npm run dev}, \code{build}, \code{test}, \code{lint}) qui orchestrent les deux paquets.
+
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily\small}l X@{}}
+\toprule
+\normalfont\bfseries Répertoire & \bfseries Rôle \\
+\midrule
+server/ & API NestJS (\code{@omat/server}) : modules métier, Prisma (\code{prisma/schema.prisma}, migrations, seeds), tests Jest unitaires et e2e. \\
+client/ & SPA React (\code{@omat/client}) : pages, composants UI, i18n \code{fr}/\code{ar}, tests Vitest et Playwright. \\
+deploy/ & Configuration nginx de production (TLS, en-têtes de sécurité, proxy). \\
+docs/ & ADR (\code{docs/adr/}), plan et rapport de sécurité, workflow des décomptes. \\
+.github/ & Intégration continue (\code{ci.yml}), analyse CodeQL, Dependabot. \\
+\bottomrule
+\end{tabularx}
+
+% ============================================================================
+\section{Architecture du backend (NestJS)}
+
+Le serveur est une application NestJS modulaire. Chaque domaine métier est un module
+(contrôleur + service + DTO) ; les préoccupations transverses (authentification, autorisation,
+validation, journalisation, gestion d'erreurs) sont appliquées globalement.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=2.42cm,y=0.95cm,every node/.append style={minimum width=2.15cm}]
+  % Transversal layer
+  \node[mod,minimum width=14.6cm,fill=softamber,draw=amber] at (3,4.3)
+    {\textbf{Pipeline :} Helmet \,→\, Throttler \,→\, JwtAuth \,→\, Roles \,→\, PasswordChange \,→\, ValidationPipe \,→\, Filtres d'exceptions};
+  % Business modules row
+  \node[mod] at (0,3) {Auth\\\tiny login · MFA · sessions};
+  \node[mod] at (1,3) {Users\\\tiny import/export Excel};
+  \node[mod] at (2,3) {Missions\\\tiny ordres, validation};
+  \node[mod] at (3,3) {Décompte\\\tiny calcul, décisions};
+  \node[mod] at (4,3) {Barème\\\tiny taux par zone};
+  \node[mod] at (5,3) {Structures};
+  \node[mod] at (6,3) {Exercices};
+  \node[mod] at (0,2) {Comments\\\tiny commentaires, support};
+  \node[mod] at (1,2) {Archive\\\tiny soft-delete, restauration};
+  \node[mod] at (2,2) {Analytics\\\tiny indicateurs};
+  \node[mod] at (3,2) {PDF\\\tiny react-pdf + QR};
+  \node[mod,fill=softgreen,draw=atgreen] at (4.5,2) {AccessPolicy\\\tiny périmètre par rôle};
+  \node[mod,fill=softgreen,draw=atgreen] at (5.75,2) {Audit\\\tiny journal \code{AuditLog}};
+  % Data layer
+  \node[mod,minimum width=14.6cm,fill=soft] at (3,0.85) {\textbf{Couche d'accès aux données :} DatabaseService / PrismaService (client Prisma typé, transactions \code{\$transaction})};
+  \node[mod,minimum width=5cm,fill=white] at (3,-0.2) {PostgreSQL};
+  \draw[arr] (3,0.5) -- (3,0.1);
+  \draw[arr] (3,3.95) -- (3,3.35);
+  \draw[arr] (3,1.65) -- (3,1.2);
+\end{tikzpicture}
+\caption{Découpage modulaire de l'API et pipeline de traitement d'une requête.}
+\end{figure}
+
+\subsection{Traitement d'une requête}
+\begin{enumerate}
+  \item \textbf{En-têtes et limites} : Helmet impose une CSP \code{default-src 'none'} (l'API ne sert que du JSON et des fichiers) ; corps JSON limité à 100~ko ; \code{trust proxy} pour récupérer l'IP réelle derrière nginx.
+  \item \textbf{Gardes globales} (ordre significatif) : limitation de débit (300 req/min/IP, 5/min sur les routes d'identifiants) ; vérification du JWT ; contrôle du rôle via le décorateur \code{@Roles} ; blocage de toute route tant qu'un mot de passe temporaire n'a pas été changé. Les routes publiques sont marquées \code{@Public()}.
+  \item \textbf{Validation} : \code{ValidationPipe} global avec \code{whitelist} et \code{forbidNonWhitelisted} ; seules des classes DTO (\code{class-validator}) sont acceptées en entrée, jamais des types Prisma --- ce qui empêche l'assignation de masse.
+  \item \textbf{Service métier} : applique la politique d'accès, les règles métier et persiste via Prisma, en transaction lorsque plusieurs écritures doivent être atomiques.
+  \item \textbf{Filtres d'exceptions} : \code{PrismaClientExceptionFilter} (contraintes d'unicité, enregistrements absents) $\rightarrow$ \code{HttpExceptionFilter} $\rightarrow$ \code{AllExceptionsFilter} ; réponses d'erreur homogènes, sans fuite de pile d'appels.
+\end{enumerate}
+
+\subsection{Principaux points d'entrée REST}
+\begin{tabularx}{\textwidth}{@{}>{\ttfamily\small}l X@{}}
+\toprule
+\normalfont\bfseries Ressource & \bfseries Opérations \\
+\midrule
+/auth & \code{login}, \code{mfa/setup}, \code{mfa/verify}, \code{refresh}, \code{logout} \\
+/missions & CRUD, \code{GET /user} (mes ordres), \code{GET /:id/download} (PDF), \code{POST /:id/reopen} \\
+/decompte & création, \code{PATCH /:id/accept|reject}, \code{bulk/accept|reject}, \code{/:id/download}, \code{/:id/reopen} \\
+/users, /structures & CRUD, import (\code{upload}) et export Excel, archivage, réinitialisation du mot de passe \\
+/barem, /exercices & gestion des taux ; exercice courant \\
+/archive & liste, archivage/restauration unitaire et en masse, suppression définitive \\
+/analytics, /audit, /comments & tableaux de bord, journal d'audit, commentaires et demandes de support \\
+\bottomrule
+\end{tabularx}
+La documentation OpenAPI (Swagger) est générée automatiquement et exposée en développement uniquement.
+
+% ============================================================================
+\section{Modèle de données}
+
+Le schéma est défini dans \code{server/prisma/schema.prisma} et versionné par migrations Prisma.
+La suppression est \textbf{logique} (\code{soft\_delete}, \code{archivedAt}, \code{archivedBy}) sur toutes les
+entités métier afin de préserver l'historique.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  ent/.style={draw=atblue,fill=white,rounded corners=2pt,align=left,font=\scriptsize,
+    inner sep=3pt,text width=#1,drop shadow={opacity=0.1}},
+  ent/.default=3.1cm,
+  hdr/.style={font=\scriptsize\bfseries},
+  rel/.style={thick,color=ink!60},
+  card/.style={font=\tiny\bfseries,text=atblue}]
+  \node[ent] (user) at (0,0) {\textbf{\color{atblue}User}\\[1pt]\underline{matricule} : Int\\nom, prénom, email\\role : Role\\category : Category\\grade, status\\serviceId → Structure\\mfaSecret, lockedUntil\\passwordChangedAt};
+  \node[ent] (struct) at (-4.3,1.1) {\textbf{\color{atblue}Structure}\\[1pt]\underline{code} : String\\name\\soft\_delete};
+  \node[ent] (session) at (-4.3,-1.5) {\textbf{\color{atblue}Session}\\[1pt]\underline{id} : uuid\\familyId, tokenHash\\expiresAt, revokedAt\\rotatedAt};
+  \node[ent] (mission) at (4.4,0) {\textbf{\color{atblue}Mission} (ordre)\\[1pt]\underline{n\_mission} : Int\\date\_sortie, date\_retour\\destination, motif\\transport, direction\\status : MissionStatus\\validatedById, validatedAt};
+  \node[ent=3.4cm] (decompte) at (4.4,-3.8) {\textbf{\color{atblue}Decompte}\\[1pt]\underline{n\_decompte} : Int\\repas\_\{pec,sans\_pec\}\_\{nord,sud\}\\hebergement\_\{…\}\_\{nord,sud\}\\parcours, fees\_transport\\montant : Float\\status, decidedById, decidedAt};
+  \node[ent] (comment) at (0,-3.8) {\textbf{\color{atblue}Commentaire}\\[1pt]\underline{id}\\title, type, status\\userId, decompteId?};
+  \node[ent] (exercice) at (8.6,-1.9) {\textbf{\color{atblue}Exercice}\\[1pt]\underline{id}\\year (unique)\\start, end, isCurrent};
+  \node[ent] (barem) at (8.6,1.2) {\textbf{\color{atblue}Barem}\\[1pt]libell : Category\\repas\_nord, repas\_sud\\hebergement\_nord/sud\\montant\_km};
+  \node[ent] (audit) at (-4.3,-3.8) {\textbf{\color{atblue}AuditLog}\\[1pt]actorMatricule\\action, entity, entityId\\before / after : Json\\reason, ip, at};
+
+  \draw[rel] (struct) -- node[card,above,pos=0.2]{1} node[card,above,pos=0.85]{*} (user);
+  \draw[rel] (session) -- node[card,above,pos=0.2]{*} node[card,above,pos=0.85]{1} (user);
+  \draw[rel] (user) -- node[card,above,pos=0.15]{1} node[card,above,pos=0.85]{*} (mission);
+  \draw[rel] (mission) -- node[card,right,pos=0.15]{1} node[card,right,pos=0.85]{*} (decompte);
+  \draw[rel] (decompte) -- node[card,above,pos=0.15]{0..1} node[card,above,pos=0.85]{*} (comment);
+  \draw[rel] (user) -- node[card,right,pos=0.15]{1} node[card,right,pos=0.85]{*} (comment);
+  \draw[rel] (exercice) -- node[card,above,pos=0.15]{1} node[card,above,pos=0.85]{*} (mission);
+  \draw[rel] (exercice) -- node[card,above,pos=0.15]{1} node[card,above,pos=0.85]{*} (decompte);
+  \draw[rel,dashed] (barem.west) -- (mission.north east);
+  \draw[rel,dotted] (audit) -- node[font=\tiny,below,sloped]{acteur} (user);
+\end{tikzpicture}
+\caption{Modèle conceptuel des données (entités principales et cardinalités).}
+\end{figure}
+
+\textbf{Énumérations} : \code{Role} (USER, ADMIN, SUPER\_ADMIN), \code{Category} (CADRE, CADRE\_SUPERIEUR,
+EXECUTION\_MAITRISE), \code{Direction} (NORD, SUD, MIXTE), \code{TransportType} (véhicule de service,
+véhicule personnel, transport entreprise/employé), \code{MissionStatus}, \code{DecompteStatus}.
+
+\textbf{Choix de conception notables}
+\begin{itemize}
+  \item Le \emph{verrou} d'un dossier est \textbf{dérivé du statut} (ordre validé, décompte accepté/rejeté) : pas de colonne \code{lockedAt} redondante susceptible de diverger.
+  \item Les compteurs du décompte sont \textbf{ventilés par zone} (8 colonnes) pour payer chaque repas et nuitée au barème de la zone où il a été consommé (ADR~0003).
+  \item \code{exerciceId} est dénormalisé sur le décompte pour simplifier le filtrage par année fiscale.
+  \item Les jetons de rafraîchissement ne sont jamais stockés en clair : seul un HMAC-SHA256 est conservé.
+\end{itemize}
+
+% ============================================================================
+\section{Flux métier}
+
+\subsection{Cycle de vie d'un ordre de mission et de son décompte}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  st/.style={draw=#1,fill=#1!10,rounded corners=10pt,minimum height=0.85cm,minimum width=2.3cm,align=center,font=\small\bfseries},
+  tr/.style={-{Stealth[length=2.2mm]},thick,color=ink!70},
+  tl/.style={font=\scriptsize,align=center,fill=white,inner sep=1.5pt}]
+  \node[circle,fill=ink,inner sep=3pt] (s0) at (0,0) {};
+  \node[st=amber] (enc) at (2.4,0) {En cours\\\tiny\normalfont INPROGRESS};
+  \node[st=atgreen] (val) at (8.0,0) {Validé\\\tiny\normalfont COMPLETED};
+  \node[st=amber] (att) at (8.0,-2.6) {En attente\\\tiny\normalfont PENDING};
+  \node[st=atgreen] (acc) at (13.4,-1.6) {Accepté\\\tiny\normalfont ACCEPTED};
+  \node[st=red] (rej) at (13.4,-3.6) {Rejeté\\\tiny\normalfont REGECTED};
+
+  \draw[tr] (s0) -- node[tl,below=3pt]{création\\(agent)} (enc);
+  \draw[tr] (enc) -- node[tl,below=2pt]{validation par un ADMIN\\(saisie de la ventilation)} (val);
+  \draw[tr] (val) -- node[tl,left=2pt]{création du décompte\\(même transaction)} (att);
+  \draw[tr] ([yshift=4pt]att.east) -- node[tl,above,sloped]{accepter} (acc.west);
+  \draw[tr] ([yshift=-4pt]att.east) -- node[tl,below,sloped]{rejeter + commentaire} (rej.west);
+  \draw[tr,dashed,color=atblue] (val.north) to[bend right=25] node[tl,above]{réouverture SUPER\_ADMIN (motif + journal d'audit)} (enc.north);
+  \draw[tr,dashed,color=atblue] (acc.south west) to[bend left=20] (att.north east);
+  \draw[tr,dashed,color=atblue] (rej.north west) to[bend right=20] node[tl,right=4pt,pos=0.3,text=atblue]{réouverture SUPER\_ADMIN} (att.south east);
+  \draw[tr] (enc) edge[loop above,looseness=5] node[tl,above]{modification} (enc);
+\end{tikzpicture}
+\caption{Machine à états : ordre de mission (haut) et décompte (bas).}
+\end{figure}
+
+\textbf{Règles appliquées côté serveur}
+\begin{itemize}
+  \item \textbf{Pas d'auto-approbation} : un ADMIN ne peut ni valider son propre ordre, ni décider de son propre décompte. L'auteur et l'horodatage de la décision sont enregistrés (\code{validatedById}, \code{decidedById}).
+  \item \textbf{Cohérence des quantités} : le nombre de repas et de nuitées déclarés est vérifié par rapport aux dates de sortie et de retour ; une ventilation hors de la Direction de l'ordre est refusée.
+  \item \textbf{Rejet motivé} : tout rejet crée un \code{Commentaire} visible par l'agent.
+  \item \textbf{Actions en masse} : acceptation/rejet et archivage de plusieurs dossiers en une requête, chacun contrôlé par la politique d'accès.
+\end{itemize}
+
+\subsection{Calcul du montant}
+Une fonction pure unique, \code{computeMontant} (\code{server/src/decompte/montant.ts}), est partagée par la
+création, la mise à jour et le jeu de données de démonstration. Elle est donc testable isolément et
+constitue le seul point à modifier si la règle de gestion évolue.
+
+\begin{minipage}[t]{0.52\textwidth}
+\vspace{0pt}
+\begin{lstlisting}[language=TypeScript]
+let montant =
+  (nord.heb_pec + nord.heb_sans_pec) * b.hebergement_nord
++ (nord.repas_pec + nord.repas_sans_pec) * b.repas_nord
++ sud.heb_sans_pec   * b.hebergement_sud
++ sud.repas_sans_pec * b.repas_sud;
+if (transport === PERSONAL_CAR)
+  montant += parcours * b.montant_km;
+if (anyPec) montant *= 0.25;
+return montant + fees_transport;
+\end{lstlisting}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.45\textwidth}
+\vspace{0pt}
+\small
+\begin{itemize}
+  \item Chaque zone est valorisée à \textbf{son propre barème} (selon la catégorie de l'agent).
+  \item Nord : tous les repas et nuitées sont payés ; Sud : seuls les éléments \emph{sans prise en charge}.
+  \item Toute prise en charge (\emph{pec}) ramène le total à 25\,\%.
+  \item Les frais de transport sont ajoutés en dernier.
+\end{itemize}
+\end{minipage}
+
+% ============================================================================
+\section{Sécurité}
+
+La sécurité a fait l'objet d'un programme de durcissement dédié, documenté par deux ADR
+(\code{docs/adr/0001}, \code{0002}), un plan de sécurité et un rapport de test d'intrusion
+(\code{docs/security/}). La menace principale retenue est l'\textbf{utilisateur interne} dépassant son rôle.
+
+\subsection{Authentification et sessions}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[
+  lane/.style={draw=none,font=\small\bfseries,minimum width=2.8cm,align=center},
+  msg/.style={-{Stealth[length=2mm]},thick,color=ink!75},
+  ml/.style={font=\scriptsize,fill=white,inner sep=1pt,align=center}]
+  \node[lane,fill=soft] (c) at (0,0) {Client React};
+  \node[lane,fill=softgreen] (s) at (6.5,0) {API NestJS};
+  \node[lane,fill=soft] (d) at (12,0) {PostgreSQL};
+  \foreach \n in {c,s,d} \draw[ink!30,dashed] (\n.south) -- ++(0,-6.3);
+
+  \draw[msg] (0,-0.8) -- node[ml,above]{\code{POST /auth/login} (matricule, mot de passe)} (6.5,-0.8);
+  \draw[msg] (6.5,-1.2) -- node[ml,above]{bcrypt, verrouillage progressif} (12,-1.2);
+  \draw[msg,dashed] (6.5,-1.8) -- node[ml,above]{ADMIN : \code{mfaToken} 5 min $\Rightarrow$ \code{POST /auth/mfa/verify} (TOTP)} (0,-1.8);
+  \draw[msg] (6.5,-2.5) -- node[ml,above]{Session(familyId, HMAC(secret))} (12,-2.5);
+  \draw[msg] (6.5,-3.2) -- node[ml,above]{JWT d'accès 15 min (mémoire) + cookie \code{httpOnly; Secure; SameSite=Strict}} (0,-3.2);
+  \draw[msg] (0,-4.0) -- node[ml,above]{Requête API \code{Authorization: Bearer} $\rightarrow$ 401 si expiré} (6.5,-4.0);
+  \draw[msg] (0,-4.8) -- node[ml,above]{\code{POST /auth/refresh} (une seule à la fois)} (6.5,-4.8);
+  \draw[msg] (6.5,-5.2) -- node[ml,above]{rotation ; rejeu $\Rightarrow$ révocation de la famille} (12,-5.2);
+  \draw[msg] (6.5,-5.9) -- node[ml,above]{nouveau JWT + nouveau cookie} (0,-5.9);
+\end{tikzpicture}
+\caption{Séquence d'authentification, MFA et rafraîchissement de session.}
+\end{figure}
+
+\begin{itemize}
+  \item \textbf{Jeton d'accès} : JWT HS256 de 15 minutes (\code{iss}/\code{aud} contrôlés), conservé \emph{uniquement en mémoire} côté client --- inaccessible à un script injecté via le stockage local. À chaque requête, le rôle et le statut sont relus en base et les jetons émis avant \code{passwordChangedAt} sont refusés.
+  \item \textbf{Jeton de rafraîchissement} : valeur opaque \code{<id>.<secret>}, seul un HMAC est stocké. La rotation crée une nouvelle session dans la même famille ; la réutilisation d'un jeton déjà tourné révoque toute la famille (détection de vol), avec une tolérance de 30~s pour les onglets concurrents. Le client sérialise les rafraîchissements (\emph{single-flight}).
+  \item \textbf{MFA TOTP} obligatoire pour ADMIN et SUPER\_ADMIN : secrets chiffrés AES-256-GCM, un code accepté une seule fois par pas de 30~s, dix codes de secours hachés (SHA-256).
+  \item \textbf{Mots de passe} : hachage bcrypt ; mot de passe temporaire imposé à la création ou après réinitialisation ; verrouillage exponentiel (1, 2, 4… jusqu'à 60 min) à partir du 5\textsuperscript{e} échec.
+  \item \textbf{CSRF} : les appels API ne portent pas de cookie ; \code{/auth/refresh} et \code{/auth/logout} vérifient en plus l'en-tête \code{Origin}.
+\end{itemize}
+
+\subsection{Autorisation : politique d'accès centralisée}
+La classe \code{AccessPolicy} (\code{server/src/common/policy/}) est la \textbf{source unique de vérité}
+sur « qui voit et modifie quoi ». Elle produit des fragments \code{where} Prisma fusionnés dans chaque requête :
+
+\begin{lstlisting}[language=TypeScript]
+scopeMissions(actor) {
+  if (isSuper(actor)) return {};                                   // tout
+  if (isAdmin(actor)) return { user: { serviceId: actor.serviceId } }; // sa structure
+  return { userId: actor.matricule };                              // ses propres ordres
+}
+// Service : db.mission.findFirst({ where: { n_mission: id, ...policy.scopeMissions(actor) } })
+\end{lstlisting}
+
+Une lecture hors périmètre renvoie \textbf{404} (les identifiants ne fuient pas) ; une écriture visible
+mais interdite (auto-approbation, dossier verrouillé) renvoie \textbf{403}. Un test e2e \emph{matrice
+d'autorisation} (toutes les routes × tous les rôles/périmètres) détecte tout nouveau point d'entrée qui
+omettrait la politique.
+
+\subsection{Défense en profondeur}
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l X@{}}
+\toprule
+Couche & Mesures \\
+\midrule
+Réseau & TLS, HSTS ; base sur réseau Docker \code{internal} ; conteneur API non-root. \\
+nginx & CSP stricte (\code{script-src 'self'}), \code{X-Content-Type-Options}, \code{Referrer-Policy}, \code{Permissions-Policy} ; limitation de débit sur \code{/api/auth}. \\
+API & Helmet, limitation de débit applicative, validation stricte des DTO, taille des corps bornée, validation du contenu des fichiers importés. \\
+Données & Traçabilité complète dans \code{AuditLog} (acteur, avant/après, motif, IP) : décisions, réouvertures, suppressions définitives. \\
+Chaîne logicielle & CodeQL, Dependabot, \code{npm audit --audit-level=high} en CI. \\
+\bottomrule
+\end{tabularx}
+
+% ============================================================================
+\section{Architecture du frontend (React)}
+
+Le client est une SPA React 18 + TypeScript construite avec Vite et servie sous le préfixe \code{/omat/}.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[x=1cm,y=1cm]
+  \node[mod,minimum width=15.5cm,fill=soft] (router) at (0,3) {\textbf{React Router 6} --- \code{ProtectedRoute} (session) · \code{RedirectBasedRole} (tableau de bord selon le rôle) · \code{/scan/:type/:id} (QR)};
+  \node[mod,minimum width=3.5cm] (p1) at (-5.9,1.8) {Pages agent\\\tiny tableau de bord, ordres, décomptes};
+  \node[mod,minimum width=3.5cm] (p2) at (-1.95,1.8) {Pages admin\\\tiny utilisateurs, structures, barème};
+  \node[mod,minimum width=3.5cm] (p3) at (1.95,1.8) {Analytique \& archive\\\tiny ECharts, restauration};
+  \node[mod,minimum width=3.5cm] (p4) at (5.9,1.8) {Authentification\\\tiny connexion, MFA, mot de passe};
+  \node[mod,minimum width=7.5cm] (ui) at (-3.95,0.6) {Composants UI (Radix UI + Tailwind 4)\\\tiny DataTable (TanStack), Dialog, Badge, StatusTimeline, Toaster};
+  \node[mod,minimum width=7.5cm] (forms) at (3.95,0.6) {Formulaires\\\tiny react-hook-form + schémas Zod};
+  \node[mod,minimum width=5cm] (store) at (-5.25,-0.6) {Redux Toolkit\\\tiny session, thème (persist)};
+  \node[mod,minimum width=5cm] (http) at (0,-0.6) {Client HTTP Axios\\\tiny Bearer, refresh single-flight};
+  \node[mod,minimum width=5cm] (i18n) at (5.25,-0.6) {i18next\\\tiny \code{fr} (défaut) / \code{ar} (RTL)};
+  \node[box,minimum width=4cm] (api) at (0,-2) {API \code{/api} (via nginx)};
+  \draw[arr] (http) -- (api);
+\end{tikzpicture}
+\caption{Organisation en couches du client React.}
+\end{figure}
+
+\begin{itemize}
+  \item \textbf{Gestion de session} : le jeton d'accès n'est jamais persisté ; au rechargement de la page, la session est restaurée via \code{/auth/refresh}. L'intercepteur Axios rejoue les requêtes en 401 après un rafraîchissement unique partagé entre les appels concurrents.
+  \item \textbf{Design system} : primitives accessibles (Radix UI) stylées avec Tailwind CSS 4 ; typographie IBM Plex Sans / Plex Sans Arabic ; thème clair/sombre.
+  \item \textbf{Tableaux} : TanStack Table pour tri, filtrage, pagination et sélection multiple (actions en masse).
+  \item \textbf{Visualisation} : tableau de bord analytique ECharts (montants et volumes par Direction, par statut, par exercice), restreint à la structure de l'ADMIN.
+  \item \textbf{Exports} : téléchargement des PDF et exports Excel (délai réseau porté à 60~s pour les fichiers).
+\end{itemize}
+
+\subsection{Internationalisation et bidirectionnalité}
+L'interface est disponible en \textbf{français} (défaut) et en \textbf{arabe} (droite-à-gauche), sélectionnable
+dans l'en-tête et mémorisée par navigateur.
+\begin{itemize}
+  \item Toute chaîne visible provient de \code{client/src/locales/<fr|ar>/<namespace>.json} ; un test (\code{locales.test.ts}) garantit la parité des clés et une règle ESLint (\code{eslint-plugin-i18next}) interdit le texte brut dans le JSX.
+  \item La mise en page n'utilise que des propriétés \emph{logiques} (\code{ms-}/\code{me-}, \code{start-}/\code{end-}) ; les icônes directionnelles sont retournées en RTL.
+  \item Les nombres conservent les chiffres latins et le format français (\code{1 500,50 DA} en français, le symbole arabe du dinar en arabe).
+\end{itemize}
+
+% ============================================================================
+\section{Génération des documents PDF}
+
+Les ordres de mission et décomptes sont produits \textbf{côté serveur} avec \code{@react-pdf/renderer} :
+les documents sont décrits comme des composants React (\code{server/src/pdf/documents/*.tsx}), ce qui
+permet de réutiliser des primitives de mise en page (en-tête, logo vectoriel, tableaux) et de tester
+le rendu.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.55cm]
+  \node[box,minimum width=2.3cm] (a) {Entité Prisma\\\scriptsize Mission / Décompte};
+  \node[box,minimum width=2.3cm,right=of a] (b) {Mapper\\\scriptsize \code{*.mapper.ts}\\\scriptsize données d'affichage};
+  \node[box,minimum width=2.4cm,right=of b] (c) {Document React\\\scriptsize \code{ordre-document.tsx}};
+  \node[box,minimum width=2.3cm,right=of c] (d) {\code{renderToBuffer}\\\scriptsize polices Inter};
+  \node[box,minimum width=1.6cm,right=of d,fill=softgreen,draw=atgreen] (e) {\faFilePdf\\PDF};
+  \node[box,minimum width=2.3cm,below=0.5cm of c] (q) {QR code\\\scriptsize \code{APP\_PUBLIC\_URL/scan/…}};
+  \draw[arr] (a) -- (b); \draw[arr] (b) -- (c); \draw[arr] (c) -- (d); \draw[arr] (d) -- (e);
+  \draw[arr] (q) -- (c);
+\end{tikzpicture}
+\caption{Chaîne de génération d'un document PDF.}
+\end{figure}
+
+Chaque document porte un \textbf{QR code} pointant vers la route \code{/scan/<ordre|decompte>/<id>} du client :
+scanné depuis un téléphone, il redirige, après authentification, vers la page de détail correspondante,
+dans la limite des droits de l'utilisateur. Les \emph{mappers} isolent la transformation des données
+(formatage des dates, montants, ventilation Nord/Sud) du rendu, et sont testés unitairement.
+
+% ============================================================================
+\section{Qualité, tests et intégration continue}
+
+\begin{tabularx}{\textwidth}{@{}>{\bfseries}l l X@{}}
+\toprule
+Niveau & Outil & Portée \\
+\midrule
+Unitaire serveur & Jest & services (missions, décomptes, barème, archive…), calcul du montant, mappers PDF, QR, filtres d'erreurs, utilitaires cryptographiques. \\
+E2E serveur & Jest + Supertest & base PostgreSQL réelle : authentification, sessions (rotation, rejeu), matrice de contrôle d'accès, métadonnées des routes (\code{@Public}, \code{@Roles}). \\
+Unitaire client & Vitest + Testing Library & composants UI, client HTTP, parité des traductions, redirection de scan. \\
+E2E client & Playwright + axe-core & parcours complets (ordres, décomptes, archive, analytique, i18n, session) et audit d'accessibilité. \\
+\bottomrule
+\end{tabularx}
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[stp/.style={draw=atblue,fill=soft,rounded corners=2pt,font=\scriptsize,align=center,minimum height=0.8cm,text width=1.45cm}, node distance=0.22cm]
+  \node[stp] (1) {\code{npm ci}};
+  \node[stp,right=of 1] (2) {Prisma generate + migrate};
+  \node[stp,right=of 2] (3) {ESLint\\client+serveur};
+  \node[stp,right=of 3] (4) {\code{tsc} --noEmit};
+  \node[stp,right=of 4] (5) {Build};
+  \node[stp,right=of 5] (6) {Tests Jest};
+  \node[stp,right=of 6] (7) {Tests Vitest};
+  \node[stp,right=of 7] (8) {E2E API};
+  \node[stp,right=of 8,fill=softgreen,draw=atgreen] (9) {\code{npm audit} high};
+  \foreach \i/\j in {1/2,2/3,3/4,4/5,5/6,6/7,7/8,8/9} \draw[arr] (\i) -- (\j);
+\end{tikzpicture}
+\caption{Pipeline GitHub Actions (service PostgreSQL 17 éphémère, Node 24).}
+\end{figure}
+
+% ============================================================================
+\section{Déploiement et exploitation}
+
+\begin{itemize}
+  \item \textbf{Images Docker multi-étapes} : l'étape de build installe les dépendances du seul workspace concerné, génère le client Prisma et compile ; l'image d'exécution ne contient que les dépendances de production et s'exécute sous un utilisateur non privilégié \code{omat}. Le client est compilé puis copié dans une image \code{nginx:1.29-alpine}.
+  \item \textbf{Démarrage} : \code{docker compose up -d} ; le point d'entrée du serveur applique les migrations (\code{prisma migrate deploy}) avant le lancement ; l'API attend que la base soit \emph{healthy}.
+  \item \textbf{Configuration} : variables validées au démarrage (\code{validateEnv}) --- \code{DATABASE\_URL}, \code{JWT\_SECRET}, \code{JWT\_REFRESH\_SECRET}, \code{MFA\_ENCRYPTION\_KEY}, \code{APP\_PUBLIC\_URL}, \code{POSTGRES\_PASSWORD} ; certificats TLS montés depuis \code{deploy/certs}. Aucun secret n'est versionné.
+  \item \textbf{Journalisation} : logs structurés JSON (Pino) avec IP client réelle, exploitables par un collecteur centralisé.
+  \item \textbf{Données initiales} : \code{npm run seed:db} (référentiel, barèmes, comptes initiaux) et \code{npm run seed:demo} (jeu de démonstration).
+\end{itemize}
+
+\begin{note}
+\textbf{Démarrage local rapide.} \code{npm install} \;→\; copier \code{server/.env.example} vers \code{server/.env} \;→\;
+\code{npm run setup:db} \;→\; \code{npm run dev} (API sur \code{:8000}, client Vite avec proxy \code{/api}).
+\end{note}
+
+% ============================================================================
+\section{Décisions d'architecture et perspectives}
+
+\begin{tabularx}{\textwidth}{@{}l X@{}}
+\toprule
+\textbf{ADR} & \textbf{Décision} \\
+\midrule
+0001 & Contrôle d'accès centralisé au niveau des requêtes (\code{AccessPolicy}), 404 hors périmètre, pas d'auto-approbation, verrouillage des dossiers approuvés. \\
+0002 & Jeton d'accès court en mémoire, sessions de rafraîchissement opaques, hachées et révocables, MFA pour les administrateurs. \\
+0003 & Ordres « Nord et Sud » : ventilation des repas et nuitées par zone, chacune valorisée à son barème. \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Perspectives}
+\begin{itemize}
+  \item Brancher l'authentification sur le SSO de l'entreprise lorsqu'il sera disponible (remplacement des mots de passe locaux et du TOTP).
+  \item Faire valider par la direction métier la règle d'abattement de 25\,\% et le traitement des éléments pris en charge au Sud ; seule \code{computeMontant} serait à modifier.
+  \item Stocker le montant par zone si un reporting financier ventilé Nord/Sud est requis.
+  \item Ajouter des notifications (courriel) lors des décisions sur les décomptes.
+\end{itemize}
+
+\end{document}
