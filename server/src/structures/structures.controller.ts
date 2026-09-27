@@ -19,6 +19,7 @@ import { Structure } from './entities/structure.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SUPPORTED_FILES } from 'src/utils/upload';
 import { Auth } from 'src/auth/guards/auth-role.guard';
+import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
 import { Response } from 'express';
 @ApiTags('Structures')
@@ -76,8 +77,8 @@ export class StructuresController {
   })
   @ApiResponse({ status: 200, description: 'Structure archived successfully' })
   @ApiResponse({ status: 404, description: 'Structure not found' })
-  archive(@Param('id') id: string) {
-    return this.structuresService.archive(id);
+  archive(@Param('id') id: string, @GetUser('matricule') actorId: number) {
+    return this.structuresService.archive(id, actorId);
   }
 
   @Post('upload')

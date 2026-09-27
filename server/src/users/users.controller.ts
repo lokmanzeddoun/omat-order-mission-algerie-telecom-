@@ -103,8 +103,8 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User archived successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  archive(@Param('id') id: string) {
-    return this.usersService.archive(+id);
+  archive(@Param('id') id: string, @GetUser('matricule') actorId: number) {
+    return this.usersService.archive(+id, actorId);
   }
   // Admin-only endpoint to reset a user's password
   @Auth('ADMIN', 'SUPER_ADMIN')

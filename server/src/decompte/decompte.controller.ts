@@ -70,8 +70,8 @@ export class DecompteController {
 
   @Delete(':id')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  remove(@Param('id') id: string) {
-    return this.decompteService.remove(+id);
+  remove(@Param('id') id: string, @GetUser('matricule') actorId: number) {
+    return this.decompteService.remove(+id, actorId);
   }
 
   @Get(':id/download')

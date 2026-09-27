@@ -1,6 +1,7 @@
 import { Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { ArchiveService } from './archive.service';
 import { Auth } from 'src/auth/guards/auth-role.guard';
+import { GetUser } from 'src/auth/decorators/getUser.decorator';
 
 @Controller('archive')
 export class ArchiveController {
@@ -20,14 +21,14 @@ export class ArchiveController {
 
   @Patch('missions/:id')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  moveMission(@Param('id') id: string) {
-    return this.archive.moveMissionToArchive(+id);
+  moveMission(@Param('id') id: string, @GetUser('matricule') actorId: number) {
+    return this.archive.moveMissionToArchive(+id, actorId);
   }
 
   @Patch('decomptes/:id')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  moveDecompte(@Param('id') id: string) {
-    return this.archive.moveDecompteToArchive(+id);
+  moveDecompte(@Param('id') id: string, @GetUser('matricule') actorId: number) {
+    return this.archive.moveDecompteToArchive(+id, actorId);
   }
 
   @Get('structures')
@@ -38,8 +39,11 @@ export class ArchiveController {
 
   @Patch('structures/:code')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  moveStructure(@Param('code') code: string) {
-    return this.archive.moveStructureToArchive(code);
+  moveStructure(
+    @Param('code') code: string,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.moveStructureToArchive(code, actorId);
   }
 
   @Get('users')
@@ -50,8 +54,8 @@ export class ArchiveController {
 
   @Patch('users/:id')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  moveUser(@Param('id') id: string) {
-    return this.archive.moveUserToArchive(+id);
+  moveUser(@Param('id') id: string, @GetUser('matricule') actorId: number) {
+    return this.archive.moveUserToArchive(+id, actorId);
   }
 
   @Patch('missions/:id/restore')

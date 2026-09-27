@@ -5,6 +5,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
+import { archiveStamp } from 'src/archive/archive-stamp';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
@@ -379,9 +380,7 @@ export class MissionsService {
         where: {
           n_mission: id,
         },
-        data: {
-          soft_delete: true,
-        },
+        data: archiveStamp(user.matricule),
       });
     } catch (error) {
       if (

@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { DatabaseService } from 'src/database/database.service';
+import { archiveStamp } from 'src/archive/archive-stamp';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import { CommentsService } from 'src/comments/comments.service';
 import {
@@ -386,14 +387,12 @@ export class DecompteService {
     return this.databaseService.$transaction([updateMission, updateDecompte]);
   }
 
-  remove(id: number) {
+  remove(id: number, actorId: number) {
     return this.databaseService.decompte.update({
       where: {
         n_decompte: id,
       },
-      data: {
-        soft_delete: true,
-      },
+      data: archiveStamp(actorId),
     });
   }
 

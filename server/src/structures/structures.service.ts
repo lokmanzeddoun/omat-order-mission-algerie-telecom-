@@ -1,4 +1,5 @@
 import { DatabaseService } from '../database/database.service';
+import { archiveStamp } from 'src/archive/archive-stamp';
 import {
   BadRequestException,
   Injectable,
@@ -53,14 +54,12 @@ export class StructuresService {
     });
   }
 
-  archive(code: string) {
+  archive(code: string, actorId: number) {
     return this.databaseService.structure.update({
       where: {
         code,
       },
-      data: {
-        soft_delete: true,
-      },
+      data: archiveStamp(actorId),
     });
   }
 
