@@ -118,7 +118,12 @@
     "forgotSubmit": "Envoyer la demande",
     "forgotSent": "Demande envoyée avec succès",
     "sending": "Envoi…",
-    "backToSignIn": "Retour à la connexion"
+    "backToSignIn": "Retour à la connexion",
+    "changePasswordTitle": "Choisir un nouveau mot de passe",
+    "changePasswordSubtitle": "Le mot de passe temporaire doit être remplacé avant d’accéder à l’application.",
+    "tempPassword": "Mot de passe temporaire",
+    "saveAndReconnect": "Enregistrer et se reconnecter",
+    "saving": "Enregistrement…"
   },
   "currency": "DA",
   "timeline": {

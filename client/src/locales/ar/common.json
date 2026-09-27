@@ -122,7 +122,12 @@
     "forgotSubmit": "إرسال الطلب",
     "forgotSent": "تم إرسال الطلب بنجاح",
     "sending": "جارٍ الإرسال…",
-    "backToSignIn": "العودة إلى تسجيل الدخول"
+    "backToSignIn": "العودة إلى تسجيل الدخول",
+    "changePasswordTitle": "اختيار كلمة مرور جديدة",
+    "changePasswordSubtitle": "يجب استبدال كلمة المرور المؤقتة قبل الوصول إلى التطبيق.",
+    "tempPassword": "كلمة المرور المؤقتة",
+    "saveAndReconnect": "حفظ وتسجيل الدخول مجددًا",
+    "saving": "جارٍ الحفظ…"
   },
   "timeline": {
     "done": "منجز",

@@ -1,11 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import { changePassword } from 'components/users/users.thunk';
 import { Button, Field, PasswordInput } from 'components/ui';
 
 export default function ChangePassword() {
+  const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const token = useSelector((state: RootState) => state.auth.token);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -17,11 +19,11 @@ export default function ChangePassword() {
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (password.length < 12) {
-      setError('Le mot de passe doit contenir au moins 12 caractères.');
+      setError(t('profile:errors.min'));
       return;
     }
     if (password !== passwordConfirm) {
-      setError('Les mots de passe ne correspondent pas.');
+      setError(t('users:password.mismatch'));
       return;
     }
     setError(null);
@@ -36,28 +38,28 @@ export default function ChangePassword() {
     <main className="mx-auto flex min-h-screen max-w-lg items-center px-4 py-8">
       <section className="w-full border border-border bg-surface shadow-sm">
         <header className="border-b border-border bg-surface-header px-6 py-4">
-          <h1 className="text-lg font-semibold">Choisir un nouveau mot de passe</h1>
+          <h1 className="text-lg font-semibold">{t('auth.changePasswordTitle')}</h1>
           <p className="mt-1 text-sm text-fg-muted">
-            Le mot de passe temporaire doit être remplacé avant d’accéder à l’application.
+            {t('auth.changePasswordSubtitle')}
           </p>
         </header>
         <form onSubmit={submit} className="flex flex-col gap-4 px-6 py-5">
           {error && <p role="alert" className="text-sm text-danger">{error}</p>}
-          <Field label="Mot de passe temporaire" required>
+          <Field label={t('auth.tempPassword')} required>
             <PasswordInput
               autoComplete="current-password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
             />
           </Field>
-          <Field label="Nouveau mot de passe" hint="12 à 128 caractères." required>
+          <Field label={t('users:password.new')} hint={t('profile:hint')} required>
             <PasswordInput
               autoComplete="new-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
           </Field>
-          <Field label="Confirmer le mot de passe" required>
+          <Field label={t('users:password.confirm')} required>
             <PasswordInput
               autoComplete="new-password"
               value={passwordConfirm}
@@ -65,7 +67,7 @@ export default function ChangePassword() {
             />
           </Field>
           <Button type="submit" variant="primary" disabled={submitting}>
-            {submitting ? 'Enregistrement…' : 'Enregistrer et se reconnecter'}
+            {submitting ? t('auth.saving') : t('auth.saveAndReconnect')}
           </Button>
         </form>
       </section>
