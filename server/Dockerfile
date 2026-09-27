@@ -1,4 +1,4 @@
-FROM node:24-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 COPY server/package.json server/package.json
@@ -7,7 +7,7 @@ RUN npm ci --workspace=server --include-workspace-root
 COPY server server
 RUN npx prisma generate --schema server/prisma/schema.prisma && npm run build --workspace=server
 
-FROM node:24-alpine AS runtime
+FROM node:26-alpine AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 RUN addgroup -S omat && adduser -S omat -G omat
