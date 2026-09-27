@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   columnVisibilityFeature,
   createColumnHelper,
@@ -29,7 +29,7 @@ import dayjs from 'helpers/date';
 import { cn } from 'lib/utils';
 import { Button } from './button';
 import { IconButton } from './icon-button';
-import { Input, Select } from './input';
+import { Checkbox, Input, Select } from './input';
 import { ContextMenu, DropdownMenu, type MenuAction } from './menu';
 import { EmptyState, Skeleton } from './page';
 
@@ -96,6 +96,12 @@ interface DataTableProps<Row> {
   showFilters?: boolean;
   /** Adds an "Exporter (CSV)" button exporting the filtered rows and visible columns. */
   exportFileName?: string;
+  /**
+   * Enables row selection (checkboxes, "select all matching", action bar).
+   * Receives the selected rows — always a subset of the filtered rows — and
+   * a callback that clears the selection.
+   */
+  bulkActions?: (selected: Row[], clearSelection: () => void) => MenuAction[];
 }
 
 type Filters = Record<string, string>;
@@ -182,6 +188,7 @@ export function DataTable<Row extends RowData>({
   server,
   showFilters = true,
   exportFileName,
+  bulkActions,
 }: DataTableProps<Row>) {
   const { t } = useTranslation();
   const [filters, setFilters] = useState<Filters>({});
@@ -197,6 +204,16 @@ export function DataTable<Row extends RowData>({
   });
 
   useEffect(() => writeVisibility(tableId, visibility), [tableId, visibility]);
+
+  const selectable = !!bulkActions;
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
+  // Last row toggled without Shift: the start of a Shift+click range.
+  const anchor = useRef<string | null>(null);
+  const idOf = (row: Row) => String(getRowId(row));
+  const clearSelection = () => {
+    setSelected(new Set());
+    anchor.current = null;
+  };
 
   const valueOf = (col: DataColumn<Row>, row: Row): unknown =>
     col.accessor ? col.accessor(row) : (row as Record<string, unknown>)[col.id];
@@ -226,6 +243,22 @@ export function DataTable<Row extends RowData>({
   useEffect(() => {
     setClientPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }));
   }, [filters]);
+
+  // A new filter means a new question: never carry hidden rows in the selection.
+  useEffect(() => clearSelection(), [filters]);
+
+  // When the rows change (refetch, page-level tabs), drop ids that are gone
+  // but keep the rest, e.g. rows a bulk action skipped.
+  useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const present = new Set(rows.map(idOf));
+      const next = new Set([...prev].filter((id) => present.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+    // idOf only depends on getRowId
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
 
   const tableColumns = useMemo(() => {
     const helper = createColumnHelper<typeof features, Row>();
@@ -268,7 +301,46 @@ export function DataTable<Row extends RowData>({
   const from = total === 0 ? 0 : pagination.pageIndex * pagination.pageSize + 1;
   const to = Math.min(total, (pagination.pageIndex + 1) * pagination.pageSize);
   const hasFilters = Object.values(filters).some(Boolean);
-  const colSpan = visibleColumns.length + (rowActions ? 1 : 0);
+  const colSpan = visibleColumns.length + (rowActions ? 1 : 0) + (selectable ? 1 : 0);
+
+  // Selection is always read through the filtered rows, so an action can
+  // never reach a row the user can't currently see.
+  const selectedRows = selectable ? filteredRows.filter((r) => selected.has(idOf(r))) : [];
+  const pageIds = pageRows.map((r) => r.id);
+  const pageAllSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const pageSomeSelected = pageIds.some((id) => selected.has(id));
+  const allMatchingSelected = filteredRows.length > 0 && selectedRows.length === filteredRows.length;
+  const morePagesThanThis = filteredRows.length > pageIds.length;
+
+  const setMany = (ids: string[], on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const id of ids) {
+        if (on) next.add(id);
+        else next.delete(id);
+      }
+      return next;
+    });
+
+  const toggleRow = (id: string, e: MouseEvent) => {
+    const on = !selected.has(id);
+    if (e.shiftKey && anchor.current && anchor.current !== id) {
+      // Range over the current sort order, across pages.
+      const ordered = table.getSortedRowModel().rows.map((r) => r.id);
+      const a = ordered.indexOf(anchor.current);
+      const b = ordered.indexOf(id);
+      if (a !== -1 && b !== -1) {
+        setMany(ordered.slice(Math.min(a, b), Math.max(a, b) + 1), on);
+        return;
+      }
+    }
+    anchor.current = id;
+    setMany([id], on);
+  };
+
+  const togglePage = () => setMany(pageIds, !pageAllSelected);
+  const selectAllMatching = () => setSelected(new Set(filteredRows.map(idOf)));
+  const visibleBulkActions = selectedRows.length ? (bulkActions?.(selectedRows, clearSelection) ?? []).filter((a) => !a.hidden) : [];
   const alignClass = (a?: DataColumn<Row>['align']) =>
     a === 'center' ? 'text-center' : a === 'end' ? 'text-end' : 'text-start';
 
@@ -323,11 +395,72 @@ export function DataTable<Row extends RowData>({
         </div>
       )}
 
+      {selectable && selectedRows.length > 0 && (
+        <div
+          role="region"
+          aria-label={t('table.bulkActions')}
+          className="sticky top-0 z-10 flex flex-col gap-1 border-b border-border bg-primary-soft px-3 py-2 text-sm"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <span aria-live="polite" className="font-semibold text-fg">
+              {t('table.selected', { count: selectedRows.length })}
+            </span>
+            {visibleBulkActions.map((a) => (
+              <Button
+                key={a.label}
+                size="sm"
+                variant={a.tone === 'danger' ? 'danger' : 'secondary'}
+                disabled={a.disabled}
+                onClick={a.onSelect}
+              >
+                {a.icon}
+                {a.label}
+              </Button>
+            ))}
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              {t('table.clearSelection')}
+            </Button>
+          </div>
+          {morePagesThanThis && pageAllSelected && (
+            <p className="text-fg-muted">
+              {allMatchingSelected ? (
+                <>
+                  {t(hasFilters ? 'table.allMatchingSelected' : 'table.allSelected', { total: filteredRows.length })}{' '}
+                  <Button size="sm" variant="link" onClick={clearSelection}>
+                    {t('table.clearSelection')}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {t('table.pageSelected', { count: pageIds.length })}{' '}
+                  <Button size="sm" variant="link" onClick={selectAllMatching}>
+                    {t(hasFilters ? 'table.selectAllMatching' : 'table.selectAll', { total: filteredRows.length })}
+                  </Button>
+                </>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
             <tr className="bg-surface-header">
+              {selectable && (
+                <th scope="col" className="w-px border border-border px-2 py-2 text-center">
+                  <Checkbox
+                    aria-label={t('table.selectPage')}
+                    checked={pageAllSelected}
+                    ref={(el) => {
+                      if (el) el.indeterminate = pageSomeSelected && !pageAllSelected;
+                    }}
+                    onChange={togglePage}
+                    disabled={pageIds.length === 0}
+                  />
+                </th>
+              )}
               {visibleColumns.map((column) => {
                 const col = colById.get(column.id)!;
                 const sorted = column.getIsSorted();
@@ -374,6 +507,7 @@ export function DataTable<Row extends RowData>({
             </tr>
             {showFilters && (
               <tr className="bg-surface-muted">
+                {selectable && <td className="border border-border p-1" />}
                 {visibleColumns.map((column) => {
                   const col = colById.get(column.id)!;
                   const label = t('table.filter', { column: col.header });
@@ -443,15 +577,32 @@ export function DataTable<Row extends RowData>({
                 const menuActions = contextMenu
                   ? contextMenu(original)
                   : [...(actions?.primary ?? []), ...(actions?.menu ?? [])];
+                const isSelected = selectable && selected.has(row.id);
                 return (
                   <ContextMenu key={row.id} actions={menuActions}>
                     <tr
+                      aria-selected={selectable ? isSelected : undefined}
                       onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(original) : undefined}
                       className={cn(
                         'even:bg-surface-muted hover:bg-primary-soft',
+                        isSelected && 'bg-primary-soft even:bg-primary-soft',
                         onRowDoubleClick && 'cursor-pointer',
                       )}
                     >
+                      {selectable && (
+                        <td className="border border-border px-2 py-1.5 text-center align-middle">
+                          <Checkbox
+                            aria-label={t('table.selectRow', {
+                              label: toText(valueOf(columns[0], original)) || row.id,
+                            })}
+                            checked={isSelected}
+                            // Toggled from onClick so Shift+click can select a range.
+                            onClick={(e) => toggleRow(row.id, e)}
+                            onChange={() => {}}
+                            onDoubleClick={(e) => e.stopPropagation()}
+                          />
+                        </td>
+                      )}
                       {visibleColumns.map((column) => {
                         const col = colById.get(column.id)!;
                         return (
