@@ -286,10 +286,10 @@ async function main() {
         // Decompte for first mission (completed, accepted)
         prisma.decompte.create({
             data: {
-                repas_pec: 2,
-                repas_sans_pec: 1,
-                hebergement_pec: 2,
-                hebergement_sans_pec: 0,
+                repas_pec_nord: 2,
+                repas_sans_pec_nord: 1,
+                hebergement_pec_nord: 2,
+                hebergement_sans_pec_nord: 0,
                 montant: 4500.0,
                 parcours: 850.0,
                 status: 'ACCEPTED',
@@ -299,10 +299,10 @@ async function main() {
         // Decompte for second mission (pending)
         prisma.decompte.create({
             data: {
-                repas_pec: 3,
-                repas_sans_pec: 0,
-                hebergement_pec: 2,
-                hebergement_sans_pec: 1,
+                repas_pec_sud: 3,
+                repas_sans_pec_sud: 0,
+                hebergement_pec_sud: 2,
+                hebergement_sans_pec_sud: 1,
                 montant: 6200.0,
                 parcours: 1200.0,
                 status: 'PENDING',
@@ -312,10 +312,10 @@ async function main() {
         // Decompte for third mission (rejected)
         prisma.decompte.create({
             data: {
-                repas_pec: 1,
-                repas_sans_pec: 0,
-                hebergement_pec: 0,
-                hebergement_sans_pec: 0,
+                repas_pec_nord: 1,
+                repas_sans_pec_nord: 0,
+                hebergement_pec_nord: 0,
+                hebergement_sans_pec_nord: 0,
                 montant: 1200.0,
                 parcours: 300.0,
                 status: 'REGECTED',
@@ -325,10 +325,10 @@ async function main() {
         // Decompte for fourth mission (pending)
         prisma.decompte.create({
             data: {
-                repas_pec: 2,
-                repas_sans_pec: 1,
-                hebergement_pec: 2,
-                hebergement_sans_pec: 0,
+                repas_pec_sud: 2,
+                repas_sans_pec_sud: 1,
+                hebergement_pec_sud: 2,
+                hebergement_sans_pec_sud: 0,
                 montant: 5800.0,
                 parcours: 950.0,
                 status: 'PENDING',

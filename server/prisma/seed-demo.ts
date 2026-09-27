@@ -20,6 +20,12 @@ import {
   User,
 } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import {
+  computeMontant,
+  emptyCounts,
+  toColumns,
+  ZoneCounts,
+} from '../src/decompte/montant';
 
 // This script truncates missions/décomptes and resets passwords: never on a real database.
 if (
@@ -386,30 +392,6 @@ function mealsAndNights(start: Date, end: Date) {
   return { meals, nights };
 }
 
-function montant(
-  barem: Barem,
-  direction: Direction,
-  transport: TransportType,
-  q: {
-    repas_pec: number;
-    repas_sans_pec: number;
-    hebergement_pec: number;
-    hebergement_sans_pec: number;
-    parcours: number;
-    fees: number;
-  },
-) {
-  let m =
-    direction === 'NORD'
-      ? (q.hebergement_pec + q.hebergement_sans_pec) * barem.hebergement_nord +
-        (q.repas_pec + q.repas_sans_pec) * barem.repas_nord
-      : q.hebergement_sans_pec * barem.hebergement_sud +
-        q.repas_sans_pec * barem.repas_sud;
-  if (transport === 'PERSONAL_CAR') m += q.parcours * barem.montant_km;
-  if (q.hebergement_pec > 0 || q.repas_pec > 0) m *= 0.25;
-  return Math.round((m + q.fees) * 100) / 100;
-}
-
 /* ------------------------------------------------------------------ */
 /* Generation                                                          */
 /* ------------------------------------------------------------------ */
@@ -584,9 +566,12 @@ async function main() {
       if ((user.status === 'INACTIVE' || user.soft_delete) && year > 2025)
         continue;
 
-      const direction: Direction = rand() < 0.62 ? 'NORD' : 'SUD';
-      const place = pick(direction === 'NORD' ? NORD : SUD);
-      const { days, hour } = duration(direction, !!place.local);
+      const zone: Direction = rand() < 0.62 ? 'NORD' : 'SUD';
+      const place = pick(zone === 'NORD' ? NORD : SUD);
+      const { days, hour } = duration(zone, !!place.local);
+      // Some longer trips to the Sud also spend days in the Nord on the way.
+      const direction: Direction =
+        zone === 'SUD' && days >= 2 && rand() < 0.3 ? 'MIXTE' : zone;
       const end = addDays(start, days);
       if (hour === null)
         end.setTime(
@@ -655,15 +640,31 @@ async function main() {
       ['full', 2],
       ['partial', 2],
     ] as const);
-    const repas_pec =
-      pec === 'full' ? meals : pec === 'partial' ? int(0, meals) : 0;
-    const hebergement_pec =
-      pec === 'full' ? nights : pec === 'partial' ? int(0, nights) : 0;
+    const zoneCounts = (m: number, n: number): ZoneCounts => {
+      const repas_pec = pec === 'full' ? m : pec === 'partial' ? int(0, m) : 0;
+      const hebergement_pec =
+        pec === 'full' ? n : pec === 'partial' ? int(0, n) : 0;
+      return {
+        repas_pec,
+        repas_sans_pec: m - repas_pec,
+        hebergement_pec,
+        hebergement_sans_pec: n - hebergement_pec,
+      };
+    };
+    const counts = emptyCounts();
+    if (p.direction === 'MIXTE') {
+      // The first part of the trip is spent in the Nord.
+      const m = int(1, meals - 1);
+      const n = int(0, nights);
+      counts.nord = zoneCounts(m, n);
+      counts.sud = zoneCounts(meals - m, nights - n);
+    } else {
+      counts[p.direction === 'NORD' ? 'nord' : 'sud'] = zoneCounts(
+        meals,
+        nights,
+      );
+    }
     const q = {
-      repas_pec,
-      repas_sans_pec: meals - repas_pec,
-      hebergement_pec,
-      hebergement_sans_pec: nights - hebergement_pec,
       parcours:
         p.transport === 'PERSONAL_CAR' ? p.place.km * 2 + int(0, 40) : 0,
       fees: p.transport === 'TRANSPORT_EMPLOYEE' ? int(3, 60) * 250 : 0,
@@ -691,18 +692,21 @@ async function main() {
     const decompteCreated = addDays(p.end, int(1, 18));
     const decompte = await prisma.decompte.create({
       data: {
-        repas_pec: q.repas_pec,
-        repas_sans_pec: q.repas_sans_pec,
-        hebergement_pec: q.hebergement_pec,
-        hebergement_sans_pec: q.hebergement_sans_pec,
+        ...toColumns(counts),
         parcours: q.parcours || null,
         fees_transport: q.fees,
-        montant: montant(
-          baremFor(p.user.category),
-          p.direction,
-          p.transport,
-          q,
-        ),
+        montant:
+          Math.round(
+            computeMontant(
+              {
+                counts,
+                transport: p.transport,
+                parcours: q.parcours,
+                fees_transport: q.fees,
+              },
+              baremFor(p.user.category),
+            ) * 100,
+          ) / 100,
         status,
         soft_delete: archived,
         missionId: mission.n_mission,

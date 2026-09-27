@@ -35,7 +35,7 @@ _Avoid_: Comment, message (in UI text)
 ### Organisation
 
 **Direction**:
-An organisational unit of Algérie Télécom (Nord or Sud).
+The zone of Algérie Télécom (Nord or Sud) an ordre de mission is spent in; an ordre spent partly in each is "Nord et Sud" (code `MIXTE`), and its décompte records each repas and nuitée in the zone where it was spent.
 _Avoid_: confusing it with text direction (LTR/RTL)
 
 **Exercice**:
@@ -43,7 +43,7 @@ The fiscal year that scopes ordres de mission and décomptes; one exercice is al
 _Avoid_: Year, Année (as a free-standing filter)
 
 **Barème**:
-The per-category rates (meals, lodging, per-km) applied to a décompte, differing by Direction.
+The per-category rates (meals, lodging, per-km) applied to a décompte, differing by Direction; each repas and nuitée is paid at the rate of the zone where it was spent.
 _Avoid_: Barem, grille, tarif
 
 ## Status labels

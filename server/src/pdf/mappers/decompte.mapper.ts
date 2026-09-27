@@ -2,6 +2,13 @@ import { Barem, Decompte, Direction, TransportType } from '@prisma/client';
 import { fmtAmount, fmtCount, fmtDate, missionDays, text } from '../format';
 import { MissionWithOwner, Moment, momentOf } from './ordre.mapper';
 import { scanUrl } from '../qr';
+import {
+  Counts,
+  Zone,
+  ZoneCounts,
+  toCounts,
+  zonesOf,
+} from '../../decompte/montant';
 
 export interface NordSud {
   nord: string;
@@ -44,15 +51,11 @@ export interface DecomptePdfData {
 
 export type DecompteWithMission = Decompte & { mission: MissionWithOwner };
 
-/** Only the mission's direction (Nord or Sud) is filled; the other side stays blank. */
-function split(
-  direction: Direction,
-  count: number | null | undefined,
-): NordSud {
-  const v = fmtCount(count ?? 0);
-  return direction === Direction.SUD
-    ? { nord: '', sud: v }
-    : { nord: v, sud: '' };
+/** One count per zone; a zone outside the ordre's Direction stays blank. */
+function split(zones: Zone[], counts: Counts, item: keyof ZoneCounts): NordSud {
+  const cell = (zone: Zone) =>
+    zones.includes(zone) ? fmtCount(counts[zone][item]) : '';
+  return { nord: cell('nord'), sud: cell('sud') };
 }
 
 export function toDecomptePdfData(
@@ -61,7 +64,8 @@ export function toDecomptePdfData(
 ): DecomptePdfData {
   const mission = decompte.mission;
   const user = mission?.user;
-  const direction = mission?.direction ?? Direction.NORD;
+  const zones = zonesOf(mission?.direction ?? Direction.NORD);
+  const counts = toCounts(decompte);
   const transport = mission?.transport ?? null;
 
   const kmIndemnity =
@@ -95,12 +99,12 @@ export function toDecomptePdfData(
     indemnite: fmtAmount(kmIndemnity),
     pec: {
       oui: {
-        repas: split(direction, decompte.repas_pec),
-        nuitees: split(direction, decompte.hebergement_pec),
+        repas: split(zones, counts, 'repas_pec'),
+        nuitees: split(zones, counts, 'hebergement_pec'),
       },
       non: {
-        repas: split(direction, decompte.repas_sans_pec),
-        nuitees: split(direction, decompte.hebergement_sans_pec),
+        repas: split(zones, counts, 'repas_sans_pec'),
+        nuitees: split(zones, counts, 'hebergement_sans_pec'),
       },
     },
     fraisTransport: fmtAmount(decompte.fees_transport ?? 0),
