@@ -8,6 +8,7 @@ import type { RootState } from 'store/rootReducer';
 import { fetchAllDecompte } from 'components/orders/decompte.thunk';
 import { useDecompteActions, type DecompteRow } from 'components/decomptes/useDecompteActions';
 import { da, missionDays } from 'components/decomptes/columns';
+import { countItems } from 'components/decomptes/zones';
 import { agentName, formatDate, formatDateTime } from 'components/orders/format';
 import type { CommentMessage } from 'components/comments/CommentsPanel';
 import { Button, DescriptionList, DropdownMenu, EmptyState, Loader, PageHeader, Panel, StatusBadge } from 'components/ui';
@@ -113,10 +114,7 @@ export default function DecompteDetailPage() {
             <DescriptionList
               columns={3}
               items={[
-                { label: 'Repas avec prise en charge', value: decompte.repas_pec ?? 0 },
-                { label: 'Repas sans prise en charge', value: decompte.repas_sans_pec ?? 0 },
-                { label: 'Nuitées avec prise en charge', value: decompte.hebergement_pec ?? 0 },
-                { label: 'Nuitées sans prise en charge', value: decompte.hebergement_sans_pec ?? 0 },
+                ...countItems(decompte, decompte.mission?.direction),
                 { label: 'Distance parcourue', value: `${decompte.parcours ?? 0} km` },
                 { label: 'Frais de transport', value: da(decompte.fees_transport) },
                 { label: 'Montant total', value: <strong className="text-base">{da(decompte.montant)}</strong> },

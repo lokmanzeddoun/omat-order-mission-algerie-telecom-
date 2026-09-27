@@ -14,13 +14,27 @@ import { partitionIds } from 'src/common/bulk';
 import {
   DecompteStatus,
   Direction,
+  Mission,
   MissionStatus,
-  TransportType,
   User,
 } from '@prisma/client';
 import { Response as ExpressResponse } from 'express';
 import { PdfService } from 'src/pdf/pdf.service';
 import { toDecomptePdfData } from 'src/pdf/mappers/decompte.mapper';
+import {
+  computeMontant,
+  toColumns,
+  toCounts,
+  totalMeals,
+  totalNights,
+  zonesOutside,
+} from './montant';
+
+const directionLabel: Record<Direction, string> = {
+  NORD: 'Nord',
+  SUD: 'Sud',
+  MIXTE: 'Nord et Sud',
+};
 
 /** Comment titles written when a décompte is accepted or rejected. */
 export const statusCommentTitle = {
@@ -49,6 +63,60 @@ export class DecompteService {
     return ex?.id ?? null;
   }
 
+  /**
+   * Checks the declared meals and nights against the trip and the ordre's
+   * Direction, then prices them with the barème of the ordre's agent.
+   */
+  private async settle(
+    dto: CreateDecompteDto,
+    mission: Pick<Mission, 'date_sortie' | 'direction' | 'transport'> & {
+      user: Pick<User, 'category'>;
+    },
+  ) {
+    const counts = toCounts(dto);
+    if (zonesOutside(mission.direction, counts).length > 0) {
+      throw new BadRequestException(
+        `Les repas et nuitées doivent être déclarés dans la direction de l'ordre de mission (${directionLabel[mission.direction]})`,
+      );
+    }
+    const { meals, accommodations } = calculateMealsAndAccommodation(
+      mission.date_sortie.toISOString().split('T')[0],
+      dto.heure_sortie,
+      dto.date_retour,
+      dto.heure_retour,
+    );
+    if (
+      meals !== totalMeals(counts) ||
+      accommodations !== totalNights(counts)
+    ) {
+      throw new BadRequestException(
+        'Le nombre de repas et hebergement non valid',
+      );
+    }
+    // calculate the montant with the barème of the agent on the mission
+    const userCategory = mission.user.category;
+    if (!userCategory) {
+      throw new BadRequestException(
+        "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
+      );
+    }
+    const categoryBarem = await this.databaseService.barem.findFirstOrThrow({
+      where: {
+        libell: userCategory,
+      },
+    });
+    const montant = computeMontant(
+      {
+        counts,
+        transport: mission.transport,
+        parcours: dto.parcours,
+        fees_transport: dto.fees_transport,
+      },
+      categoryBarem,
+    );
+    return { counts, montant };
+  }
+
   async create(createDecompteDto: CreateDecompteDto, id: number) {
     const mission = await this.databaseService.mission.findUnique({
       where: {
@@ -68,25 +136,7 @@ export class DecompteService {
         'Seul un ordre de mission en cours, non archivé et sans décompte peut être validé',
       );
     }
-    const date_sortie = mission.date_sortie.toISOString().split('T')[0];
-    const date_retour = createDecompteDto.date_retour;
-    const { meals, accommodations } = calculateMealsAndAccommodation(
-      date_sortie,
-      createDecompteDto.heure_sortie,
-      date_retour,
-      createDecompteDto.heure_retour,
-    );
-    if (
-      meals !==
-        createDecompteDto.repas_pec + createDecompteDto.repas_sans_pec ||
-      accommodations !==
-        createDecompteDto.hebergement_pec +
-          createDecompteDto.hebergement_sans_pec
-    ) {
-      throw new BadRequestException(
-        'Le nombre de repas et hebergement non valid',
-      );
-    }
+    const { counts, montant } = await this.settle(createDecompteDto, mission);
     const updateMission = this.databaseService.mission.update({
       where: {
         n_mission: id,
@@ -99,52 +149,10 @@ export class DecompteService {
         ).toISOString(),
       },
     });
-    // calculate the montant with the barème of the agent on the mission
-    const userCategory = mission.user.category;
-    if (!userCategory) {
-      throw new BadRequestException(
-        "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
-      );
-    }
-    const categoryBarem = await this.databaseService.barem.findFirstOrThrow({
-      where: {
-        libell: userCategory,
-      },
-    });
-
-    let montant: number = 0;
-    if (mission.direction === Direction.NORD) {
-      montant =
-        (createDecompteDto.hebergement_sans_pec +
-          createDecompteDto.hebergement_pec) *
-          categoryBarem.hebergement_nord +
-        (createDecompteDto.repas_sans_pec + createDecompteDto.repas_pec) *
-          categoryBarem.repas_nord;
-    } else {
-      montant =
-        createDecompteDto.hebergement_sans_pec * categoryBarem.hebergement_sud +
-        createDecompteDto.repas_sans_pec * categoryBarem.repas_sud;
-    }
-    if (mission.transport === TransportType.PERSONAL_CAR) {
-      montant = montant + createDecompteDto.parcours * categoryBarem.montant_km;
-    }
-    // reduce 25%
-    if (
-      createDecompteDto.hebergement_pec > 0 ||
-      createDecompteDto.repas_pec > 0
-    ) {
-      montant = montant * 0.25;
-    }
-    // Add transport fees to the total amount
-    montant = montant + (createDecompteDto.fees_transport || 0);
-
     const exerciceId = await this.getCurrentExerciceId();
     const createDecomte = this.databaseService.decompte.create({
       data: {
-        repas_pec: createDecompteDto.repas_pec,
-        repas_sans_pec: createDecompteDto.repas_sans_pec,
-        hebergement_pec: createDecompteDto.hebergement_pec,
-        hebergement_sans_pec: createDecompteDto.hebergement_sans_pec,
+        ...toColumns(counts),
         montant: montant,
         parcours: createDecompteDto.parcours
           ? createDecompteDto.parcours
@@ -197,10 +205,14 @@ export class DecompteService {
       },
       select: {
         n_decompte: true,
-        repas_pec: true,
-        repas_sans_pec: true,
-        hebergement_pec: true,
-        hebergement_sans_pec: true,
+        repas_pec_nord: true,
+        repas_pec_sud: true,
+        repas_sans_pec_nord: true,
+        repas_sans_pec_sud: true,
+        hebergement_pec_nord: true,
+        hebergement_pec_sud: true,
+        hebergement_sans_pec_nord: true,
+        hebergement_sans_pec_sud: true,
         montant: true,
         parcours: true,
         fees_transport: true,
@@ -249,10 +261,14 @@ export class DecompteService {
       },
       select: {
         n_decompte: true,
-        repas_pec: true,
-        repas_sans_pec: true,
-        hebergement_pec: true,
-        hebergement_sans_pec: true,
+        repas_pec_nord: true,
+        repas_pec_sud: true,
+        repas_sans_pec_nord: true,
+        repas_sans_pec_sud: true,
+        hebergement_pec_nord: true,
+        hebergement_pec_sud: true,
+        hebergement_sans_pec_nord: true,
+        hebergement_sans_pec_sud: true,
         montant: true,
         parcours: true,
         status: true,
@@ -323,27 +339,10 @@ export class DecompteService {
         'Seul un décompte en attente peut être modifié',
       );
     }
-    const date_sortie = decompte.mission.date_sortie
-      .toISOString()
-      .split('T')[0];
-    const date_retour = updateDecompteDto.date_retour;
-    const { meals, accommodations } = calculateMealsAndAccommodation(
-      date_sortie,
-      updateDecompteDto.heure_sortie,
-      date_retour,
-      updateDecompteDto.heure_retour,
+    const { counts, montant } = await this.settle(
+      updateDecompteDto,
+      decompte.mission,
     );
-    if (
-      meals !==
-        updateDecompteDto.repas_pec + updateDecompteDto.repas_sans_pec ||
-      accommodations !==
-        updateDecompteDto.hebergement_pec +
-          updateDecompteDto.hebergement_sans_pec
-    ) {
-      throw new BadRequestException(
-        'Le nombre de repas et hebergement non valid',
-      );
-    }
     const updateMission = this.databaseService.mission.update({
       where: {
         n_mission: decompte.missionId,
@@ -355,55 +354,13 @@ export class DecompteService {
         ).toISOString(),
       },
     });
-    // calculate the montant with the barème of the agent on the mission
-    const userCategory = decompte.mission.user.category;
-    if (!userCategory) {
-      throw new BadRequestException(
-        "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
-      );
-    }
-    const categoryBarem = await this.databaseService.barem.findFirstOrThrow({
-      where: {
-        libell: userCategory,
-      },
-    });
-
-    let montant: number;
-    if (decompte.mission.direction === Direction.NORD) {
-      montant =
-        (updateDecompteDto.hebergement_sans_pec +
-          updateDecompteDto.hebergement_pec) *
-          categoryBarem.hebergement_nord +
-        (updateDecompteDto.repas_sans_pec + updateDecompteDto.repas_pec) *
-          categoryBarem.repas_nord;
-    } else {
-      montant =
-        updateDecompteDto.hebergement_sans_pec * categoryBarem.hebergement_sud +
-        updateDecompteDto.repas_sans_pec * categoryBarem.repas_sud;
-    }
-    if (decompte.mission.transport === TransportType.PERSONAL_CAR) {
-      montant = montant + updateDecompteDto.parcours * categoryBarem.montant_km;
-    }
-    // reduce 25%
-    if (
-      updateDecompteDto.hebergement_pec > 0 ||
-      updateDecompteDto.repas_pec > 0
-    ) {
-      montant = montant * 0.25;
-    }
-    // Add transport fees to the total amount
-    montant = montant + (updateDecompteDto.fees_transport || 0);
-
     const updateDecompte = this.databaseService.decompte.update({
       where: {
         soft_delete: false,
         n_decompte: id,
       },
       data: {
-        repas_pec: updateDecompteDto.repas_pec,
-        repas_sans_pec: updateDecompteDto.repas_sans_pec,
-        hebergement_pec: updateDecompteDto.hebergement_pec,
-        hebergement_sans_pec: updateDecompteDto.hebergement_sans_pec,
+        ...toColumns(counts),
         montant: montant,
         parcours: updateDecompteDto.parcours
           ? updateDecompteDto.parcours

@@ -13,6 +13,7 @@ import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import { PdfService } from 'src/pdf/pdf.service';
+import { emptyCounts, toColumns, toCounts } from './montant';
 import { CommentsService } from 'src/comments/comments.service';
 
 const barem = {
@@ -56,13 +57,20 @@ const overnightDto = (overrides: Partial<CreateDecompteDto> = {}) =>
     heure_sortie: '08:00',
     date_retour: '2026-03-11',
     heure_retour: '15:00',
-    repas_pec: 0,
-    repas_sans_pec: 3,
-    hebergement_pec: 0,
-    hebergement_sans_pec: 1,
+    repas_pec_nord: 0,
+    repas_sans_pec_nord: 3,
+    hebergement_pec_nord: 0,
+    hebergement_sans_pec_nord: 1,
     parcours: 0,
     fees_transport: 0,
     ...overrides,
+  }) as CreateDecompteDto;
+
+// The same meals and nights, spent in the Sud instead of the Nord.
+const inSud = (dto: CreateDecompteDto) =>
+  ({
+    ...dto,
+    ...toColumns({ nord: emptyCounts().nord, sud: toCounts(dto).nord }),
   }) as CreateDecompteDto;
 
 describe('DecompteService', () => {
@@ -116,8 +124,8 @@ describe('DecompteService', () => {
         overnightDto({
           date_retour: '2026-03-10',
           heure_retour: '22:00',
-          repas_sans_pec: 2,
-          hebergement_sans_pec: 0,
+          repas_sans_pec_nord: 2,
+          hebergement_sans_pec_nord: 0,
         }),
         N_MISSION,
       );
@@ -147,37 +155,40 @@ describe('DecompteService', () => {
       async (_label, times, meals, nights) => {
         const dto = overnightDto({
           ...times,
-          repas_sans_pec: meals,
-          hebergement_sans_pec: nights,
+          repas_sans_pec_nord: meals,
+          hebergement_sans_pec_nord: nights,
         });
         await service.create(dto, N_MISSION);
         expect(db.$transaction).toHaveBeenCalledTimes(1);
         await expect(
-          service.create({ ...dto, repas_sans_pec: meals + 1 }, N_MISSION),
+          service.create({ ...dto, repas_sans_pec_nord: meals + 1 }, N_MISSION),
         ).rejects.toThrow(BadRequestException);
       },
     );
 
     it('rejects a declared meal count that does not match the trip', async () => {
       await expect(
-        service.create(overnightDto({ repas_sans_pec: 4 }), N_MISSION),
+        service.create(overnightDto({ repas_sans_pec_nord: 4 }), N_MISSION),
       ).rejects.toThrow(BadRequestException);
       expect(db.$transaction).not.toHaveBeenCalled();
     });
 
     it('rejects a declared night count that does not match the trip', async () => {
       await expect(
-        service.create(overnightDto({ hebergement_sans_pec: 2 }), N_MISSION),
+        service.create(
+          overnightDto({ hebergement_sans_pec_nord: 2 }),
+          N_MISSION,
+        ),
       ).rejects.toThrow('Le nombre de repas et hebergement non valid');
     });
 
     it('counts pec and sans_pec together against the trip', async () => {
       await service.create(
         overnightDto({
-          repas_pec: 1,
-          hebergement_pec: 1,
-          repas_sans_pec: 2,
-          hebergement_sans_pec: 0,
+          repas_pec_nord: 1,
+          hebergement_pec_nord: 1,
+          repas_sans_pec_nord: 2,
+          hebergement_sans_pec_nord: 0,
         }),
         N_MISSION,
       );
@@ -187,13 +198,13 @@ describe('DecompteService', () => {
     it('treats a return before departure as 0 meals and 0 nights', async () => {
       const dto = overnightDto({
         date_retour: '2026-03-09',
-        repas_sans_pec: 0,
-        hebergement_sans_pec: 0,
+        repas_sans_pec_nord: 0,
+        hebergement_sans_pec_nord: 0,
       });
       await service.create(dto, N_MISSION);
       expect(db.$transaction).toHaveBeenCalledTimes(1);
       await expect(
-        service.create({ ...dto, repas_sans_pec: 1 }, N_MISSION),
+        service.create({ ...dto, repas_sans_pec_nord: 1 }, N_MISSION),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -209,7 +220,7 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ direction: Direction.SUD }),
       );
-      await service.create(overnightDto(), N_MISSION);
+      await service.create(inSud(overnightDto()), N_MISSION);
       expect(createdData().montant).toBe(3 * 200 + 1 * 2000);
     });
 
@@ -229,7 +240,11 @@ describe('DecompteService', () => {
     // Code behaviour: the doc's montant formula does not mention fees_transport.
     it('adds fees_transport on top, after any reduction', async () => {
       await service.create(
-        overnightDto({ repas_pec: 1, repas_sans_pec: 2, fees_transport: 30 }),
+        overnightDto({
+          repas_pec_nord: 1,
+          repas_sans_pec_nord: 2,
+          fees_transport: 30,
+        }),
         N_MISSION,
       );
       expect(createdData().montant).toBe(NORD_OVERNIGHT * 0.25 + 30);
@@ -240,7 +255,7 @@ describe('DecompteService', () => {
     // business decision.
     it('NORD with any pec item: keeps 25% of the total', async () => {
       await service.create(
-        overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
+        overnightDto({ repas_pec_nord: 1, repas_sans_pec_nord: 2 }),
         N_MISSION,
       );
       expect(createdData().montant).toBe(NORD_OVERNIGHT * 0.25);
@@ -254,7 +269,7 @@ describe('DecompteService', () => {
         mission({ direction: Direction.SUD }),
       );
       await service.create(
-        overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
+        inSud(overnightDto({ repas_pec_nord: 1, repas_sans_pec_nord: 2 })),
         N_MISSION,
       );
       expect(createdData().montant).toBe((2 * 200 + 2000) * 0.25);
@@ -274,6 +289,55 @@ describe('DecompteService', () => {
       await expect(service.create(overnightDto(), N_MISSION)).rejects.toThrow(
         BadRequestException,
       );
+    });
+  });
+
+  describe('create: Direction of the meals and nights', () => {
+    it.each([
+      ['Sud counts on a Nord ordre', Direction.NORD, (d) => inSud(d)],
+      ['Nord counts on a Sud ordre', Direction.SUD, (d) => d],
+    ])(
+      'refuses %s',
+      async (_label, direction, place: (d: CreateDecompteDto) => any) => {
+        db.mission.findUnique.mockResolvedValue(mission({ direction }));
+        await expect(
+          service.create(place(overnightDto()), N_MISSION),
+        ).rejects.toThrow(BadRequestException);
+        expect(db.$transaction).not.toHaveBeenCalled();
+      },
+    );
+
+    // 2 meals and the night in the Nord, the last lunch in the Sud.
+    const split = () =>
+      overnightDto({
+        repas_sans_pec_nord: 2,
+        repas_sans_pec_sud: 1,
+        hebergement_sans_pec_nord: 1,
+      });
+
+    it('Nord et Sud: checks both zones together against the trip', async () => {
+      db.mission.findUnique.mockResolvedValue(
+        mission({ direction: Direction.MIXTE }),
+      );
+      await service.create(split(), N_MISSION);
+      expect(db.$transaction).toHaveBeenCalledTimes(1);
+      await expect(
+        service.create({ ...split(), repas_sans_pec_sud: 2 }, N_MISSION),
+      ).rejects.toThrow('Le nombre de repas et hebergement non valid');
+    });
+
+    it('Nord et Sud: prices each zone at its own rates and stores both', async () => {
+      db.mission.findUnique.mockResolvedValue(
+        mission({ direction: Direction.MIXTE }),
+      );
+      await service.create(split(), N_MISSION);
+      expect(createdData().montant).toBe(2 * 100 + 1000 + 1 * 200);
+      expect(createdData()).toMatchObject({
+        repas_sans_pec_nord: 2,
+        repas_sans_pec_sud: 1,
+        hebergement_sans_pec_nord: 1,
+        hebergement_sans_pec_sud: 0,
+      });
     });
   });
 
@@ -418,6 +482,18 @@ describe('DecompteService', () => {
       db.decompte.findUniqueOrThrow.mockResolvedValue({
         status: DecompteStatus.ACCEPTED,
         mission: mission(),
+      });
+      await expect(service.update(1, overnightDto())).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("refuses counts outside the ordre's Direction", async () => {
+      db.decompte.findUniqueOrThrow.mockResolvedValue({
+        status: DecompteStatus.PENDING,
+        missionId: N_MISSION,
+        mission: mission({ direction: Direction.SUD }),
       });
       await expect(service.update(1, overnightDto())).rejects.toThrow(
         BadRequestException,

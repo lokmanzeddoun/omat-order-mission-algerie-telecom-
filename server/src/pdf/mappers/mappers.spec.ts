@@ -28,10 +28,14 @@ const decompte = (over: Record<string, unknown> = {}, m = mission()) =>
   ({
     n_decompte: 3,
     createdAt: new Date(2026, 8, 26),
-    repas_pec: 2,
-    repas_sans_pec: 1,
-    hebergement_pec: 2,
-    hebergement_sans_pec: 0,
+    repas_pec_nord: 2,
+    repas_pec_sud: 0,
+    repas_sans_pec_nord: 1,
+    repas_sans_pec_sud: 0,
+    hebergement_pec_nord: 2,
+    hebergement_pec_sud: 0,
+    hebergement_sans_pec_nord: 0,
+    hebergement_sans_pec_sud: 0,
     montant: 4500,
     parcours: 850,
     fees_transport: 300,
@@ -87,9 +91,27 @@ describe('toDecomptePdfData', () => {
   });
 
   it('fills only the Sud side for a SUD mission', () => {
-    const d = toDecomptePdfData(decompte({}, mission({ direction: 'SUD' })));
+    const d = toDecomptePdfData(
+      decompte(
+        { repas_pec_nord: 0, repas_pec_sud: 2 },
+        mission({ direction: 'SUD' }),
+      ),
+    );
     expect(d.pec.oui.repas).toEqual({ nord: '', sud: '2' });
     expect(d.pec.non.nuitees).toEqual({ nord: '', sud: '0' });
+  });
+
+  it('fills both sides for a Nord et Sud mission', () => {
+    const d = toDecomptePdfData(
+      decompte(
+        { repas_sans_pec_sud: 3, hebergement_sans_pec_sud: 1 },
+        mission({ direction: 'MIXTE' }),
+      ),
+    );
+    expect(d.pec).toEqual({
+      oui: { repas: { nord: '2', sud: '0' }, nuitees: { nord: '2', sud: '0' } },
+      non: { repas: { nord: '1', sud: '3' }, nuitees: { nord: '0', sud: '1' } },
+    });
   });
 
   it('shows the total amount (not the transport fees) as Montant Total', () => {

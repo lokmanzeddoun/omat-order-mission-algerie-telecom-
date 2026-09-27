@@ -10,6 +10,7 @@ import { fetchAllOrders, fetchUserOrders } from 'components/orders/orderthunk';
 import { fetchAllDecompte, fetchUserDecompte } from 'components/orders/decompte.thunk';
 import type { IMission } from 'components/orders/orderReducer';
 import type { IDecompte } from 'components/orders/decompte.reducer';
+import { countItems } from 'components/decomptes/zones';
 import { isValidated, useMissionActions } from 'components/orders/useMissionActions';
 import { agentName, formatDate, formatDateTime, missionDuration } from 'components/orders/format';
 import {
@@ -200,10 +201,7 @@ export default function OrdreDetailPage() {
               <DescriptionList
                 columns={3}
                 items={[
-                  { label: 'Repas avec prise en charge', value: decompte.repas_pec ?? 0 },
-                  { label: 'Repas sans prise en charge', value: decompte.repas_sans_pec ?? 0 },
-                  { label: 'Nuitées avec prise en charge', value: decompte.hebergement_pec ?? 0 },
-                  { label: 'Nuitées sans prise en charge', value: decompte.hebergement_sans_pec ?? 0 },
+                  ...countItems(decompte, mission.direction),
                   { label: 'Distance parcourue', value: `${decompte.parcours ?? 0} km` },
                   { label: 'Frais de transport', value: `${amount.format(decompte.fees_transport ?? 0)} DA` },
                   { label: 'Montant', value: <strong>{amount.format(decompte.montant ?? 0)} DA</strong> },

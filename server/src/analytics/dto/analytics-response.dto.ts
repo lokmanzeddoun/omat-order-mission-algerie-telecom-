@@ -78,7 +78,7 @@ export class CategoryBreakdownDto {
 }
 
 export class DirectionBreakdownDto {
-  @ApiProperty({ description: 'Direction (NORD/SUD)' })
+  @ApiProperty({ description: 'Direction (NORD/SUD/MIXTE)' })
   direction: string;
 
   @ApiProperty({ description: 'Count of missions' })

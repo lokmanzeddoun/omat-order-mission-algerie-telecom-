@@ -1,15 +1,13 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import type { Counts } from 'components/decomptes/zones';
 
 // Define the Decompte interface for decompte data
-export interface IDecompte {
+// Meals and nights per zone: repas_pec_nord, repas_pec_sud, …
+export interface IDecompte extends Counts {
   n_decompte?: number;
   heure_sortie: string;
   date_retour: string;
   heure_retour: string;
-  hebergement_sans_pec?: number;
-  repas_sans_pec?: number;
-  repas_pec?: number;
-  hebergement_pec?: number;
   distance_km?: number; // Distance parcourue pour indemnité kilométrique
   transport_cost?: number; // Frais de transport engagés (DA)
   parcours?: number; // Distance parcours in km

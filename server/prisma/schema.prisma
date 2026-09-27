@@ -71,10 +71,15 @@ model Mission {
 
 model Decompte {
   n_decompte Int @default(autoincrement()) @id
-  repas_pec Int @default(0)
-  repas_sans_pec Int @default(0)
-  hebergement_pec Int @default(0)
-  hebergement_sans_pec Int @default(0)
+  // Meals and nights per zone: each is priced at its own Direction's barème.
+  repas_pec_nord Int @default(0)
+  repas_pec_sud Int @default(0)
+  repas_sans_pec_nord Int @default(0)
+  repas_sans_pec_sud Int @default(0)
+  hebergement_pec_nord Int @default(0)
+  hebergement_pec_sud Int @default(0)
+  hebergement_sans_pec_nord Int @default(0)
+  hebergement_sans_pec_sud Int @default(0)
   montant Float
   parcours Float?
   fees_transport Float? @default(0)
@@ -157,6 +162,8 @@ enum TransportType {
 enum Direction {
   NORD
   SUD
+  // A trip spent partly in the Nord and partly in the Sud.
+  MIXTE
 }
 enum MissionStatus {
   INPROGRESS
