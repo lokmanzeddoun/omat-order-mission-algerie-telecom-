@@ -5,7 +5,12 @@ import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule, loggingMiddleware } from 'nestjs-prisma';
 import config from './common/configs/config';
-import { Logger, Module } from '@nestjs/common';
+import { validateEnv } from './common/configs/env.validation';
+import { pinoParams } from './common/configs/logger';
+import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './auth/guards/app-throttler.guard';
 import { StructuresModule } from './structures/structures.module';
 import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
@@ -16,26 +21,35 @@ import { ExercicesModule } from './exercices/exercices.module';
 import { ArchiveModule } from './archive/archive.module';
 import { CommentsModule } from './comments/comments.module';
 import { AnalyticsModule } from './analytics/analytics.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './roles/roles.guard';
+import { PolicyModule } from './common/policy/policy.module';
+import { PasswordChangeGuard } from './auth/guards/password-change.guard';
+import { AuditModule } from './audit/audit.module';
 @Module({
   imports: [
-    PinoLoggerModule.forRoot({
-      pinoHttp: {
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            singleLine: true,
-          },
-        },
-      },
+    // First: it loads .env, which pinoParams() below reads.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [config],
+      validate: validateEnv,
     }),
-    ConfigModule.forRoot({ isGlobal: true, load: [config] }),
+    PolicyModule,
+    AuditModule,
+    PinoLoggerModule.forRoot(pinoParams()),
+    // Default: 300 requests per minute per client IP. Credential routes are
+    // stricter (see AuthController).
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+      errorMessage: 'Trop de requêtes, réessayez dans une minute',
+    }),
     PrismaModule.forRoot({
       isGlobal: true,
       prismaServiceOptions: {
         middlewares: [
           // configure your prisma middleware
           loggingMiddleware({
-            logger: new Logger('PrismaMiddleware'),
+            logger: console,
             logLevel: 'log',
           }),
         ],
@@ -54,6 +68,13 @@ import { AnalyticsModule } from './analytics/analytics.module';
     AnalyticsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // Order matters: rate limit first, then authentication, then roles.
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PasswordChangeGuard },
+  ],
 })
 export class AppModule {}

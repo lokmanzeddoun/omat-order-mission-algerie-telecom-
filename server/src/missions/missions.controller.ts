@@ -17,6 +17,7 @@ import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { Prisma, User } from '@prisma/client';
 import { Response } from 'express';
 import { BadRequestException } from '@nestjs/common';
+import { ReopenDto } from 'src/common/dto/reopen.dto';
 // Removed destination validator import - now just using string validation
 // import { isValidDestination } from '../utils/destination-validator';
 @Controller('missions')
@@ -55,11 +56,12 @@ export class MissionsController {
   @Get()
   @Auth()
   findAll(
+    @GetUser() actor: User,
     @Query('archive') soft_delete: string,
     @Query('status') status: string,
     @Query('exercice') exercice?: string,
   ) {
-    return this.missionsService.findAll(soft_delete, status, exercice);
+    return this.missionsService.findAll(actor, soft_delete, status, exercice);
   }
   @Get('user')
   @Auth()
@@ -73,8 +75,9 @@ export class MissionsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.missionsService.findOne(+id);
+  @Auth()
+  findOne(@Param('id') id: string, @GetUser() actor: User) {
+    return this.missionsService.findOne(+id, actor);
   }
 
   @Patch(':id')
@@ -82,19 +85,18 @@ export class MissionsController {
   async update(
     @Param('id') id: string,
     @Body() updateMissionDto: UpdateMissionDto,
+    @GetUser() actor: User,
   ) {
     // Optional cross-field checks only for provided fields
-    console.log('Update DTO received:', updateMissionDto);
-
     // Only validate dates if we're updating date/time fields
-    // We need to fetch the existing mission to get complete data for validation
     const hasDateTimeUpdate =
       updateMissionDto.date_retour !== undefined ||
       updateMissionDto.date_sortie !== undefined;
 
     if (hasDateTimeUpdate) {
-      // Fetch existing mission to get complete date/time data
-      const existingMission = await this.missionsService.findOne(+id);
+      // Fetch existing mission (scoped: 404 outside the caller's scope) for
+      // complete date/time data before the cross-field check.
+      const existingMission = await this.missionsService.findOne(+id, actor);
 
       // Merge existing data with updates
       const finalDateSortie =
@@ -121,13 +123,6 @@ export class MissionsController {
         const dRetour = new Date(dateRetourStr);
         const dSortie = new Date(dateSortieStr);
 
-        console.log('Validating dates:', {
-          dateSortieStr,
-          dateRetourStr,
-          dSortie,
-          dRetour,
-        });
-
         if (isNaN(dRetour.getTime()) || isNaN(dSortie.getTime())) {
           throw new BadRequestException('Invalid date/time format');
         }
@@ -143,10 +138,7 @@ export class MissionsController {
     // Destination is now validated as a string by the DTO
     // No need for complex JSON file validation
 
-    return this.missionsService.update(
-      +id,
-      updateMissionDto as unknown as Prisma.MissionUpdateInput,
-    );
+    return this.missionsService.update(+id, updateMissionDto, actor);
   }
 
   @Delete(':id')
@@ -157,7 +149,21 @@ export class MissionsController {
 
   @Get(':id/download')
   @Auth()
-  download(@Param('id') id: string, @Res() res: Response) {
-    return this.missionsService.downloadOrdre(+id, res);
+  download(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @GetUser() actor: User,
+  ) {
+    return this.missionsService.downloadOrdre(+id, res, actor);
+  }
+
+  @Post(':id/reopen')
+  @Auth('SUPER_ADMIN')
+  reopen(
+    @Param('id') id: string,
+    @Body() body: ReopenDto,
+    @GetUser() actor: User,
+  ) {
+    return this.missionsService.reopen(+id, body.reason, actor);
   }
 }

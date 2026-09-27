@@ -126,7 +126,12 @@ const compareValues = (a: unknown, b: unknown): number => {
   return collator.compare(toText(a), toText(b));
 };
 
-const csvCell = (value: string) => (/[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+export const sanitizeCsvCell = (value: string) =>
+  /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
+const csvCell = (raw: string) => {
+  const value = sanitizeCsvCell(raw);
+  return /[";\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+};
 
 /** Semicolon-separated CSV with a BOM so Excel (French locale) opens accents and columns correctly. */
 function downloadCsv(fileName: string, header: string[], lines: string[][]) {

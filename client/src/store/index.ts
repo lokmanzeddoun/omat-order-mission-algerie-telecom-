@@ -6,15 +6,17 @@ import { persistReducer, persistStore, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, 
 const persistConfig = {
   key: 'root',
   storage,
-  // Only persist small, session-level state. Data lists (orders, users, decomptes...)
-  // are refetched on mount; persisting them made every dispatch serialize the whole store.
-  whitelist: ['auth', 'theme', 'exercice'],
+  // Only persist small preferences. Data lists are refetched on mount, and the
+  // session (access token, user) is never written to storage: it lives in
+  // memory and is restored from the httpOnly refresh cookie (ADR 0002).
+  whitelist: ['theme', 'exercice'],
 };
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
-  devTools: true,
+  // DevTools expose the whole store (including the session) to anyone at the keyboard.
+  devTools: import.meta.env.DEV,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

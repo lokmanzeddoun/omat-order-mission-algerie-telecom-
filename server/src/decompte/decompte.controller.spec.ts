@@ -31,7 +31,7 @@ describe('DecompteController (HTTP)', () => {
     expect(service.bulkSetStatus).toHaveBeenCalledWith(
       [1, 2],
       'accept',
-      TEST_ACTOR,
+      expect.objectContaining({ matricule: TEST_ACTOR }),
       undefined,
     );
     expect(service.acceptDecompte).not.toHaveBeenCalled();
@@ -44,7 +44,7 @@ describe('DecompteController (HTTP)', () => {
     expect(service.bulkSetStatus).toHaveBeenCalledWith(
       [3],
       'reject',
-      TEST_ACTOR,
+      expect.objectContaining({ matricule: TEST_ACTOR }),
       'Pièces manquantes',
     );
     expect(service.rejectDecompte).not.toHaveBeenCalled();

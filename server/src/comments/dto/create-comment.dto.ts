@@ -3,29 +3,33 @@ import {
   IsNotEmpty,
   IsOptional,
   IsInt,
-  IsEmail,
+  IsEnum,
 } from 'class-validator';
+import { MessageType } from '@prisma/client';
 
 export class CreateCommentDto {
   @IsString()
   @IsNotEmpty()
   title: string;
 
-  @IsString()
-  @IsNotEmpty()
-  type: string; // use MessageType enum values (FORGET_PASSWORD, DECOMPTE_STATUS, OTHER)
-
-  @IsString()
-  @IsOptional()
-  status?: string;
+  // Validated against the enum so an arbitrary string can't be stored.
+  @IsEnum(MessageType)
+  type: MessageType;
 
   @IsInt()
   @IsOptional()
   decompteId?: number | null;
 
-  @IsEmail()
+  // Accepted for backward compatibility but IGNORED by the service: authorship
+  // comes from the authenticated token and status is always server-set. Kept in
+  // the DTO only so an older client sending them is not rejected by the
+  // whitelist (forbidNonWhitelisted).
+  @IsString()
   @IsOptional()
-  // When the requester is not authenticated they can provide their email to link the comment to their account
+  status?: string;
+
+  @IsString()
+  @IsOptional()
   email?: string;
 
   @IsInt()

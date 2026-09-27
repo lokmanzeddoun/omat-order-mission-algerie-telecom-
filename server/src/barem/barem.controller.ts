@@ -6,18 +6,20 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { BaremService } from './barem.service';
-import { Category, Prisma } from '@prisma/client';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { getCategoryDto } from './getByCategory.dto';
+import { CreateBaremDto, UpdateBaremDto } from './dto/barem.dto';
 @Auth()
 @Controller('barem')
 export class BaremController {
   constructor(private readonly baremService: BaremService) {}
 
   @Post()
-  create(@Body() createBaremDto: Prisma.BaremCreateInput) {
+  @Auth('SUPER_ADMIN')
+  create(@Body() createBaremDto: CreateBaremDto) {
     return this.baremService.create(createBaremDto);
   }
   @Get()
@@ -25,19 +27,18 @@ export class BaremController {
     return this.baremService.findAll();
   }
   @Get('category')
-  findByCategory(@Body() body: getCategoryDto) {
+  findByCategory(@Query() body: getCategoryDto) {
     return this.baremService.findByCategory(body.libell);
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() updateBaremDto: Prisma.BaremUpdateInput,
-  ) {
+  @Auth('SUPER_ADMIN')
+  update(@Param('id') id: string, @Body() updateBaremDto: UpdateBaremDto) {
     return this.baremService.update(+id, updateBaremDto);
   }
 
   @Delete(':id')
+  @Auth('SUPER_ADMIN')
   remove(@Param('id') id: string) {
     return this.baremService.remove(+id);
   }

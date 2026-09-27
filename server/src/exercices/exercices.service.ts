@@ -1,8 +1,10 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 
 @Injectable()
 export class ExercicesService implements OnModuleInit {
+  private readonly logger = new Logger(ExercicesService.name);
+
   constructor(private readonly db: DatabaseService) {}
 
   async onModuleInit() {
@@ -10,8 +12,7 @@ export class ExercicesService implements OnModuleInit {
       await this.ensureCurrentForNow();
     } catch (e) {
       // Do not crash app on bootstrap; logs only
-      // eslint-disable-next-line no-console
-      console.error('[Exercices] ensureCurrentForNow failed on bootstrap:', e);
+      this.logger.error('ensureCurrentForNow failed on bootstrap', e?.stack);
     }
   }
 

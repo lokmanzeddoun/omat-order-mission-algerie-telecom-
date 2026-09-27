@@ -51,7 +51,9 @@ export function Label({
 /** Small unit after a box: "DA", "KM". */
 export function Unit({ children }: { children: ReactNode }) {
   return (
-    <RP.Text style={{ fontSize: size.small, color: color.muted, fontWeight: 500 }}>
+    <RP.Text
+      style={{ fontSize: size.small, color: color.muted, fontWeight: 500 }}
+    >
       {children}
     </RP.Text>
   );
@@ -294,7 +296,9 @@ export function SectionTitle({
       >
         {children}
       </RP.Text>
-      <RP.View style={{ flex: 1, height: 0.5, backgroundColor: color.hairline }} />
+      <RP.View
+        style={{ flex: 1, height: 0.5, backgroundColor: color.hairline }}
+      />
     </Row>
   );
 }

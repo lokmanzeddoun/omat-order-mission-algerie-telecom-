@@ -83,6 +83,20 @@
     "password": "Mot de passe",
     "forgot": "Mot de passe oublié ?",
     "invalid": "Adresse e-mail ou mot de passe incorrect.",
-    "error": "Connexion impossible. Veuillez réessayer."
+    "error": "Connexion impossible. Veuillez réessayer.",
+    "throttled": "Trop de tentatives. Patientez une minute avant de réessayer.",
+    "mfaTitle": "Vérification en deux étapes",
+    "mfaSubtitle": "Saisissez le code à 6 chiffres de votre application d'authentification, ou un code de secours.",
+    "mfaEnrollTitle": "Activer la vérification en deux étapes",
+    "mfaEnrollSubtitle": "Les comptes administrateur doivent utiliser une application d'authentification. Scannez le QR code, puis saisissez le code affiché.",
+    "mfaQrAlt": "QR code à scanner avec l'application d'authentification",
+    "mfaManual": "Saisie manuelle :",
+    "mfaCode": "Code de vérification",
+    "mfaSubmit": "Vérifier",
+    "mfaBack": "Revenir à la connexion",
+    "mfaInvalid": "Code incorrect ou déjà utilisé.",
+    "recoveryTitle": "Codes de secours",
+    "recoverySubtitle": "Conservez ces codes en lieu sûr : chacun permet une connexion si vous perdez votre téléphone. Ils ne seront plus affichés.",
+    "recoveryDone": "J'ai conservé mes codes — continuer"
   }
 }

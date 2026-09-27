@@ -1,42 +1,61 @@
 import {
-  IS_LENGTH,
+  IsDefined,
   IsEmail,
   IsEnum,
   IsInt,
-  IsNotEmpty,
+  IsOptional,
+  IsPositive,
   IsString,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { Category } from '@prisma/client';
-import { Role } from '@prisma/client';
-export class importUserDto {
-  @IsInt()
-  @IsNotEmpty()
+
+const REQUIRED = { message: 'Champ obligatoire' };
+const toText = ({ value }: { value: unknown }) =>
+  value === undefined || value === null ? value : String(value).trim();
+const toUpper = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim().toUpperCase() : value;
+
+/** Importable user fields. Role and password columns are deliberately ignored. */
+export class ImportUserRowDto {
+  @IsDefined(REQUIRED)
+  @Transform(({ value }) =>
+    typeof value === 'string' && /^\d+$/.test(value.trim())
+      ? Number(value)
+      : value,
+  )
+  @IsInt({ message: 'Le matricule doit être un nombre entier' })
+  @IsPositive({ message: 'Le matricule doit être positif' })
   matricule: number;
-  @IsNotEmpty()
+
+  @IsDefined(REQUIRED)
+  @Transform(toText)
   @IsString()
   nom: string;
-  @IsNotEmpty()
+
+  @IsDefined(REQUIRED)
+  @Transform(toText)
   @IsString()
   prenom: string;
-  @IsEmail()
+
+  @IsDefined(REQUIRED)
+  @IsEmail({}, { message: 'Adresse email invalide' })
   email: string;
-  @IsString()
-  password: string;
-  @IsEnum(Role, {
-    message:
-      `Invalid value for 'type` +
-      `Acceptable values are: ${Object.values(Role)}`,
-  })
-  role: Role;
-  @IsString()
-  @IsNotEmpty()
-  grade: string;
+
+  @IsDefined(REQUIRED)
+  @Transform(toUpper)
   @IsEnum(Category, {
-    message:
-      `Invalid value for 'type` +
-      `Acceptable values are: ${Object.values(Category)}`,
+    message: `Catégorie invalide (valeurs acceptées : ${Object.values(Category).join(', ')})`,
   })
   category: Category;
+
+  @IsDefined(REQUIRED)
+  @Transform(toText)
   @IsString()
-  serviceId: string;
+  grade: string;
+
+  @IsOptional()
+  @Transform(toText)
+  @IsString()
+  serviceId?: string;
 }

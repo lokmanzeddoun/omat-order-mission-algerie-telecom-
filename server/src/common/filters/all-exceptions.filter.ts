@@ -8,6 +8,19 @@ import {
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
+/** A client error raised by Express middleware (e.g. body-parser). */
+function isClientError(
+  exception: unknown,
+): exception is { status: number; expose: true } {
+  const e = exception as { status?: unknown; expose?: unknown } | null;
+  return (
+    typeof e?.status === 'number' &&
+    e.status >= 400 &&
+    e.status < 500 &&
+    e.expose === true
+  );
+}
+
 /**
  * Global Exception Filter
  * Catches all unhandled exceptions and returns a consistent error response
@@ -30,6 +43,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
       message = this.extractMessage(exceptionResponse);
+    } else if (isClientError(exception)) {
+      // body-parser rejects oversized or malformed bodies before any route
+      // runs; it marks those errors as safe to report (`expose`).
+      status = exception.status;
+      message =
+        status === HttpStatus.PAYLOAD_TOO_LARGE
+          ? 'Requête trop volumineuse'
+          : 'Requête invalide';
     } else if (exception instanceof Error) {
       // Log the full error for debugging but don't expose it to the client
       this.logger.error(
@@ -85,6 +106,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
         return 'Ressource introuvable';
       case HttpStatus.CONFLICT:
         return 'Conflit';
+      case HttpStatus.PAYLOAD_TOO_LARGE:
+        return 'Requête trop volumineuse';
       case HttpStatus.INTERNAL_SERVER_ERROR:
         return 'Erreur serveur';
       default:

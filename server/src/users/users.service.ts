@@ -1,24 +1,82 @@
 import {
   BadRequestException,
-  Body,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
-import { Category, Prisma, Role } from '@prisma/client';
+import { Category, Prisma, Role, User } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp } from 'src/archive/archive-stamp';
 import { createUserDto } from './dtos/create-user.dto';
-import * as xlsx from 'xlsx';
-import { WorkBook, WorkSheet } from 'xlsx';
 import * as bcrypt from 'bcryptjs';
 import { ImportExcel } from './dtos/import-Excel.dto';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { Response } from 'express';
+import {
+  findDuplicates,
+  ImportColumn,
+  ImportValidationError,
+  readRows,
+  validateRows,
+} from 'src/utils/import-validation';
+import { ImportUserRowDto } from './dtos/import-user.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
+import {
+  BCRYPT_ROUNDS,
+  personalPasswordProblem,
+  temporaryPassword,
+} from 'src/common/validators/password';
+import { exportWorkbook } from 'src/utils/export-workbook';
+import { AccessPolicy } from 'src/common/policy/access-policy';
+
+/** Expected columns of the users spreadsheet, matched by header name (see src/utils/AABook1.xlsx). */
+const USER_IMPORT_COLUMNS: ImportColumn[] = [
+  { field: 'matricule', headers: ['Matricule'] },
+  { field: 'nom', headers: ['Nom'] },
+  { field: 'prenom', headers: ['Prenom', 'Prénom'] },
+  { field: 'email', headers: ['Email', 'E-mail'] },
+  { field: 'category', headers: ['Category', 'Catégorie'] },
+  { field: 'grade', headers: ['Grade'] },
+  {
+    field: 'serviceId',
+    headers: ['ServiceId', 'Code service'],
+    optional: true,
+  },
+];
+
+const SAFE_USER_SELECT = {
+  matricule: true,
+  email: true,
+  nom: true,
+  prenom: true,
+  role: true,
+  category: true,
+  userSince: true,
+  grade: true,
+  status: true,
+  serviceId: true,
+  structure: { select: { code: true, name: true } },
+} as const;
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly databaseService: DatabaseService) {}
-  async create(createUserDto: createUserDto) {
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly accessPolicy: AccessPolicy,
+  ) {}
+  async create(createUserDto: createUserDto, actor: User) {
+    if (
+      actor.role === Role.ADMIN &&
+      (!actor.serviceId ||
+        (createUserDto.serviceId &&
+          createUserDto.serviceId !== actor.serviceId) ||
+        createUserDto.role !== Role.USER)
+    ) {
+      throw new ForbiddenException(
+        'Administrators may create only regular users in their own structure.',
+      );
+    }
     let userSince: Date;
     // check if the user exist
     const user = await this.databaseService.user.findUnique({
@@ -35,18 +93,26 @@ export class UsersService {
     // Check Role
     if (createUserDto.category && !Category[createUserDto.category])
       throw new BadRequestException('Invalid category');
-    // Initial password derived from the name (users change it from their profile)
-    const password = `${createUserDto.nom.toLowerCase()}_${createUserDto.prenom.toLowerCase()}13`;
-    //Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Random single-use password, returned once to the admin; the user must
+    // choose their own at first sign-in.
+    const password = temporaryPassword();
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
     try {
-      return await this.databaseService.user.create({
+      const created = await this.databaseService.user.create({
         data: {
           ...createUserDto,
+          role: actor.role === Role.ADMIN ? Role.USER : createUserDto.role,
+          serviceId:
+            actor.role === Role.ADMIN
+              ? actor.serviceId
+              : createUserDto.serviceId,
           password: hashedPassword,
+          mustChangePassword: true,
           userSince: userSince ?? undefined, // Will be set only if userSince is defined
         },
+        select: SAFE_USER_SELECT,
       });
+      return { ...created, temporaryPassword: password };
     } catch (error) {
       // Check if the error is from Prisma and specifically a unique constraint violation
       if (error instanceof Prisma.PrismaClientKnownRequestError) {
@@ -60,10 +126,11 @@ export class UsersService {
     }
   }
 
-  findAll() {
+  findAll(actor: User) {
     return this.databaseService.user.findMany({
       where: {
         soft_delete: false,
+        ...this.accessPolicy.scopeUsers(actor),
       },
       orderBy: [
         {
@@ -90,23 +157,30 @@ export class UsersService {
     });
   }
 
-  findOne(matricule: number) {
-    return this.databaseService.user.findUnique({
+  async findOne(matricule: number, actor: User) {
+    const user = await this.databaseService.user.findFirst({
       where: {
         matricule,
+        ...this.accessPolicy.scopeUsers(actor),
       },
-      include: {
-        structure: true,
-      },
+      select: SAFE_USER_SELECT,
     });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
-  async findUsersInService(matricule: number) {
+  async findUsersInService(matricule: number, actor: User) {
     const user = await this.databaseService.user.findUnique({
       where: {
         matricule,
       },
     });
+    if (!user) throw new NotFoundException('User not found');
+    if (!this.accessPolicy.canAccessUser(actor, user)) {
+      throw new ForbiddenException(
+        'You cannot access users in another structure.',
+      );
+    }
     if (!user.serviceId) {
       throw new BadRequestException(
         "cette Utilisateur n'est pas attache a un service",
@@ -137,159 +211,338 @@ export class UsersService {
     });
   }
 
-  async update(
-    matricule: number,
-    @Body() updateUserDto: Prisma.UserUpdateInput,
-  ) {
-    // Prevent changing immutable identifiers
+  async update(matricule: number, updateUserDto: UpdateUserDto, actor: User) {
+    const existing = await this.databaseService.user.findUnique({
+      where: { matricule },
+      select: { matricule: true, role: true, serviceId: true },
+    });
+    if (!existing) throw new NotFoundException('User not found');
     if (
-      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'matricule') &&
-      (updateUserDto as any).matricule !== undefined &&
-      (updateUserDto as any).matricule !== matricule
+      updateUserDto.matricule !== undefined &&
+      updateUserDto.matricule !== matricule
     ) {
       throw new BadRequestException("You can't modify user's matricule");
+    }
+    if (!this.accessPolicy.canAccessUser(actor, existing)) {
+      throw new ForbiddenException(
+        'You cannot update a user in another structure.',
+      );
+    }
+    if (
+      actor.role === Role.ADMIN &&
+      updateUserDto.role !== undefined &&
+      updateUserDto.role !== existing.role
+    ) {
+      throw new ForbiddenException(
+        'Only super administrators may change roles.',
+      );
+    }
+    if (
+      actor.role === Role.ADMIN &&
+      updateUserDto.serviceId !== undefined &&
+      updateUserDto.serviceId !== actor.serviceId
+    ) {
+      throw new ForbiddenException(
+        'Administrators cannot move users to another structure.',
+      );
     }
 
     // Validate serviceId if it's being updated
     if (
-      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'serviceId') &&
-      (updateUserDto as any).serviceId !== undefined &&
-      (updateUserDto as any).serviceId !== null
+      updateUserDto.serviceId !== undefined &&
+      updateUserDto.serviceId !== null
     ) {
       const structureExists = await this.databaseService.structure.findUnique({
-        where: { code: (updateUserDto as any).serviceId },
+        where: { code: updateUserDto.serviceId },
       });
 
       if (!structureExists) {
         throw new BadRequestException(
-          `Structure with code '${(updateUserDto as any).serviceId}' does not exist`,
+          `Structure with code '${updateUserDto.serviceId}' does not exist`,
         );
       }
     }
 
-    const data = { ...(updateUserDto as any) };
-    delete (data as any).matricule;
-    delete (data as any).structure; // Remove relation field, only serviceId should be updated
-    delete (data as any).id; // Remove any client-side ID fields
-    delete (data as any).service; // Remove computed service field if present
+    const data: Prisma.UserUpdateInput = {
+      ...(updateUserDto.nom !== undefined && { nom: updateUserDto.nom }),
+      ...(updateUserDto.prenom !== undefined && {
+        prenom: updateUserDto.prenom,
+      }),
+      ...(updateUserDto.email !== undefined && { email: updateUserDto.email }),
+      ...(updateUserDto.grade !== undefined && { grade: updateUserDto.grade }),
+      ...(updateUserDto.category !== undefined && {
+        category: updateUserDto.category,
+      }),
+      ...(updateUserDto.role !== undefined && { role: updateUserDto.role }),
+      ...(updateUserDto.serviceId !== undefined && {
+        structure: updateUserDto.serviceId
+          ? { connect: { code: updateUserDto.serviceId } }
+          : { disconnect: true },
+      }),
+    };
 
     return this.databaseService.user.update({
       where: { matricule },
       data,
+      select: SAFE_USER_SELECT,
     });
   }
 
-  archive(matricule: number, actorId: number) {
-    if (matricule === actorId)
+  archive(matricule: number, actor: User) {
+    if (matricule === actor.matricule)
       throw new BadRequestException('You cannot archive yourself');
+    return this.assertAndArchive(matricule, actor);
+  }
+
+  private async assertAndArchive(matricule: number, actor: User) {
+    const target = await this.databaseService.user.findUnique({
+      where: { matricule },
+      select: { matricule: true, serviceId: true },
+    });
+    if (!target) throw new NotFoundException('User not found');
+    if (!this.accessPolicy.canAccessUser(actor, target)) {
+      throw new ForbiddenException(
+        'You cannot archive a user in another structure.',
+      );
+    }
     return this.databaseService.user.update({
       where: {
         matricule,
       },
-      data: archiveStamp(actorId),
+      data: archiveStamp(actor.matricule),
+      select: SAFE_USER_SELECT,
     });
   }
-  async uploadUsers(file: ImportExcel) {
-    try {
-      const wb: WorkBook = xlsx.read(file.buffer, { type: 'buffer' });
-      const sheet: WorkSheet = wb.Sheets[wb.SheetNames[0]];
-      const range = xlsx.utils.decode_range(sheet['!ref']);
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        if (R === 0 || !sheet[xlsx.utils.encode_cell({ c: 0, r: R })]) {
-          continue;
-        }
-        let col = 0;
-        const userData = {
-          matricule: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // ID or unique identifier
-          nom: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // First Name
-          prenom: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Last Name
-          email: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Email
-          password: await bcrypt.hash(
-            sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v,
-            10,
-          ), // Password (hash if needed)
-          role: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Role
-          category: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Category
-          grade: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // Grade
-          serviceId:
-            `${sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v}` || null, // Foreign key (convert to number)
-        };
-        // Check if user already exists by matricule
-        const existingUser = await this.databaseService.user.findUnique({
-          where: { matricule: userData.matricule },
-        });
 
-        if (existingUser) {
-          // Update the user if it exists
-          await this.databaseService.user.update({
-            where: { matricule: userData.matricule },
-            data: userData,
-          });
-        } else {
-          // Create a new user
-          await this.databaseService.user.create({
-            data: userData,
-          });
-        }
+  /**
+   * Imports users from the first sheet. Every row is validated first (format, duplicates,
+   * existing emails and services); if anything is wrong nothing is written and the whole
+   * list of problems is returned as a 400.
+   */
+  async uploadUsers(file: ImportExcel, actor: User) {
+    const rows = await readRows(
+      file.buffer,
+      USER_IMPORT_COLUMNS,
+      file.originalname,
+    );
+    const { items, errors } = await validateRows(
+      rows,
+      ImportUserRowDto,
+      USER_IMPORT_COLUMNS,
+    );
+    errors.push(
+      ...findDuplicates(items, (u) => u.matricule, 'Matricule'),
+      ...findDuplicates(items, (u) => u.email, 'Email'),
+    );
+
+    const [existing, emailOwners, structures] = await Promise.all([
+      this.databaseService.user.findMany({
+        where: { matricule: { in: items.map((i) => i.value.matricule) } },
+        select: { matricule: true, role: true, serviceId: true },
+      }),
+      this.databaseService.user.findMany({
+        where: {
+          email: { in: items.map((i) => i.value.email), mode: 'insensitive' },
+        },
+        select: { matricule: true, email: true },
+      }),
+      this.databaseService.structure.findMany({
+        where: {
+          code: {
+            in: items.map((i) => i.value.serviceId).filter(Boolean),
+          },
+          soft_delete: false,
+        },
+        select: { code: true },
+      }),
+    ]);
+    const existingById = new Map(existing.map((u) => [u.matricule, u]));
+    const codes = new Set(structures.map((s) => s.code));
+
+    for (const { row, value: u } of items) {
+      const current = existingById.get(u.matricule);
+      if (current?.role === Role.SUPER_ADMIN) {
+        errors.push({
+          row,
+          field: 'Matricule',
+          message: 'Un SUPER_ADMIN ne peut pas être modifié par import',
+        });
       }
-    } catch (error) {
-      console.error('Error in  Excel', error.stack);
-      throw error;
+      const targetService =
+        actor.role === Role.ADMIN ? actor.serviceId : (u.serviceId ?? null);
+      if (
+        actor.role === Role.ADMIN &&
+        (!actor.serviceId ||
+          (current && current.serviceId !== actor.serviceId) ||
+          (u.serviceId && u.serviceId !== actor.serviceId))
+      ) {
+        errors.push({
+          row,
+          field: 'ServiceId',
+          message: 'Utilisateur hors de votre structure',
+        });
+      }
+      const owner = emailOwners.find(
+        (o) => o.email.toLowerCase() === u.email.toLowerCase(),
+      );
+      if (owner && owner.matricule !== u.matricule) {
+        errors.push({
+          row,
+          field: 'Email',
+          value: u.email,
+          message: `Email déjà utilisé par le matricule ${owner.matricule}`,
+        });
+      }
+      if (targetService && !codes.has(targetService)) {
+        errors.push({
+          row,
+          field: 'ServiceId',
+          value: targetService,
+          message: 'Service inexistant ou archivé',
+        });
+      }
     }
+    if (errors.length) throw new ImportValidationError(errors);
+
+    const temporaryPasswords = new Map<number, string>();
+    for (const { value: user } of items) {
+      if (!existingById.has(user.matricule)) {
+        temporaryPasswords.set(user.matricule, temporaryPassword());
+      }
+    }
+    const passwordHashes = new Map(
+      await Promise.all(
+        [...temporaryPasswords].map(
+          async ([matricule, password]) =>
+            [matricule, await bcrypt.hash(password, BCRYPT_ROUNDS)] as const,
+        ),
+      ),
+    );
+    const writes = items.map(({ value: u }) => {
+      const serviceId =
+        actor.role === Role.ADMIN ? actor.serviceId : (u.serviceId ?? null);
+      const data = {
+        nom: u.nom,
+        prenom: u.prenom,
+        email: u.email,
+        category: u.category,
+        grade: u.grade,
+        serviceId,
+      };
+      if (existingById.has(u.matricule)) {
+        return this.databaseService.user.update({
+          where: { matricule: u.matricule },
+          data,
+        });
+      }
+      return this.databaseService.user.create({
+        data: {
+          ...data,
+          matricule: u.matricule,
+          role: Role.USER,
+          password: passwordHashes.get(u.matricule)!,
+          mustChangePassword: true,
+          userSince: new Date(),
+        },
+      });
+    });
+    await this.databaseService.$transaction(writes);
+
+    const updated = items.filter((i) =>
+      existingById.has(i.value.matricule),
+    ).length;
+    return {
+      created: items.length - updated,
+      updated,
+      temporaryPasswords: [...temporaryPasswords].map(
+        ([matricule, password]) => ({ matricule, password }),
+      ),
+    };
   }
 
   async ChangePassword(changePassword: ChangePasswordDto, matricule: number) {
-    const user = await this.databaseService.user.findUnique({
-      where: { matricule },
+    const user = await this.databaseService.user.findFirst({
+      where: { matricule, soft_delete: false },
     });
-
-    if (!user) {
-      throw new BadRequestException('User not found');
-    }
+    if (!user) throw new NotFoundException();
 
     const passwordMatch = await bcrypt.compare(
       changePassword.currentPassword,
       user.password,
     );
-
     if (!passwordMatch) {
-      throw new BadRequestException('Invalid Password');
+      throw new BadRequestException('Mot de passe actuel incorrect');
     }
+    if (await bcrypt.compare(changePassword.password, user.password)) {
+      throw new BadRequestException(
+        'Le nouveau mot de passe doit être différent de l’actuel',
+      );
+    }
+    const personal = personalPasswordProblem(changePassword.password, user);
+    if (personal) throw new BadRequestException(personal);
 
-    const hashedPassword = await bcrypt.hash(changePassword.password, 10);
-    return this.databaseService.user.update({
-      where: { matricule },
-      data: { password: hashedPassword },
-    });
-  }
-
-  // Admin reset password: accept a custom password from admin
-  async resetPassword(matricule: number, newPassword: string) {
-    const user = await this.databaseService.user.findUnique({
-      where: { matricule },
-    });
-    if (!user) throw new BadRequestException('User not found');
-
-    // Hash the new password provided by admin
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(
+      changePassword.password,
+      BCRYPT_ROUNDS,
+    );
     await this.databaseService.user.update({
       where: { matricule },
-      data: { password: hashed },
+      // Every earlier access token and session stops working (ADR 0002).
+      data: {
+        password: hashedPassword,
+        passwordChangedAt: new Date(),
+        mustChangePassword: false,
+      },
+    });
+    return { matricule, message: 'Password changed successfully' };
+  }
+
+  // Admin reset: a temporary password (chosen by the admin, or generated and
+  // returned once) that the user must replace at next sign-in.
+  async resetPassword(
+    matricule: number,
+    newPassword: string | undefined,
+    actor: User,
+  ) {
+    const user = await this.databaseService.user.findFirst({
+      where: { matricule, soft_delete: false },
+      select: { matricule: true, serviceId: true, role: true },
+    });
+    if (!user || !this.accessPolicy.canAccessUser(actor, user))
+      throw new NotFoundException();
+    if (user.role === Role.SUPER_ADMIN && actor.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenException();
+    }
+
+    const password = newPassword ?? temporaryPassword();
+    const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await this.databaseService.user.update({
+      where: { matricule },
+      // Ends the user's sessions and lifts a lockout (ADR 0002).
+      data: {
+        password: hashed,
+        passwordChangedAt: new Date(),
+        mustChangePassword: true,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      },
     });
 
     return {
       matricule,
       message: 'Password reset successfully',
       success: true,
+      ...(newPassword ? {} : { temporaryPassword: password }),
     };
   }
 
-  async exportUsers(res: Response) {
+  async exportUsers(res: Response, actor: User) {
     try {
       // Fetch all users from database (server-side, not client-side)
       const users = await this.databaseService.user.findMany({
         where: {
           soft_delete: false,
+          ...this.accessPolicy.scopeUsers(actor),
         },
         include: {
           structure: {
@@ -304,9 +557,6 @@ export class UsersService {
           },
         ],
       });
-
-      // Create workbook and worksheet
-      const workbook = xlsx.utils.book_new();
 
       // Prepare data for Excel export
       const usersData = users.map((user) => ({
@@ -327,17 +577,7 @@ export class UsersService {
         'Updated At': user.updatedAt.toISOString().split('T')[0],
       }));
 
-      // Convert data to worksheet
-      const worksheet = xlsx.utils.json_to_sheet(usersData);
-
-      // Add worksheet to workbook
-      xlsx.utils.book_append_sheet(workbook, worksheet, 'Users');
-
-      // Generate Excel buffer
-      const excelBuffer = xlsx.write(workbook, {
-        type: 'buffer',
-        bookType: 'xlsx',
-      });
+      const excelBuffer = await exportWorkbook('Users', usersData);
 
       // Set response headers for file download
       const filename = `users_export_${new Date().toISOString().split('T')[0]}.xlsx`;

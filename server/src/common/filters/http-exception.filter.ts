@@ -24,6 +24,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     const exceptionResponse = exception.getResponse();
     const errorMessage = this.extractErrorMessage(exceptionResponse);
+    // Per-row details (e.g. spreadsheet import problems) are forwarded as-is.
+    const details =
+      typeof exceptionResponse === 'object' &&
+      Array.isArray((exceptionResponse as any).errors)
+        ? { errors: (exceptionResponse as any).errors }
+        : {};
 
     // Log the error for debugging (sanitize sensitive info in production)
     this.logger.error(
@@ -38,6 +44,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       error: this.getErrorType(status),
       timestamp: new Date().toISOString(),
       path: request.url,
+      ...details,
     });
   }
 

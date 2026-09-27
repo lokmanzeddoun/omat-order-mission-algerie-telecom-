@@ -1,15 +1,17 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { User } from '@prisma/client';
 import { MissionsService } from './missions.service';
 import { DatabaseService } from 'src/database/database.service';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import { PdfService } from 'src/pdf/pdf.service';
+import { AccessPolicy } from 'src/common/policy/access-policy';
+import { AuditService } from 'src/audit/audit.service';
 
 describe('MissionsService', () => {
   let service: MissionsService;
   const db = {
-    mission: { findUnique: jest.fn(), update: jest.fn() },
+    mission: { findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn() },
   };
 
   const agent = { matricule: 1, role: 'USER' } as User;
@@ -23,6 +25,8 @@ describe('MissionsService', () => {
         { provide: DatabaseService, useValue: db },
         { provide: ExercicesService, useValue: {} },
         { provide: PdfService, useValue: {} },
+        AccessPolicy,
+        { provide: AuditService, useValue: { record: jest.fn() } },
       ],
     }).compile();
 
@@ -39,29 +43,29 @@ describe('MissionsService', () => {
     });
 
     it('lets an agent cancel their own ordre before validation', async () => {
-      db.mission.findUnique.mockResolvedValue(mission({}));
+      db.mission.findFirst.mockResolvedValue(mission({}));
       db.mission.update.mockResolvedValue({});
       await service.remove(5, agent);
       expect(db.mission.update).toHaveBeenCalled();
     });
 
     it("forbids an agent from cancelling someone else's ordre", async () => {
-      db.mission.findUnique.mockResolvedValue(mission({ userId: 2 }));
+      db.mission.findFirst.mockResolvedValue(null);
       await expect(service.remove(5, agent)).rejects.toBeInstanceOf(
-        ForbiddenException,
+        NotFoundException,
       );
       expect(db.mission.update).not.toHaveBeenCalled();
     });
 
     it('forbids an agent from cancelling a validated ordre', async () => {
-      db.mission.findUnique.mockResolvedValue(mission({ status: 'COMPLETED' }));
+      db.mission.findFirst.mockResolvedValue(mission({ status: 'COMPLETED' }));
       await expect(service.remove(5, agent)).rejects.toBeInstanceOf(
         ForbiddenException,
       );
     });
 
     it('lets an admin cancel any ordre', async () => {
-      db.mission.findUnique.mockResolvedValue(
+      db.mission.findFirst.mockResolvedValue(
         mission({ userId: 2, status: 'COMPLETED' }),
       );
       db.mission.update.mockResolvedValue({});

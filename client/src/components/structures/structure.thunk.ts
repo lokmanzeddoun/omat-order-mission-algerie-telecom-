@@ -11,6 +11,7 @@ import {
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
+import { uploadSpreadsheet } from 'components/common/importFile';
 import { IStructure } from './structure.reducer';
 
 export const getAllStructures = () => async (dispatch: AppDispatch) => {
@@ -80,37 +81,11 @@ export const addStructure = (structure: IStructure) => async (dispatch: AppDispa
   }
 };
 
+/** Imports a spreadsheet; returns the per-row problems when the server rejects the file. */
 export const uploadStructure = (file: File) => async (dispatch: AppDispatch) => {
-  const formData = new FormData();
-  formData.append('file', file); // Attach the file to the request
-
-  try {
-    const res = await http.post(`/structures/upload`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data', // Ensure the correct content type for file upload
-      },
-    });
-    console.log(res);
-    if (res) {
-      await dispatch(setAlert({ msg: 'File uploaded successfully', type: AlertTypes.SUCCESS }));
-      await dispatch(getAllStructures()); // Assuming 'res.data' contains the newly created users
-    } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
-    }
-  } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
-
-    dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
-    console.error('Error:', errorMessage);
-  }
+  const result = await uploadSpreadsheet('/structures/upload', file, dispatch);
+  if (result?.ok) await dispatch(getAllStructures());
+  return result;
 };
 
 export const exportStructures = () => async (dispatch: AppDispatch) => {

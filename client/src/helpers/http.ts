@@ -14,7 +14,7 @@ const http = axios.create({
     timeout: DEFAULT_TIMEOUT_MS,
 });
 
-if (typeof window !== 'undefined') {
+if (import.meta.env.DEV && typeof window !== 'undefined') {
     // Lightweight runtime hint to verify which baseURL is used
     console.info('[http] baseURL =', baseURL);
 }
@@ -29,32 +29,46 @@ http.interceptors.request.use((config) => {
         const fullUrl = `${config.baseURL ?? ''}${config.url ?? ''}`;
         console.info(`[http] → ${method} ${fullUrl}`);
     }
-    // Ensure Authorization header is present if token exists in storage
-    try {
-        const hasAuth = config.headers && (
-            (config.headers as any)['Authorization'] || (config.headers as any)['authorization']
-        );
-        if (!hasAuth && typeof window !== 'undefined') {
-            const raw = window.localStorage.getItem('token');
-            let token: string | null = null;
-            if (raw) {
-                try {
-                    const parsed = JSON.parse(raw);
-                    token = typeof parsed === 'string' ? parsed : parsed?.token || null;
-                } catch {
-                    token = raw; // use raw string as token
-                }
-            }
-            if (token) {
-                config.headers = config.headers || {};
-                (config.headers as any)['Authorization'] = `Bearer ${token}`;
-            }
-        }
-    } catch {
-        // ignore storage issues
-    }
     return config;
 });
+
+/**
+ * The store registers these (see main.tsx) so this module does not import it.
+ * `refreshed` receives the new session; `ended` runs when it cannot be renewed.
+ */
+const sessionHooks: {
+    refreshed: (data: ResLoginApi) => void;
+    ended: () => void;
+} = { refreshed: () => undefined, ended: () => undefined };
+
+export function onSession(hooks: Partial<typeof sessionHooks>) {
+    Object.assign(sessionHooks, hooks);
+}
+
+export function setAccessToken(token: string | null) {
+    if (token) http.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    else delete http.defaults.headers.common['Authorization'];
+}
+
+// One refresh at a time: parallel 401s wait for the same rotation instead of
+// replaying the refresh cookie (which the server would treat as a theft).
+let refreshing: Promise<string> | null = null;
+
+export function refreshAccessToken(): Promise<string> {
+    refreshing ??= http
+        .post<ResLoginApi>('/auth/refresh')
+        .then((res) => {
+            const token = res.data?.token;
+            if (!token) throw new Error('No token');
+            setAccessToken(token);
+            sessionHooks.refreshed(res.data);
+            return token;
+        })
+        .finally(() => {
+            refreshing = null;
+        });
+    return refreshing;
+}
 
 http.interceptors.response.use(
     (response) => {
@@ -75,35 +89,24 @@ http.interceptors.response.use(
             console.warn(`[http] × ${method} ${fullUrl} ${status ?? ''}`, error?.message);
         }
 
-        // If the failed request is the refresh endpoint itself, don't try to refresh again
+        // Credential routes answer 401 for a bad password or code: never retry them.
         const requestUrl = String(cfg.url || '').toLowerCase();
-        if (requestUrl.includes('/auth/refresh')) {
-            return Promise.reject(error);
-        }
+        const isAuthRoute = /\/auth\/(login|refresh|logout|mfa\/)/.test(requestUrl);
 
-        // If unauthorized, attempt one refresh and retry original request
-        if (status === 401 && !cfg.__isRetryRequest) {
+        // Access tokens live 15 minutes: on 401, refresh once and replay the request.
+        if (status === 401 && !isAuthRoute && !cfg.__isRetryRequest) {
+            cfg.__isRetryRequest = true;
             try {
-                cfg.__isRetryRequest = true;
-                const r = await http.post('/auth/refresh');
-                const newToken = r.data?.token;
-                if (newToken) {
-                    cfg.headers = cfg.headers || {};
-                    cfg.headers['Authorization'] = `Bearer ${newToken}`;
-                }
+                const newToken = await refreshAccessToken();
+                cfg.headers = cfg.headers || {};
+                cfg.headers['Authorization'] = `Bearer ${newToken}`;
                 return await http(cfg);
             } catch {
-                // If refresh fails, logout user by clearing storage
-                if (typeof window !== 'undefined') {
-                    window.localStorage.removeItem('token');
-                    window.localStorage.removeItem('user');
-                    window.localStorage.removeItem('persist:root');
-                    // Optionally redirect to login
-                    // Sign-in lives at the app root ('/' under the '/omat' basename)
-                    const signInPath = import.meta.env.BASE_URL;
-                    if (window.location.pathname !== signInPath) {
-                        window.location.href = signInPath;
-                    }
+                sessionHooks.ended();
+                // Sign-in lives at the app root ('/' under the '/omat' basename)
+                const signInPath = import.meta.env.BASE_URL;
+                if (typeof window !== 'undefined' && window.location.pathname !== signInPath) {
+                    window.location.href = signInPath;
                 }
                 return Promise.reject(error);
             }

@@ -49,7 +49,7 @@ export class ArchiveController {
   }
 
   @Patch('missions/bulk')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   archiveMissionsBulk(
     @Body() body: BulkIdsDto,
     @GetUser('matricule') actorId: number,
@@ -58,7 +58,7 @@ export class ArchiveController {
   }
 
   @Patch('missions/bulk/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreMissionsBulk(
     @Body() body: BulkIdsDto,
     @GetUser('matricule') actorId: number,
@@ -67,7 +67,7 @@ export class ArchiveController {
   }
 
   @Patch('decomptes/bulk')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   archiveDecomptesBulk(
     @Body() body: BulkIdsDto,
     @GetUser('matricule') actorId: number,
@@ -76,7 +76,7 @@ export class ArchiveController {
   }
 
   @Patch('decomptes/bulk/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreDecomptesBulk(
     @Body() body: BulkIdsDto,
     @GetUser('matricule') actorId: number,
@@ -85,7 +85,7 @@ export class ArchiveController {
   }
 
   @Patch('users/bulk')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   archiveUsersBulk(
     @Body() body: BulkIdsDto,
     @GetUser('matricule') actorId: number,
@@ -94,7 +94,7 @@ export class ArchiveController {
   }
 
   @Patch('users/bulk/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreUsersBulk(
     @Body() body: BulkIdsDto,
     @GetUser('matricule') actorId: number,
@@ -103,7 +103,7 @@ export class ArchiveController {
   }
 
   @Patch('structures/bulk')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   archiveStructuresBulk(
     @Body() body: BulkCodesDto,
     @GetUser('matricule') actorId: number,
@@ -112,7 +112,7 @@ export class ArchiveController {
   }
 
   @Patch('structures/bulk/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreStructuresBulk(
     @Body() body: BulkCodesDto,
     @GetUser('matricule') actorId: number,
@@ -121,37 +121,37 @@ export class ArchiveController {
   }
 
   @Get('missions')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   listMissions(@Query('year') year?: string) {
     return this.archive.listMissions(year ? +year : undefined);
   }
 
   @Get('decomptes')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   listDecomptes(@Query('year') year?: string) {
     return this.archive.listDecomptes(year ? +year : undefined);
   }
 
   @Patch('missions/:id')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   moveMission(@Param('id') id: string, @GetUser('matricule') actorId: number) {
     return this.archive.moveMissionToArchive(+id, actorId);
   }
 
   @Patch('decomptes/:id')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   moveDecompte(@Param('id') id: string, @GetUser('matricule') actorId: number) {
     return this.archive.moveDecompteToArchive(+id, actorId);
   }
 
   @Get('structures')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   listStructures() {
     return this.archive.listStructures();
   }
 
   @Patch('structures/:code')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   moveStructure(
     @Param('code') code: string,
     @GetUser('matricule') actorId: number,
@@ -160,37 +160,37 @@ export class ArchiveController {
   }
 
   @Get('users')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   listUsers() {
     return this.archive.listUsers();
   }
 
   @Patch('users/:id')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   moveUser(@Param('id') id: string, @GetUser('matricule') actorId: number) {
     return this.archive.moveUserToArchive(+id, actorId);
   }
 
   @Patch('missions/:id/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreMission(@Param('id') id: string) {
     return this.archive.restoreMission(+id);
   }
 
   @Patch('decomptes/:id/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreDecompte(@Param('id') id: string) {
     return this.archive.restoreDecompte(+id);
   }
 
   @Patch('users/:id/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreUser(@Param('id') id: string) {
     return this.archive.restoreUser(+id);
   }
 
   @Patch('structures/:code/restore')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   restoreStructure(@Param('code') code: string) {
     return this.archive.restoreStructure(code);
   }

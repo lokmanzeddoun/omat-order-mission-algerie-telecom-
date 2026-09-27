@@ -32,6 +32,43 @@ model User {
   archivedStructures Structure[] @relation("StructureArchivedBy")
   archivedMissions Mission[] @relation("MissionArchivedBy")
   archivedDecomptes Decompte[] @relation("DecompteArchivedBy")
+  // Sessions & credentials (ADR 0002)
+  sessions Session[]
+  // Access tokens issued before this instant are refused; so are sessions opened before it.
+  passwordChangedAt DateTime?
+  // Set on a temporary password (creation, admin reset): every route but the
+  // password change is refused until the user picks their own.
+  mustChangePassword Boolean @default(false)
+  failedLoginCount Int @default(0)
+  lockedUntil DateTime?
+  // TOTP MFA (ADMIN / SUPER_ADMIN). Secrets are AES-256-GCM encrypted.
+  mfaSecret String?
+  mfaPendingSecret String?
+  mfaEnabledAt DateTime?
+  // Last accepted TOTP time step, so a code cannot be replayed.
+  mfaLastStep Int?
+  // sha256 hashes of the unused recovery codes.
+  mfaRecoveryCodes String[] @default([])
+}
+
+/// A refresh-token session. The cookie holds `<id>.<secret>`; only an HMAC of
+/// the secret is stored. Rotation creates a new row in the same family;
+/// presenting a rotated (or revoked) token revokes the whole family.
+model Session {
+  id String @id @default(uuid())
+  user User @relation(fields: [userMatricule], references: [matricule], onDelete: Cascade)
+  userMatricule Int
+  familyId String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  rotatedAt DateTime?
+  createdAt DateTime @default(now())
+  userAgent String?
+  ip String?
+
+  @@index([userMatricule])
+  @@index([familyId])
 }
 
 model Structure {
@@ -63,6 +100,10 @@ model Mission {
   hors_wilaya Boolean @default(false)
   userId Int
   direction Direction @default(NORD)
+  // Who validated this ordre de mission, and when (ADR 0001; audit lands in issue 07).
+  // The lock itself is derived from `status`, so there is no separate lockedAt.
+  validatedById Int?
+  validatedAt DateTime?
   decompte Decompte[]
   // Exercice relation
   exercice   Exercice? @relation(fields: [exerciceId], references: [id])
@@ -90,6 +131,10 @@ model Decompte {
   archivedAt DateTime?
   archivedBy User? @relation("DecompteArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
   archivedById Int?
+  // Who accepted/rejected this décompte, and when (ADR 0001; audit lands in issue 07).
+  // The lock is derived from `status` (ACCEPTED/REGECTED are read-only), so no lockedAt.
+  decidedById Int?
+  decidedAt DateTime?
   mission Mission @relation(fields: [missionId],references: [n_mission])
   missionId Int
   messages Commentaire[]
@@ -134,6 +179,22 @@ model Exercice {
   updatedAt DateTime  @updatedAt
   missions  Mission[]
   decomptes Decompte[]
+}
+
+model AuditLog {
+  id              Int      @id @default(autoincrement())
+  actorMatricule  Int?
+  action          String
+  entity          String
+  entityId        String
+  before          Json?
+  after           Json?
+  reason          String?
+  ip              String?
+  at              DateTime @default(now())
+
+  @@index([actorMatricule, at])
+  @@index([entity, entityId, at])
 }
 
 

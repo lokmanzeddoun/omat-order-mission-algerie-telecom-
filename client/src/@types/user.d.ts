@@ -11,6 +11,7 @@ interface ResLoginApi extends Res {
     category: Category;
     role: Role;
     createdAt: Date;
+    mustChangePassword: boolean;
   };
   token: string | null;
 }
@@ -25,6 +26,7 @@ interface IUser {
   role: Role;
   category: Category;
   serviceId?: string | null;
+  mustChangePassword?: boolean;
 }
 
 interface DispatchAuth {

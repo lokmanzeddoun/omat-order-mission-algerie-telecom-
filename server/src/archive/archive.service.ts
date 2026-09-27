@@ -116,10 +116,24 @@ export class ArchiveService {
         soft_delete: true,
       },
       orderBy: { updatedAt: 'desc' },
-      include: {
+      select: {
+        matricule: true,
+        email: true,
+        nom: true,
+        prenom: true,
+        role: true,
+        category: true,
+        userSince: true,
+        grade: true,
+        status: true,
+        serviceId: true,
+        soft_delete: true,
+        archivedAt: true,
+        archivedById: true,
         archivedBy: ARCHIVED_BY,
         structure: {
           select: {
+            code: true,
             name: true,
           },
         },
@@ -137,6 +151,16 @@ export class ArchiveService {
     return this.db.user.update({
       where: { matricule },
       data: archiveStamp(actorId),
+      select: {
+        matricule: true,
+        email: true,
+        nom: true,
+        prenom: true,
+        role: true,
+        soft_delete: true,
+        archivedAt: true,
+        archivedById: true,
+      },
     });
   }
 
@@ -170,6 +194,16 @@ export class ArchiveService {
     return this.db.user.update({
       where: { matricule },
       data: restoreStamp(),
+      select: {
+        matricule: true,
+        email: true,
+        nom: true,
+        prenom: true,
+        role: true,
+        soft_delete: true,
+        archivedAt: true,
+        archivedById: true,
+      },
     });
   }
 

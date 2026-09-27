@@ -15,7 +15,6 @@ import {
   Row,
   SectionTitle,
   TimeBoxes,
-  Unit,
 } from '../components/primitives';
 
 const FORM_CODE = 'Annexe01 V.1.1';
@@ -82,7 +81,9 @@ function ResponsablePanel() {
         padding: 12,
       }}
     >
-      <RP.Text style={{ fontSize: size.value, fontWeight: 700, color: color.ink }}>
+      <RP.Text
+        style={{ fontSize: size.value, fontWeight: 700, color: color.ink }}
+      >
         Le Responsable hiérarchique direct ayant ordonné la mission :
       </RP.Text>
       <Row gap={8} style={{ marginTop: 12 }}>

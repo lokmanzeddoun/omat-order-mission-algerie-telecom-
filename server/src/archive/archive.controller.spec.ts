@@ -23,7 +23,7 @@ describe('ArchiveController (HTTP)', () => {
   afterAll(() => app.close());
   beforeEach(() => jest.clearAllMocks());
 
-  const patch = (url: string, role = 'ADMIN') =>
+  const patch = (url: string, role = 'SUPER_ADMIN') =>
     request(app.getHttpServer()).patch(url).set('x-role', role);
 
   it('routes /missions/bulk to the bulk handler, not /missions/:id', async () => {

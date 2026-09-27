@@ -1,5 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { Logger } from '@nestjs/common';
+
+const logger = new Logger('DestinationValidator');
 
 type City = {
   commune_name_ascii?: string;
@@ -54,16 +57,15 @@ function loadCommuneSet(): Set<string> {
   for (const p of candidates) {
     cities = tryLoadJson(p);
     if (cities) {
-      console.log(`[destination-validator] Loaded cities from: ${p}`);
+      logger.log(`Loaded cities from: ${p}`);
       break;
     }
   }
 
   if (!cities) {
-    console.warn(
-      '[destination-validator] Could not load algeria_cities.json from any candidate path',
+    logger.warn(
+      `Could not load algeria_cities.json; tried: ${candidates.join(', ')}`,
     );
-    console.warn('[destination-validator] Tried paths:', candidates);
   }
 
   const set = new Set<string>();

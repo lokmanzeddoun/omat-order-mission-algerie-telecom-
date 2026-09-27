@@ -7,10 +7,23 @@ import {
 } from '@nestjs/common';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
-import * as xlsx from 'xlsx';
-import { WorkBook, WorkSheet } from 'xlsx';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
 import { Response } from 'express';
+import {
+  findDuplicates,
+  ImportColumn,
+  ImportValidationError,
+  readRows,
+  validateRows,
+} from 'src/utils/import-validation';
+import { ImportStructureDto } from './dto/import-structure.dto';
+import { exportWorkbook } from 'src/utils/export-workbook';
+
+/** Expected columns of the services spreadsheet, matched by header name (same as the export). */
+const STRUCTURE_IMPORT_COLUMNS: ImportColumn[] = [
+  { field: 'code', headers: ['Code'] },
+  { field: 'name', headers: ['Name', 'Nom', 'Service'] },
+];
 
 @Injectable()
 export class StructuresService {
@@ -63,44 +76,44 @@ export class StructuresService {
     });
   }
 
+  /**
+   * Imports services from the first sheet (upsert by code). All rows are validated first;
+   * if anything is wrong nothing is written and every problem is returned as a 400.
+   */
   async uploadStructure(file: ImportExcel) {
-    try {
-      const wb: WorkBook = xlsx.read(file.buffer, { type: 'buffer' });
-      const sheet: WorkSheet = wb.Sheets[wb.SheetNames[0]];
-      const range = xlsx.utils.decode_range(sheet['!ref']);
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        if (R === 0 || !sheet[xlsx.utils.encode_cell({ c: 0, r: R })]) {
-          continue;
-        }
-        let col = 0;
-        const serviceData = {
-          code: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // ID or unique identifier
-          name: sheet[xlsx.utils.encode_cell({ c: col++, r: R })]?.v, // First Name
-        };
-        // Check if user already exists by matricule
-        const existingStructure =
-          await this.databaseService.structure.findUnique({
-            where: { code: serviceData.code },
-          });
+    const rows = await readRows(
+      file.buffer,
+      STRUCTURE_IMPORT_COLUMNS,
+      file.originalname,
+    );
+    const { items, errors } = await validateRows(
+      rows,
+      ImportStructureDto,
+      STRUCTURE_IMPORT_COLUMNS,
+    );
+    errors.push(...findDuplicates(items, (s) => s.code, 'Code'));
+    if (errors.length) throw new ImportValidationError(errors);
 
-        if (existingStructure) {
-          // Update the user if it exists
-          // Do not update 'code' to avoid FK issues
-          await this.databaseService.structure.update({
-            where: { code: serviceData.code },
-            data: { name: serviceData.name },
-          });
-        } else {
-          // Create a new Structure
-          await this.databaseService.structure.create({
-            data: serviceData,
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error in  Excel', error.stack);
-      throw error;
-    }
+    const existing = await this.databaseService.structure.findMany({
+      where: { code: { in: items.map((i) => i.value.code) } },
+      select: { code: true },
+    });
+    const existingCodes = new Set(existing.map((s) => s.code));
+    await this.databaseService.$transaction(
+      items.map(({ value: { code, name } }) =>
+        existingCodes.has(code)
+          ? // Only the name changes: 'code' is referenced by users.
+            this.databaseService.structure.update({
+              where: { code },
+              data: { name },
+            })
+          : this.databaseService.structure.create({ data: { code, name } }),
+      ),
+    );
+    return {
+      created: items.length - existingCodes.size,
+      updated: existingCodes.size,
+    };
   }
 
   async exportStructures(res: Response) {
@@ -127,9 +140,6 @@ export class StructuresService {
         ],
       });
 
-      // Create workbook and worksheet
-      const workbook = xlsx.utils.book_new();
-
       // Prepare data for Excel export
       const structuresData = structures.map((structure) => ({
         Code: structure.code,
@@ -137,17 +147,7 @@ export class StructuresService {
         'Number of Users': structure.users.length,
       }));
 
-      // Convert data to worksheet
-      const worksheet = xlsx.utils.json_to_sheet(structuresData);
-
-      // Add worksheet to workbook
-      xlsx.utils.book_append_sheet(workbook, worksheet, 'Structures');
-
-      // Generate Excel buffer
-      const excelBuffer = xlsx.write(workbook, {
-        type: 'buffer',
-        bookType: 'xlsx',
-      });
+      const excelBuffer = await exportWorkbook('Structures', structuresData);
 
       // Set response headers for file download
       const filename = `structures_export_${new Date().toISOString().split('T')[0]}.xlsx`;

@@ -19,7 +19,7 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
     // Log the error for debugging
     this.logger.error(
       `Prisma Error ${exception.code}: ${request.method} ${request.url}`,
-      exception.message,
+      JSON.stringify(exception.meta ?? {}),
     );
 
     let status: HttpStatus;
@@ -27,11 +27,10 @@ export class PrismaClientExceptionFilter extends BaseExceptionFilter {
 
     switch (exception.code) {
       case 'P2002': {
-        // Unique constraint violation
+        // Unique constraint violation. The column names stay in the server
+        // log: they reveal the schema and which values already exist.
         status = HttpStatus.CONFLICT;
-        const target = (exception.meta?.target as string[]) || [];
-        const field = target.length > 0 ? target.join(', ') : 'champ';
-        message = `Un enregistrement avec ce ${field} existe déjà`;
+        message = 'Cet enregistrement existe déjà';
         break;
       }
       case 'P2025': {

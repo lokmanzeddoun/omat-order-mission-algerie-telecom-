@@ -20,6 +20,8 @@ import { addOrder } from 'components/orders/orderthunk';
 import type { IMission } from 'components/orders/orderReducer';
 import MissionFormDialog from 'components/orders/MissionFormDialog';
 import FileImportButton from 'components/common/FileImportButton';
+import { ImportErrorsDialog } from 'components/common/ImportErrorsDialog';
+import type { ImportRowError } from 'components/common/importFile';
 import { useBulkArchive } from 'components/common/useBulkArchive';
 import {
   Badge,
@@ -104,6 +106,7 @@ export default function UsersPage() {
   const [toArchive, setToArchive] = useState<UserRow | null>(null);
   const [toReset, setToReset] = useState<UserRow | null>(null);
   const [missionFor, setMissionFor] = useState<UserRow | null>(null);
+  const [importErrors, setImportErrors] = useState<ImportRowError[] | null>(null);
 
   useEffect(() => {
     void dispatch(getAllUsers());
@@ -167,9 +170,11 @@ export default function UsersPage() {
           <>
             <IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={refresh} />
             <FileImportButton
+              accept=".xlsx,.csv"
               onFile={async (file) => {
-                await dispatch(uploadUsers(file));
-                await refresh();
+                const result = await dispatch(uploadUsers(file));
+                if (result && !result.ok) setImportErrors(result.errors);
+                else if (result) await refresh();
               }}
             />
             <Button onClick={() => dispatch(exportUsers())}>
@@ -267,6 +272,7 @@ export default function UsersPage() {
         onClose={() => setMissionFor(null)}
         onSubmit={submitMission}
       />
+      <ImportErrorsDialog errors={importErrors} onClose={() => setImportErrors(null)} />
     </>
   );
 }
