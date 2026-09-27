@@ -1,20 +1,17 @@
 import { useState, type ReactNode } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import http from 'helpers/http';
 import { extractErrorMessage } from 'helpers/errorHandler';
 import { ConfirmDialog, Field, Textarea, type MenuAction } from 'components/ui';
 import { toast } from 'components/ui/toaster';
-import { countOf, idsOf, reportBulkResult, type BulkResult, type Id } from './bulk';
+import { countOf, idsOf, reportBulkResult, type BulkNoun, type BulkResult, type Id } from './bulk';
 import { BulkPreview } from './BulkPreview';
 
 type Decision = 'accept' | 'reject';
 
-const noun: [string, string] = ['décompte', 'décomptes'];
-const skipLabels: Record<string, string> = {
-  not_found: 'introuvable',
-  not_pending: 'pas en attente',
-  archived: 'archivé',
-};
+const noun: BulkNoun = 'decompte';
+const skipReasons = ['not_found', 'not_pending', 'archived'];
 
 interface Options<Row> {
   idOf: (row: Row) => Id | null | undefined;
@@ -30,6 +27,7 @@ interface Options<Row> {
  * aren't pending are left out of the request and of the counts.
  */
 export function useBulkDecompteStatus<Row>({ idOf, labelOf, isPending, onDone }: Options<Row>) {
+  const { t } = useTranslation();
   const [pending, setPending] = useState<{ decision: Decision; rows: Row[] } | null>(null);
   const [message, setMessage] = useState('');
   const [touched, setTouched] = useState(false);
@@ -54,8 +52,8 @@ export function useBulkDecompteStatus<Row>({ idOf, labelOf, isPending, onDone }:
       reportBulkResult({
         result: data,
         noun,
-        participle: decision === 'accept' ? ['accepté', 'acceptés'] : ['rejeté', 'rejetés'],
-        skipLabels,
+        outcome: decision === 'accept' ? 'accepted' : 'rejected',
+        skipReasons,
       });
     } catch (error) {
       toast.error(extractErrorMessage(error));
@@ -71,13 +69,13 @@ export function useBulkDecompteStatus<Row>({ idOf, labelOf, isPending, onDone }:
     if (rows.length === 0) return [];
     return [
       {
-        label: `Accepter (${rows.length})`,
+        label: `${t('decomptes:accept')} (${rows.length})`,
         icon: <CheckCircle2 />,
         disabled: busy,
         onSelect: () => setPending({ decision: 'accept', rows }),
       },
       {
-        label: `Rejeter (${rows.length})`,
+        label: `${t('decomptes:reject')} (${rows.length})`,
         icon: <XCircle />,
         tone: 'danger',
         disabled: busy,
@@ -93,14 +91,12 @@ export function useBulkDecompteStatus<Row>({ idOf, labelOf, isPending, onDone }:
     <ConfirmDialog
       open={pending !== null}
       onOpenChange={(o) => !o && !busy && close()}
-      title={`${reject ? 'Rejeter' : 'Accepter'} ${countOf(rows.length, noun)} ?`}
+      title={t('bulk:confirmTitle', { verb: reject ? t('decomptes:reject') : t('decomptes:accept'), what: countOf(rows.length, noun) })}
       description={
-        reject
-          ? 'Le même motif de rejet est transmis à chaque agent.'
-          : 'Les agents seront informés de l’acceptation.'
+        reject ? t('bulk:rejectHint') : t('bulk:acceptHint')
       }
       tone={reject ? 'danger' : 'primary'}
-      confirmLabel={reject ? 'Rejeter' : 'Accepter'}
+      confirmLabel={reject ? t('decomptes:reject') : t('decomptes:accept')}
       confirmDisabled={busy || reasonMissing}
       onConfirm={() => pending && void run(pending.decision, rows)}
     >
@@ -108,14 +104,14 @@ export function useBulkDecompteStatus<Row>({ idOf, labelOf, isPending, onDone }:
         <BulkPreview names={rows.map(labelOf)} total={rows.length} />
         {reject ? (
           <Field
-            label="Motif du rejet"
+            label={t('decomptes:rejectReason')}
             required
-            error={touched && reasonMissing ? 'Le motif du rejet est obligatoire.' : undefined}
+            error={touched && reasonMissing ? t('decomptes:rejectReasonRequired') : undefined}
           >
             <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} onBlur={() => setTouched(true)} />
           </Field>
         ) : (
-          <Field label="Message aux agents (facultatif)">
+          <Field label={t('bulk:messageToAgents')}>
             <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} />
           </Field>
         )}

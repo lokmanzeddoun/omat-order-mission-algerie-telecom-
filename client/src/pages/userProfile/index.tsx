@@ -1,40 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import { loadUser } from 'components/auth/auth.thunk';
 import { changePassword } from 'components/users/users.thunk';
 import { Button, DescriptionList, Field, FormGrid, PageHeader, Panel, PasswordInput } from 'components/ui';
+import { categoryLabels, roleLabels } from 'constants/labels';
 import { homeFor } from 'routes/navigation';
 
-const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: 'Super administrateur',
-  ADMIN: 'Administrateur',
-  USER: 'Agent',
-};
+const passwordSchemaFor = (t: TFunction) =>
+  z
+    .object({
+      currentPassword: z.string().min(1, t('profile:errors.currentRequired')),
+      password: z.string().min(12, t('profile:errors.min')),
+      passwordConfirm: z.string().min(1, t('profile:errors.confirmRequired')),
+    })
+    .refine((v) => v.password === v.passwordConfirm, {
+      path: ['passwordConfirm'],
+      message: t('users:password.mismatch'),
+    });
 
-const categoryLabel: Record<string, string> = {
-  CADRE: 'Cadre',
-  CADRE_SUPERIEUR: 'Cadre supérieur',
-  EXECUTION_MAITRISE: 'Exécution / Maîtrise',
-};
-
-const passwordSchema = z
-  .object({
-    currentPassword: z.string().min(1, 'Saisissez votre mot de passe actuel.'),
-    password: z.string().min(12, 'Le mot de passe doit contenir au moins 12 caractères.'),
-    passwordConfirm: z.string().min(1, 'Confirmez le nouveau mot de passe.'),
-  })
-  .refine((v) => v.password === v.passwordConfirm, {
-    path: ['passwordConfirm'],
-    message: 'Les mots de passe ne correspondent pas.',
-  });
-
-type PasswordForm = z.infer<typeof passwordSchema>;
+type PasswordForm = z.infer<ReturnType<typeof passwordSchemaFor>>;
 
 const EMPTY_FORM: PasswordForm = { currentPassword: '', password: '', passwordConfirm: '' };
 
@@ -42,6 +33,7 @@ export default function MyProfile() {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const { user, token } = useSelector((state: RootState) => state.auth) as { user: IUser; token: string | null };
+  const passwordSchema = useMemo(() => passwordSchemaFor(t), [t]);
 
   const {
     register,
@@ -64,38 +56,36 @@ export default function MyProfile() {
     <>
       <PageHeader
         title={t('nav.profile')}
-        description="Vos informations et la sécurité de votre compte."
+        description={t('profile:description')}
         breadcrumbs={[{ label: t('nav.home'), to: homeFor(user.role) }, { label: t('nav.profile') }]}
       />
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Panel title="Informations personnelles">
+        <Panel title={t('profile:personalInfo')}>
           <DescriptionList
             items={[
-              { label: 'Nom', value: user.nom },
-              { label: 'Prénom', value: user.prenom },
-              { label: 'Matricule', value: user.matricule },
-              { label: 'Grade', value: user.grade },
-              { label: 'Adresse e-mail', value: user.email },
-              { label: 'Rôle', value: roleLabel[user.role] ?? user.role },
-              { label: 'Catégorie', value: user.category ? (categoryLabel[user.category] ?? user.category) : undefined },
+              { label: t('users:field.nom'), value: user.nom },
+              { label: t('users:field.prenom'), value: user.prenom },
+              { label: t('field.matricule'), value: user.matricule },
+              { label: t('users:field.grade'), value: user.grade },
+              { label: t('auth.email'), value: <span dir="ltr">{user.email}</span> },
+              { label: t('users:field.role'), value: roleLabels[user.role] ?? user.role },
+              { label: t('users:field.category'), value: user.category ? (categoryLabels[user.category] ?? user.category) : undefined },
             ]}
           />
-          <p className="mt-3 text-xs text-fg-subtle">
-            Pour corriger ces informations, contactez l’administrateur de votre direction.
-          </p>
+          <p className="mt-3 text-xs text-fg-subtle">{t('profile:contactAdmin')}</p>
         </Panel>
 
-        <Panel title="Changer le mot de passe">
+        <Panel title={t('profile:changePassword')}>
           <form onSubmit={handleSubmit(onSubmit)} noValidate className="flex flex-col gap-4">
-            <Field label="Mot de passe actuel" error={errors.currentPassword?.message} required full>
+            <Field label={t('profile:currentPassword')} error={errors.currentPassword?.message} required full>
               <PasswordInput autoComplete="current-password" {...register('currentPassword')} />
             </Field>
             <FormGrid>
-              <Field label="Nouveau mot de passe" hint="12 caractères minimum." error={errors.password?.message} required>
+              <Field label={t('users:password.new')} hint={t('profile:hint')} error={errors.password?.message} required>
                 <PasswordInput autoComplete="new-password" {...register('password')} />
               </Field>
-              <Field label="Confirmer le mot de passe" error={errors.passwordConfirm?.message} required>
+              <Field label={t('users:password.confirm')} error={errors.passwordConfirm?.message} required>
                 <PasswordInput autoComplete="new-password" {...register('passwordConfirm')} />
               </Field>
             </FormGrid>

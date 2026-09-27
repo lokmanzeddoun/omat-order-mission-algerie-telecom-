@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { extractErrorMessage } from './errorHandler';
+import { extractErrorMessage, serverMessage } from './errorHandler';
 
 // Use the Vite proxy in dev (/api -> backend) to avoid CORS. In prod, prefer VITE_API_URL or fallback to '/api'.
 const baseURL = import.meta.env.DEV ? '/api' : (import.meta.env.VITE_API_URL ?? '/api');
@@ -112,7 +112,9 @@ http.interceptors.response.use(
             }
         }
 
-        // Use the error handler to extract and normalize the error message
+        // Use the error handler to extract and normalize (translate) the error message;
+        // the backend's own text is kept as `serverMessage`.
+        const originalMessage = serverMessage(error);
         const normalizedMessage = extractErrorMessage(error);
 
         // Attach normalized message to the error object for easy access in catch blocks
@@ -120,6 +122,7 @@ http.interceptors.response.use(
         if (error.response) {
             error.response.data = {
                 ...(typeof error.response.data === 'object' ? error.response.data : {}),
+                serverMessage: originalMessage,
                 normalizedMessage,
                 message: normalizedMessage,
             };

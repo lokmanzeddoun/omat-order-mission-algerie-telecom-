@@ -163,6 +163,7 @@ const Signin = () => {
             name="email"
             type="text"
             inputMode="email"
+            dir="ltr"
             autoComplete="email"
             autoFocus
             value={email}

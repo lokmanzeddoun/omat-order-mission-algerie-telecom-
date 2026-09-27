@@ -1,4 +1,5 @@
 import dayjs from 'helpers/date';
+import i18n from 'i18n';
 
 export const formatDate = (v?: string | null) => (v ? dayjs(v).format('DD/MM/YYYY') : '—');
 export const formatDateTime = (v?: string | null) => (v ? dayjs(v).format('DD/MM/YYYY HH:mm') : '—');
@@ -10,7 +11,7 @@ export const missionDuration = (start?: string | null, end?: string | null) => {
   const e = dayjs(end);
   const days = Math.floor(e.diff(s, 'day', true));
   const hours = Math.floor(e.diff(s, 'hour', true));
-  return days > 0 ? `${days} jour(s)` : `${hours} heure(s)`;
+  return days > 0 ? i18n.t('common:duration.days', { count: days }) : i18n.t('common:duration.hours', { count: hours });
 };
 
 export const agentName = (u?: { nom?: string; prenom?: string } | null) =>

@@ -27,6 +27,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import dayjs from 'helpers/date';
 import { cn } from 'lib/utils';
+import { collator, intlLocale } from 'lib/format';
 import { Button } from './button';
 import { IconButton } from './icon-button';
 import { Checkbox, Input, Select } from './input';
@@ -107,7 +108,6 @@ interface DataTableProps<Row> {
 type Filters = Record<string, string>;
 
 const EMPTY_ROWS: never[] = [];
-const collator = new Intl.Collator('fr', { numeric: true, sensitivity: 'base' });
 
 const toText = (v: unknown): string => {
   if (v == null) return '';
@@ -123,7 +123,7 @@ const compareValues = (a: unknown, b: unknown): number => {
   const da = typeof a === 'string' && /^\d{4}-\d{2}-\d{2}/.test(a) ? Date.parse(a) : NaN;
   const db = typeof b === 'string' && /^\d{4}-\d{2}-\d{2}/.test(b) ? Date.parse(b) : NaN;
   if (!Number.isNaN(da) && !Number.isNaN(db)) return da - db;
-  return collator.compare(toText(a), toText(b));
+  return collator().compare(toText(a), toText(b));
 };
 
 export const sanitizeCsvCell = (value: string) =>
@@ -237,7 +237,8 @@ export function DataTable<Row extends RowData>({
         }
         if (typeof col.filter === 'object') return toText(raw) === value;
         const text = col.filterText ? col.filterText(row) : toText(raw);
-        return text.toLocaleLowerCase('fr').includes(value.toLocaleLowerCase('fr'));
+        const locale = intlLocale();
+        return text.toLocaleLowerCase(locale).includes(value.toLocaleLowerCase(locale));
       }),
     );
     // valueOf only depends on columns
@@ -384,7 +385,7 @@ export function DataTable<Row extends RowData>({
             {exportFileName && (
             <Button size="sm" variant="secondary" onClick={exportCsv} disabled={filteredRows.length === 0}>
               <FileSpreadsheet />
-              Exporter (CSV)
+              {t('table.exportCsv')}
             </Button>
           )}
           {chooser.length > 0 && (
@@ -414,7 +415,7 @@ export function DataTable<Row extends RowData>({
             </span>
             {visibleBulkActions.map((a) => (
               <Button
-                key={a.label}
+                key={a.id ?? a.label}
                 size="sm"
                 variant={a.tone === 'danger' ? 'danger' : 'secondary'}
                 disabled={a.disabled}
@@ -632,7 +633,7 @@ export function DataTable<Row extends RowData>({
                               ?.filter((a) => !a.hidden)
                               .map((a) => (
                                 <IconButton
-                                  key={a.label}
+                                  key={a.id ?? a.label}
                                   label={a.label}
                                   icon={a.icon}
                                   disabled={a.disabled}

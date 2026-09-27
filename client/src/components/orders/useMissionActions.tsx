@@ -1,11 +1,13 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { saveAs } from 'file-saver';
 import { Archive, CheckCircle2, Download, Eye, Pencil, XCircle } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import http from 'helpers/http';
+import { extractErrorMessage } from 'helpers/errorHandler';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { ConfirmDialog, type MenuAction, type RowActions } from 'components/ui';
@@ -32,8 +34,7 @@ export function useMissionDownload() {
         const raw = String(res.headers['content-disposition'] ?? '').split('filename=')[1] ?? '';
         saveAs(res.data, raw.replace(/['"]/g, '').trim() || `ordre-mission-${m.n_mission}.pdf`);
       } catch (error) {
-        const msg = (error as { message?: string })?.message || 'Erreur lors du téléchargement';
-        dispatch(setAlert({ msg, type: AlertTypes.ERROR }));
+        dispatch(setAlert({ msg: extractErrorMessage(error), type: AlertTypes.ERROR }));
       }
     },
     [dispatch, token],
@@ -58,6 +59,7 @@ interface Options {
  * Modifier / Valider / Annuler only before validation, Archiver only after.
  */
 export function useMissionActions({ onChanged, detailPath, admin }: Options) {
+  const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const token = useSelector((s: RootState) => s.auth.token);
@@ -72,13 +74,13 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
 
   const actionsFor = (m: IMission): RowActions => {
     const validated = isValidated(m);
-    const primary: MenuAction[] = [{ label: 'Télécharger', icon: <Download />, onSelect: () => download(m) }];
-    if (detailPath) primary.push({ label: 'Voir le détail', icon: <Eye />, onSelect: () => navigate(detailPath(m)) });
+    const primary: MenuAction[] = [{ id: 'download', label: t('actions.download'), icon: <Download />, onSelect: () => download(m) }];
+    if (detailPath) primary.push({ id: 'details', label: t('actions.details'), icon: <Eye />, onSelect: () => navigate(detailPath(m)) });
     const menu: MenuAction[] = [
-      { label: 'Valider', icon: <CheckCircle2 />, hidden: !admin || validated, onSelect: () => setPending({ kind: 'validate', mission: m }) },
-      { label: 'Modifier', icon: <Pencil />, hidden: validated, onSelect: () => setPending({ kind: 'edit', mission: m }) },
-      { label: 'Archiver', icon: <Archive />, hidden: !admin || !validated, onSelect: () => setPending({ kind: 'archive', mission: m }) },
-      { label: 'Annuler l’ordre', icon: <XCircle />, tone: 'danger', hidden: validated, onSelect: () => setPending({ kind: 'cancel', mission: m }) },
+      { id: 'validate', label: t('actions.validate'), icon: <CheckCircle2 />, hidden: !admin || validated, onSelect: () => setPending({ kind: 'validate', mission: m }) },
+      { id: 'edit', label: t('actions.edit'), icon: <Pencil />, hidden: validated, onSelect: () => setPending({ kind: 'edit', mission: m }) },
+      { id: 'archive', label: t('actions.archive'), icon: <Archive />, hidden: !admin || !validated, onSelect: () => setPending({ kind: 'archive', mission: m }) },
+      { id: 'cancel', label: t('ordres:cancelOrder'), icon: <XCircle />, tone: 'danger', hidden: validated, onSelect: () => setPending({ kind: 'cancel', mission: m }) },
     ];
     return { primary, menu };
   };
@@ -110,9 +112,9 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
       <ConfirmDialog
         open={pending?.kind === 'archive'}
         onOpenChange={(o) => !o && close()}
-        title="Archiver l’ordre de mission ?"
-        description={`L’ordre de mission N° ${m?.n_mission ?? ''} (${m?.destination ?? ''}) sera déplacé dans l’archive.`}
-        confirmLabel="Archiver"
+        title={t('ordres:archiveTitle')}
+        description={t('ordres:archiveHint', { n: m?.n_mission ?? '', destination: m?.destination ?? '' })}
+        confirmLabel={t('actions.archive')}
         onConfirm={async () => {
           await dispatch(archiveMission(m?.n_mission ?? null, admin));
           await done();
@@ -121,10 +123,10 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
       <ConfirmDialog
         open={pending?.kind === 'cancel'}
         onOpenChange={(o) => !o && close()}
-        title="Annuler l’ordre de mission ?"
-        description={`L’ordre de mission N° ${m?.n_mission ?? ''} (${m?.destination ?? ''}) sera annulé.`}
-        confirmLabel="Annuler l’ordre"
-        cancelLabel="Retour"
+        title={t('ordres:cancelTitle')}
+        description={t('ordres:cancelHint', { n: m?.n_mission ?? '', destination: m?.destination ?? '' })}
+        confirmLabel={t('ordres:cancelOrder')}
+        cancelLabel={t('actions.back')}
         tone="danger"
         onConfirm={async () => {
           const ok = await dispatch(deleteOrder(m?.n_mission ?? null));

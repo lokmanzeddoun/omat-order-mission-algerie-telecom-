@@ -1,0 +1,8 @@
+{
+  "description": "أوامرك بمهمة وكشوف مصاريفك للسنة المالية {{year}}.",
+  "decompte": "كشف المصاريف",
+  "emptyOrdresHint": "أنشئ أمرًا بمهمة بالضغط على زر «أمر بمهمة جديد».",
+  "decisionCounts": "مقبولة: {{accepted}} · مرفوضة: {{rejected}}",
+  "emptyDecomptesHint": "يُنشأ كشف المصاريف عند المصادقة على أمرك بمهمة.",
+  "commentDecompte": "التعليق على كشف المصاريف"
+}

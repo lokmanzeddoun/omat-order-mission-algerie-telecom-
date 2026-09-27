@@ -70,7 +70,8 @@
 }
 
 @theme inline {
-  --font-sans: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+  /* Plex Sans has no Arabic glyphs: the browser falls back to Plex Sans Arabic for them. */
+  --font-sans: 'IBM Plex Sans', 'IBM Plex Sans Arabic', 'Segoe UI', Tahoma, Arial, sans-serif;
 
   --color-primary: var(--omat-primary);
   --color-primary-hover: var(--omat-primary-hover);
@@ -165,4 +166,10 @@
     outline: 3px solid var(--omat-focus);
     outline-offset: 0;
   }
+}
+
+/* ---------- Arabic ---------- */
+/* Letter-spacing breaks the joins between Arabic letters (unlayered so it beats the tracking-* utilities). */
+:lang(ar) [class*='tracking-'] {
+  letter-spacing: normal;
 }

@@ -14,6 +14,7 @@ import { Button } from 'components/ui';
 import { cn } from 'lib/utils';
 import { homeFor, navigationFor, type NavItem } from 'routes/navigation';
 import atLogo from 'assets/Logo_Algérie_Télécom.svg';
+import LanguageSwitch from 'components/common/LanguageSwitch';
 import ExerciceSelect from './ExerciceSelect';
 import UserMenu from './UserMenu';
 
@@ -102,7 +103,7 @@ export default function AppShell({ children }: PropsWithChildren) {
 
       {/* Official header band */}
       <header className="border-b-4 border-accent bg-band text-white">
-        <div className="flex h-16 items-center gap-3 px-3 sm:px-4">
+        <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-4">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -114,7 +115,7 @@ export default function AppShell({ children }: PropsWithChildren) {
           <Link to={homeFor(user?.role)} className="flex min-w-0 items-center gap-3">
             {/* The official SVG has wide built-in margins; crop them by scaling inside a fixed frame */}
             <span className="flex h-10 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xs bg-white sm:h-11 sm:w-32">
-              <img src={atLogo} alt="Algérie Télécom" className="h-full w-full scale-[1.12] object-contain" />
+              <img src={atLogo} alt={t('app.institution')} className="h-full w-full scale-[1.12] object-contain" />
             </span>
             <span className="hidden min-w-0 flex-col leading-tight sm:flex">
               <span className="text-xs tracking-wide text-white/80 uppercase">{t('app.institution')}</span>
@@ -122,7 +123,7 @@ export default function AppShell({ children }: PropsWithChildren) {
             </span>
           </Link>
 
-          <div className="ms-auto flex min-w-0 items-center gap-1.5 sm:gap-3">
+          <div className="ms-auto flex min-w-0 items-center gap-1 sm:gap-3">
             <Button
               size="sm"
               onClick={() => setMissionOpen(true)}
@@ -132,6 +133,7 @@ export default function AppShell({ children }: PropsWithChildren) {
               <span className="hidden md:inline">{t('actions.addMission')}</span>
             </Button>
             <ExerciceSelect />
+            <LanguageSwitch />
             <button
               type="button"
               onClick={() => dispatch(toggleTheme())}
@@ -149,7 +151,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       <div className="flex min-h-0 flex-1">
         {/* Desktop navigation */}
         <nav
-          aria-label="Navigation principale"
+          aria-label={t('app.mainNav')}
           className={cn(
             'sticky top-0 hidden h-[calc(100vh-4.25rem)] shrink-0 flex-col border-e border-border bg-surface lg:flex',
             collapsed ? 'w-14' : 'w-60',

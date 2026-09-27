@@ -23,7 +23,7 @@ function Harness({ onDone }: { onDone: () => void }) {
     entity: 'users',
     idOf: (r) => r.id,
     labelOf: (r) => r.nom,
-    noun: ['utilisateur', 'utilisateurs'],
+    noun: 'user',
     onDone,
   });
   return (

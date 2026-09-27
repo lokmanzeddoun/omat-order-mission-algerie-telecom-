@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Archive, Download, Pencil, Plus, RefreshCw } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
@@ -21,9 +22,9 @@ import { useBulkArchive } from 'components/common/useBulkArchive';
 import { Button, ConfirmDialog, DataTable, IconButton, PageHeader, SummaryStrip, type DataColumn } from 'components/ui';
 import paths from 'routes/paths';
 
-const columns: DataColumn<IStructure>[] = [
-  { id: 'code', header: 'Code', width: 160, cell: (s) => <span className="font-medium tabular-nums">{s.code}</span>, alwaysVisible: true },
-  { id: 'name', header: 'Nom du service', alwaysVisible: true },
+const structureColumns = (t: TFunction): DataColumn<IStructure>[] => [
+  { id: 'code', header: t('structures:field.code'), width: 160, cell: (s) => <span className="font-medium tabular-nums">{s.code}</span>, alwaysVisible: true },
+  { id: 'name', header: t('structures:field.name'), alwaysVisible: true },
 ];
 
 export default function StructuresPage() {
@@ -33,6 +34,7 @@ export default function StructuresPage() {
   const [form, setForm] = useState<{ mode: StructureFormMode; item: IStructure | null } | null>(null);
   const [toArchive, setToArchive] = useState<IStructure | null>(null);
   const [importErrors, setImportErrors] = useState<ImportRowError[] | null>(null);
+  const columns = useMemo(() => structureColumns(t), [t]);
 
   useEffect(() => {
     void dispatch(getAllStructures());
@@ -44,7 +46,7 @@ export default function StructuresPage() {
     mode: 'archive',
     idOf: (s) => s.code,
     labelOf: (s) => `${s.name} (${s.code})`,
-    noun: ['service', 'services'],
+    noun: 'structure',
     onDone: refresh,
   });
 
@@ -62,13 +64,13 @@ export default function StructuresPage() {
     setToArchive(null);
   };
 
-  const summary = useMemo(() => [{ key: 'total', label: 'Services', value: structures.length }], [structures.length]);
+  const summary = useMemo(() => [{ key: 'total', label: t('nav.structures'), value: structures.length }], [structures.length, t]);
 
   return (
     <>
       <PageHeader
-        title="Services"
-        description="Structures organisationnelles auxquelles les agents sont rattachés."
+        title={t('nav.structures')}
+        description={t('structures:description')}
         breadcrumbs={[{ label: t('nav.home'), to: paths.admins }, { label: t('nav.structures') }]}
         actions={
           <>
@@ -87,7 +89,7 @@ export default function StructuresPage() {
             </Button>
             <Button variant="primary" onClick={() => setForm({ mode: 'create', item: null })}>
               <Plus />
-              Ajouter un service
+              {t('structures:add')}
             </Button>
           </>
         }
@@ -96,13 +98,13 @@ export default function StructuresPage() {
       <SummaryStrip items={summary} />
 
       <DataTable
-        caption="Liste des services"
+        caption={t('structures:caption')}
         tableId="structures"
         columns={columns}
         rows={structures}
         getRowId={(s) => s.code}
         loading={loading && structures.length === 0}
-        emptyTitle="Aucun service"
+        emptyTitle={t('structures:empty')}
         onRowDoubleClick={(s) => setForm({ mode: 'view', item: s })}
         rowActions={(s) => ({
           primary: [{ label: t('actions.edit'), icon: <Pencil />, onSelect: () => setForm({ mode: 'edit', item: s }) }],
@@ -122,11 +124,9 @@ export default function StructuresPage() {
       <ConfirmDialog
         open={toArchive !== null}
         onOpenChange={(o) => !o && setToArchive(null)}
-        title="Archiver le service ?"
+        title={t('structures:archiveTitle')}
         description={
-          <>
-            Le service <strong>{toArchive?.name}</strong> sera déplacé dans l’archive. Vous pourrez le désarchiver plus tard.
-          </>
+          <Trans t={t} i18nKey="structures:archiveHint" values={{ name: toArchive?.name ?? '' }} components={{ b: <strong /> }} />
         }
         confirmLabel={t('actions.archive')}
         tone="danger"

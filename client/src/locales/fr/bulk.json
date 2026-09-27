@@ -1,0 +1,53 @@
+{
+  "noun": {
+    "mission_one": "{{count}} ordre de mission",
+    "mission_many": "{{count}} ordres de mission",
+    "mission_other": "{{count}} ordres de mission",
+    "decompte_one": "{{count}} décompte",
+    "decompte_many": "{{count}} décomptes",
+    "decompte_other": "{{count}} décomptes",
+    "user_one": "{{count}} utilisateur",
+    "user_many": "{{count}} utilisateurs",
+    "user_other": "{{count}} utilisateurs",
+    "structure_one": "{{count}} service",
+    "structure_many": "{{count}} services",
+    "structure_other": "{{count}} services"
+  },
+  "result": {
+    "archived_one": "{{what}} archivé",
+    "archived_other": "{{what}} archivés",
+    "restored_one": "{{what}} désarchivé",
+    "restored_other": "{{what}} désarchivés",
+    "deleted_one": "{{what}} supprimé définitivement",
+    "deleted_other": "{{what}} supprimés définitivement",
+    "accepted_one": "{{what}} accepté",
+    "accepted_other": "{{what}} acceptés",
+    "rejected_one": "{{what}} rejeté",
+    "rejected_other": "{{what}} rejetés",
+    "skipped_one": "{{what}} ignoré",
+    "skipped_other": "{{what}} ignorés"
+  },
+  "skip": {
+    "not_found": "introuvable",
+    "already_archived": "déjà archivé",
+    "not_archived": "pas archivé",
+    "self": "votre propre compte",
+    "has_missions": "a des ordres de mission",
+    "has_comments": "a des commentaires",
+    "has_decomptes": "a des décomptes",
+    "not_pending": "pas en attente",
+    "archived": "archivé"
+  },
+  "confirmTitle": "{{verb}} {{what}} ?",
+  "andOthers_one": "… et {{count}} autre",
+  "andOthers_other": "… et {{count}} autres",
+  "undone": "Action annulée",
+  "restoreHint": "Ils redeviendront visibles dans les listes.",
+  "archiveHint": "Ils disparaîtront des listes et resteront consultables depuis la page Archive, d’où ils pourront être restaurés.",
+  "deleteForever": "Supprimer définitivement",
+  "deleteHint": "Cette action est irréversible : les éléments seront effacés de la base de données. Ceux qui sont encore liés à d’autres données seront ignorés.",
+  "typeToConfirm": "Saisissez {{expected}} pour confirmer",
+  "rejectHint": "Le même motif de rejet est transmis à chaque agent.",
+  "acceptHint": "Les agents seront informés de l’acceptation.",
+  "messageToAgents": "Message aux agents (facultatif)"
+}

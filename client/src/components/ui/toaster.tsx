@@ -1,16 +1,20 @@
 import { Toaster as SonnerToaster, toast } from 'sonner';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import type { RootState } from 'store/rootReducer';
 
 export { toast };
 
-/** Notification area (bottom-right), styled with the design tokens for AA contrast. */
+/** Notification area (bottom corner on the reading-end side), styled with the design tokens for AA contrast. */
 export function Toaster() {
   const mode = useSelector((s: RootState) => s.theme.mode);
+  const { i18n } = useTranslation();
+  const dir = i18n.dir();
   return (
     <SonnerToaster
       theme={mode}
-      position="bottom-right"
+      position={dir === 'rtl' ? 'bottom-left' : 'bottom-right'}
+      dir={dir}
       closeButton
       toastOptions={{
         duration: 5000,

@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { AppDispatch } from 'store';
@@ -26,23 +28,23 @@ export interface UserFormValues {
 /** Form state: the matricule is edited as text and converted on submit. */
 type FormState = Omit<UserFormValues, 'matricule'> & { matricule: string };
 
-const required = (label: string) => z.string().trim().min(1, `${label} est obligatoire.`);
+const required = (message: string) => z.string().trim().min(1, message);
 
-const schemaFor = (mode: UserFormMode) =>
+const schemaFor = (mode: UserFormMode, t: TFunction) =>
   z.object({
     matricule: z
       .string()
       .trim()
-      .min(1, 'Le matricule est obligatoire.')
-      .regex(/^\d+$/, 'Le matricule doit être un nombre.'),
-    nom: required('Le nom'),
-    prenom: required('Le prénom'),
-    email: z.string().trim().min(1, 'L’adresse e-mail est obligatoire.').email('Adresse e-mail invalide.'),
+      .min(1, t('users:errors.matriculeRequired'))
+      .regex(/^\d+$/, t('users:errors.matriculeNumber')),
+    nom: required(t('users:errors.nomRequired')),
+    prenom: required(t('users:errors.prenomRequired')),
+    email: z.string().trim().min(1, t('users:errors.emailRequired')).email(t('users:errors.emailInvalid')),
     role: z.string().min(1),
     category: z.string().min(1),
-    grade: required('Le grade'),
+    grade: required(t('users:errors.gradeRequired')),
     // The service was only mandatory at creation in the previous form.
-    serviceId: mode === 'create' ? required('Le service') : z.string(),
+    serviceId: mode === 'create' ? required(t('users:errors.serviceRequired')) : z.string(),
   });
 
 const EMPTY: FormState = {
@@ -56,12 +58,6 @@ const EMPTY: FormState = {
   serviceId: '',
 };
 
-const titles: Record<UserFormMode, string> = {
-  create: 'Ajouter un utilisateur',
-  edit: 'Modifier l’utilisateur',
-  view: 'Détails de l’utilisateur',
-};
-
 interface Props {
   open: boolean;
   mode: UserFormMode;
@@ -71,11 +67,13 @@ interface Props {
 }
 
 export default function UserFormDialog({ open, mode, initial, onClose, onSubmit }: Props) {
+  const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const structures = useSelector((s: RootState) => s.structures.structures) as IStructure[];
   const readOnly = mode === 'view';
   // Identity fields are fixed once the account exists (same rule as before).
   const locked = mode !== 'create';
+  const schema = useMemo(() => schemaFor(mode, t), [mode, t]);
 
   const {
     register,
@@ -83,7 +81,7 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
     reset,
     setValue,
     formState: { errors, isSubmitting },
-  } = useForm<FormState>({ resolver: zodResolver(schemaFor(mode)), defaultValues: EMPTY });
+  } = useForm<FormState>({ resolver: zodResolver(schema), defaultValues: EMPTY });
 
   useEffect(() => {
     if (open && structures.length === 0) void dispatch(getAllStructures());
@@ -111,17 +109,17 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
     <Dialog
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title={titles[mode]}
+      title={t(`users:form.title.${mode}`)}
       footer={
         readOnly ? (
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{t('actions.close')}</Button>
         ) : (
           <>
             <Button onClick={onClose} disabled={isSubmitting}>
-              Annuler
+              {t('actions.cancel')}
             </Button>
             <Button variant="primary" type="submit" form="user-form" disabled={isSubmitting}>
-              {mode === 'edit' ? 'Enregistrer' : 'Ajouter'}
+              {mode === 'edit' ? t('actions.save') : t('actions.add')}
             </Button>
           </>
         )
@@ -129,19 +127,19 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
     >
       <form id="user-form" noValidate onSubmit={handleSubmit(async (v) => onSubmit({ ...v, matricule: Number(v.matricule) }))} className="flex flex-col gap-4">
         <FormGrid>
-          <Field label="Matricule" error={errors.matricule?.message} required={!readOnly}>
-            <Input type="number" inputMode="numeric" readOnly={locked} autoFocus={mode === 'create'} {...register('matricule')} />
+          <Field label={t('field.matricule')} error={errors.matricule?.message} required={!readOnly}>
+            <Input type="number" inputMode="numeric" dir="ltr" readOnly={locked} autoFocus={mode === 'create'} {...register('matricule')} />
           </Field>
-          <Field label="Adresse e-mail" error={errors.email?.message} required={!readOnly}>
-            <Input type="email" autoComplete="off" readOnly={readOnly} {...register('email')} />
+          <Field label={t('auth.email')} error={errors.email?.message} required={!readOnly}>
+            <Input type="email" dir="ltr" autoComplete="off" readOnly={readOnly} {...register('email')} />
           </Field>
-          <Field label="Nom" error={errors.nom?.message} required={!readOnly}>
+          <Field label={t('users:field.nom')} error={errors.nom?.message} required={!readOnly}>
             <Input readOnly={readOnly} {...register('nom')} />
           </Field>
-          <Field label="Prénom" error={errors.prenom?.message} required={!readOnly}>
+          <Field label={t('users:field.prenom')} error={errors.prenom?.message} required={!readOnly}>
             <Input readOnly={readOnly} {...register('prenom')} />
           </Field>
-          <Field label="Rôle" required={!readOnly}>
+          <Field label={t('users:field.role')} required={!readOnly}>
             <Select disabled={locked} {...register('role')}>
               {Object.entries(roleLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -150,7 +148,7 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
               ))}
             </Select>
           </Field>
-          <Field label="Catégorie" required={!readOnly}>
+          <Field label={t('users:field.category')} required={!readOnly}>
             <Select disabled={locked} {...register('category')}>
               {Object.entries(categoryLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -159,12 +157,12 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
               ))}
             </Select>
           </Field>
-          <Field label="Grade (fonction)" error={errors.grade?.message} required={!readOnly}>
+          <Field label={t('users:field.gradeFunction')} error={errors.grade?.message} required={!readOnly}>
             <Input readOnly={readOnly} {...register('grade')} />
           </Field>
-          <Field label="Service" error={errors.serviceId?.message} required={mode === 'create'}>
+          <Field label={t('users:field.service')} error={errors.serviceId?.message} required={mode === 'create'}>
             <Select disabled={readOnly} {...register('serviceId')}>
-              <option value="">— Choisir un service —</option>
+              <option value="">{t('users:form.chooseService')}</option>
               {structures.map((s) => (
                 <option key={s.code} value={s.code}>
                   {s.name}

@@ -1,0 +1,33 @@
+{
+  "title": "Décompte N° {{n}}",
+  "description": "Décomptes des ordres de mission validés — exercice {{year}}.",
+  "summary": {
+    "pending": "En attente",
+    "accepted": "Acceptés",
+    "rejected": "Rejetés"
+  },
+  "caption": "Liste des décomptes",
+  "empty": "Aucun décompte",
+  "emptyHint": "Aucun décompte pour cet exercice et ces critères.",
+  "mine": "Mes décomptes",
+  "notFound": "Décompte introuvable",
+  "notFoundHint": "Il n’appartient pas à l’exercice sélectionné, ou il a été archivé.",
+  "amounts": "Montants",
+  "openMission": "Ouvrir l’ordre N° {{n}}",
+  "commentsCount_one": "Commentaires ({{count}})",
+  "commentsCount_many": "Commentaires ({{count}})",
+  "commentsCount_other": "Commentaires ({{count}})",
+  "viewComments": "Voir les commentaires",
+  "accept": "Accepter",
+  "reject": "Rejeter",
+  "acceptTitle": "Accepter le décompte N° {{n}} ?",
+  "acceptHint": "L’agent sera informé de l’acceptation.",
+  "messageToAgent": "Message à l’agent (facultatif)",
+  "rejectTitle": "Rejeter le décompte N° {{n}} ?",
+  "rejectHint": "Le motif du rejet est transmis à l’agent.",
+  "rejectReason": "Motif du rejet",
+  "rejectReasonRequired": "Le motif du rejet est obligatoire.",
+  "archiveTitle": "Archiver le décompte N° {{n}} ?",
+  "archiveHint": "Le décompte sera déplacé dans l’archive. Vous pourrez le désarchiver plus tard.",
+  "commentsTitle": "Décompte N° {{n}} — commentaires"
+}

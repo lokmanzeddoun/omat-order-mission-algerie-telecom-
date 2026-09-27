@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
 import * as echarts from 'echarts/core';
 import { BarChart as EBarChart, LineChart as ELineChart, PieChart as EPieChart } from 'echarts/charts';
@@ -21,21 +22,23 @@ const readTheme = () => {
     surface: v('--omat-surface'),
     // Institutional palette: blue, green, amber, red, then neutrals
     palette: [v('--omat-primary'), v('--omat-success'), v('--omat-warning'), v('--omat-danger'), v('--omat-info'), v('--omat-accent'), v('--omat-text-subtle')],
-    font: 'IBM Plex Sans, Segoe UI, Arial, sans-serif',
+    font: 'IBM Plex Sans, IBM Plex Sans Arabic, Segoe UI, Arial, sans-serif',
+    rtl: document.documentElement.dir === 'rtl',
   };
 };
 
 /**
- * Chart colours from the design tokens. Re-read one frame after a theme switch,
- * once the `.dark` class (set by a parent effect) is on <html>.
+ * Chart colours from the design tokens and the reading direction. Re-read one frame after
+ * a theme or language switch, once the `.dark` class / `dir` attribute is on <html>.
  */
 function useChartTheme() {
   const mode = useSelector((s: RootState) => s.theme.mode);
+  const { i18n } = useTranslation();
   const [theme, setTheme] = useState(readTheme);
   useEffect(() => {
     const id = requestAnimationFrame(() => setTheme(readTheme()));
     return () => cancelAnimationFrame(id);
-  }, [mode]);
+  }, [mode, i18n.language]);
   return theme;
 }
 
@@ -119,8 +122,9 @@ export function BarChart({ title, xAxisData, seriesData, height = 320, horizonta
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, ...baseTooltip(t) },
     legend: seriesData.length > 1 ? { bottom: 0, textStyle: { color: t.text }, icon: 'rect', itemWidth: 12, itemHeight: 12 } : undefined,
     grid: { left: 12, right: 16, top: 16, bottom: seriesData.length > 1 ? 40 : 12, containLabel: true },
-    xAxis: horizontal ? value : category,
-    yAxis: horizontal ? { ...category, inverse: true } : value,
+    // Right-to-left: categories run from the right and the value axis sits on the right.
+    xAxis: horizontal ? { ...value, inverse: t.rtl } : { ...category, inverse: t.rtl },
+    yAxis: horizontal ? { ...category, inverse: true, position: t.rtl ? 'right' : 'left' } : { ...value, position: t.rtl ? 'right' : 'left' },
     series: seriesData.map((s) => ({ name: s.name, type: 'bar', data: s.data, barMaxWidth: 28 })),
   };
   return (
@@ -138,8 +142,8 @@ export function LineChart({ title, xAxisData, seriesData, height = 320 }: Series
     tooltip: { trigger: 'axis', ...baseTooltip(t) },
     legend: { bottom: 0, textStyle: { color: t.text }, icon: 'rect', itemWidth: 12, itemHeight: 12 },
     grid: { left: 12, right: 16, top: 16, bottom: 40, containLabel: true },
-    xAxis: { type: 'category', boundaryGap: false, data: xAxisData, ...axis(t) },
-    yAxis: { type: 'value', minInterval: 1, ...axis(t) },
+    xAxis: { type: 'category', boundaryGap: false, data: xAxisData, inverse: t.rtl, ...axis(t) },
+    yAxis: { type: 'value', minInterval: 1, position: t.rtl ? 'right' : 'left', ...axis(t) },
     series: seriesData.map((s) => ({ name: s.name, type: 'line', data: s.data, symbol: 'circle', symbolSize: 6 })),
   };
   return (
@@ -150,9 +154,10 @@ export function LineChart({ title, xAxisData, seriesData, height = 320 }: Series
 }
 
 function Empty({ height }: { height: number }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center text-sm text-fg-muted" style={{ height }}>
-      Aucune donnée pour cette période.
+      {t('analytics:noData')}
     </div>
   );
 }

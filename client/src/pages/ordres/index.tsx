@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { RefreshCw } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
@@ -17,31 +18,31 @@ import paths from 'routes/paths';
 
 type MissionRow = IMission & { user?: { matricule: number; nom?: string; prenom?: string } };
 
-const columns: DataColumn<MissionRow>[] = [
-  { id: 'n_mission', header: 'N°', width: 64, align: 'end', cell: (m) => <span className="tabular-nums">{m.n_mission}</span>, alwaysVisible: true },
-  { id: 'agent', header: 'Agent', accessor: (m) => agentName(m.user) },
-  { id: 'motif', header: 'Motif', cell: (m) => <span className="line-clamp-2">{m.motif}</span> },
-  { id: 'destination', header: 'Destination' },
-  { id: 'date_sortie', header: 'Départ', filter: 'date', cell: (m) => formatDateTime(m.date_sortie) },
-  { id: 'date_retour', header: 'Retour', filter: 'date', cell: (m) => formatDateTime(m.date_retour) },
-  { id: 'duree', header: 'Durée', filter: false, sortable: false, accessor: (m) => missionDuration(m.date_sortie, m.date_retour) },
+const missionColumns = (t: TFunction): DataColumn<MissionRow>[] => [
+  { id: 'n_mission', header: t('field.number'), width: 64, align: 'end', cell: (m) => <span className="tabular-nums">{m.n_mission}</span>, alwaysVisible: true },
+  { id: 'agent', header: t('field.agent'), accessor: (m) => agentName(m.user) },
+  { id: 'motif', header: t('field.motif'), cell: (m) => <span className="line-clamp-2">{m.motif}</span> },
+  { id: 'destination', header: t('field.destination') },
+  { id: 'date_sortie', header: t('field.departure'), filter: 'date', cell: (m) => formatDateTime(m.date_sortie) },
+  { id: 'date_retour', header: t('field.return'), filter: 'date', cell: (m) => formatDateTime(m.date_retour) },
+  { id: 'duree', header: t('field.duration'), filter: false, sortable: false, accessor: (m) => missionDuration(m.date_sortie, m.date_retour) },
   {
     id: 'transport',
-    header: 'Transport',
+    header: t('field.transport'),
     defaultHidden: true,
     filter: { type: 'select', options: toOptions(transportLabels) },
     cell: (m) => transportLabels[m.transport] ?? m.transport,
   },
   {
     id: 'direction',
-    header: 'Direction',
+    header: t('field.direction'),
     defaultHidden: true,
     filter: { type: 'select', options: toOptions(directionLabels) },
     cell: (m) => directionLabels[m.direction] ?? m.direction,
   },
   {
     id: 'status',
-    header: 'Statut',
+    header: t('field.status'),
     filter: { type: 'select', options: Object.entries(missionStatus).map(([value, s]) => ({ value, label: s.label })) },
     cell: (m) => <StatusBadge map={missionStatus} code={m.status} />,
   },
@@ -57,6 +58,7 @@ export default function OrdresPage() {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const [tab, setTab] = useState<'all' | 'mine'>('all');
   const [status, setStatus] = useState<string | null>(null);
+  const columns = useMemo(() => missionColumns(t), [t]);
 
   const refresh = useCallback(() => {
     if (!token) return;
@@ -73,8 +75,8 @@ export default function OrdresPage() {
     entity: 'missions',
     mode: 'archive',
     idOf: (m) => m.n_mission,
-    labelOf: (m) => `N° ${m.n_mission} · ${agentName(m.user)} · ${m.destination ?? '—'}`,
-    noun: ['ordre de mission', 'ordres de mission'],
+    labelOf: (m) => `${t('numbered', { n: m.n_mission })} · ${agentName(m.user)} · ${m.destination ?? '—'}`,
+    noun: 'mission',
     onDone: refresh,
   });
 
@@ -88,8 +90,8 @@ export default function OrdresPage() {
   return (
     <>
       <PageHeader
-        title="Ordres de mission"
-        description={`Ordres de mission de l’exercice ${selectedYear ?? ''}.`}
+        title={t('nav.ordres')}
+        description={t('ordres:description', { year: selectedYear ?? '' })}
         breadcrumbs={[{ label: t('nav.home'), to: paths.admins }, { label: t('nav.ordres') }]}
         actions={<IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={refresh} />}
       />
@@ -98,30 +100,30 @@ export default function OrdresPage() {
         active={status ?? 'ALL'}
         onSelect={(k) => setStatus(k === 'ALL' || k === null ? null : k)}
         items={[
-          { key: 'ALL', label: 'Total', value: scoped.length },
-          { key: 'INPROGRESS', label: 'En cours', value: count('INPROGRESS'), tone: 'info' },
-          { key: 'COMPLETED', label: 'Validés', value: count('COMPLETED'), tone: 'success' },
+          { key: 'ALL', label: t('summary.total'), value: scoped.length },
+          { key: 'INPROGRESS', label: t('ordres:summary.inProgress'), value: count('INPROGRESS'), tone: 'info' },
+          { key: 'COMPLETED', label: t('ordres:summary.validated'), value: count('COMPLETED'), tone: 'success' },
         ]}
       />
 
       <DataTable
-        caption="Liste des ordres de mission"
+        caption={t('ordres:caption')}
         tableId="ordres"
         columns={columns}
         rows={rows}
         getRowId={(m) => m.n_mission ?? `${m.motif}-${m.date_sortie}`}
         loading={loading && orders.length === 0}
-        emptyTitle="Aucun ordre de mission"
-        emptyHint="Aucun ordre de mission pour cet exercice et ces critères."
+        emptyTitle={t('ordres:empty')}
+        emptyHint={t('ordres:emptyHint')}
         toolbar={
           isAdmin && (
             <Tabs
-              label="Périmètre"
+              label={t('scope.label')}
               value={tab}
               onValueChange={(v) => setTab(v as 'all' | 'mine')}
               items={[
-                { value: 'all', label: 'Tous', count: orders.length },
-                { value: 'mine', label: 'Mes ordres', count: orders.filter((m) => m.user?.matricule === user?.matricule).length },
+                { value: 'all', label: t('scope.all'), count: orders.length },
+                { value: 'mine', label: t('ordres:mine'), count: orders.filter((m) => m.user?.matricule === user?.matricule).length },
               ]}
             />
           )

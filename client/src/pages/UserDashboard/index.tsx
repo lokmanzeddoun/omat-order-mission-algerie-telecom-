@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { MessageSquare, MessageSquarePlus, RefreshCw } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
@@ -26,22 +27,22 @@ import { decompteStatus, missionStatus } from 'constants/statusLabels';
 import { transportLabels } from 'constants/labels';
 import paths from 'routes/paths';
 
-const missionColumns: DataColumn<IMission>[] = [
-  { id: 'n_mission', header: 'N°', width: 64, align: 'end', alwaysVisible: true },
-  { id: 'motif', header: 'Motif', cell: (m) => <span className="line-clamp-2">{m.motif}</span> },
-  { id: 'destination', header: 'Destination' },
-  { id: 'date_sortie', header: 'Départ', filter: 'date', cell: (m) => formatDateTime(m.date_sortie), exportValue: (m) => formatDateTime(m.date_sortie) },
-  { id: 'date_retour', header: 'Retour', filter: 'date', cell: (m) => formatDateTime(m.date_retour), exportValue: (m) => formatDateTime(m.date_retour) },
-  { id: 'duree', header: 'Durée', filter: false, sortable: false, accessor: (m) => missionDuration(m.date_sortie, m.date_retour) },
+const missionColumnsFor = (t: TFunction): DataColumn<IMission>[] => [
+  { id: 'n_mission', header: t('field.number'), width: 64, align: 'end', alwaysVisible: true },
+  { id: 'motif', header: t('field.motif'), cell: (m) => <span className="line-clamp-2">{m.motif}</span> },
+  { id: 'destination', header: t('field.destination') },
+  { id: 'date_sortie', header: t('field.departure'), filter: 'date', cell: (m) => formatDateTime(m.date_sortie), exportValue: (m) => formatDateTime(m.date_sortie) },
+  { id: 'date_retour', header: t('field.return'), filter: 'date', cell: (m) => formatDateTime(m.date_retour), exportValue: (m) => formatDateTime(m.date_retour) },
+  { id: 'duree', header: t('field.duration'), filter: false, sortable: false, accessor: (m) => missionDuration(m.date_sortie, m.date_retour) },
   {
     id: 'transport',
-    header: 'Transport',
+    header: t('field.transport'),
     defaultHidden: true,
     accessor: (m) => transportLabels[m.transport] ?? m.transport,
   },
   {
     id: 'status',
-    header: 'Statut',
+    header: t('field.status'),
     filter: { type: 'select', options: Object.entries(missionStatus).map(([value, s]) => ({ value, label: s.label })) },
     cell: (m) => <StatusBadge map={missionStatus} code={m.status} />,
     exportValue: (m) => missionStatus[m.status ?? '']?.label ?? '',
@@ -61,6 +62,7 @@ export default function UserDashboard() {
   const [status, setStatus] = useState<string | null>(null);
   const [commentFor, setCommentFor] = useState<{ decompteId: number | null } | null>(null);
   const [thread, setThread] = useState<DecompteRow | null>(null);
+  const missionColumns = useMemo(() => missionColumnsFor(t), [t]);
 
   const refresh = useCallback(async () => {
     if (!token) return;
@@ -80,22 +82,21 @@ export default function UserDashboard() {
 
   const decompteColumns: DataColumn<DecompteRow>[] = useMemo(
     () => [
-      { id: 'n_decompte', header: 'Décompte', width: 90, align: 'end' },
-      { id: 'ordre', header: 'Ordre de mission', accessor: (d) => d.mission?.n_mission, cell: (d) => (d.mission?.n_mission ? `N° ${d.mission.n_mission} — ${d.mission.destination ?? ''}` : '—') },
-      { id: 'createdAt', header: 'Date', filter: 'date', cell: (d) => formatDate(d.createdAt) },
+      { id: 'n_decompte', header: t('dashboard:decompte'), width: 90, align: 'end' },
+      { id: 'ordre', header: t('field.missionOrder'), accessor: (d) => d.mission?.n_mission, cell: (d) => (d.mission?.n_mission ? `${t('numbered', { n: d.mission.n_mission })} — ${d.mission.destination ?? ''}` : '—') },
+      { id: 'createdAt', header: t('field.date'), filter: 'date', cell: (d) => formatDate(d.createdAt) },
       {
         id: 'status',
-        header: 'Statut',
-        filter: { type: 'select', options: [
-          { value: 'PENDING', label: 'En attente' },
-          { value: 'ACCEPTED', label: 'Accepté' },
-          { value: 'REGECTED', label: 'Rejeté' },
-        ] },
+        header: t('field.status'),
+        filter: {
+          type: 'select',
+          options: ['PENDING', 'ACCEPTED', 'REGECTED'].map((value) => ({ value, label: decompteStatus[value].label })),
+        },
         cell: (d) => <StatusBadge map={decompteStatus} code={d.status} />,
       },
       {
         id: 'messages',
-        header: 'Commentaires',
+        header: t('nav.comments'),
         filter: false,
         accessor: (d) => d.messages?.length ?? 0,
         cell: (d) => {
@@ -104,20 +105,20 @@ export default function UserDashboard() {
         },
       },
     ],
-    [],
+    [t],
   );
 
   return (
     <>
       <PageHeader
         title={t('nav.myOrdres')}
-        description={`Vos ordres de mission et décomptes pour l’exercice ${selectedYear ?? ''}.`}
+        description={t('dashboard:description', { year: selectedYear ?? '' })}
         actions={
           <>
             <IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={() => void refresh()} />
             <Button onClick={() => setCommentFor({ decompteId: null })}>
               <MessageSquarePlus />
-              Ajouter un commentaire
+              {t('comments:add')}
             </Button>
           </>
         }
@@ -127,21 +128,21 @@ export default function UserDashboard() {
         active={status ?? 'ALL'}
         onSelect={(k) => setStatus(k === 'ALL' || k === null ? null : k)}
         items={[
-          { key: 'ALL', label: 'Ordres de mission', value: orders.length },
-          { key: 'INPROGRESS', label: 'En cours', value: orders.filter((m) => m.status === 'INPROGRESS').length, tone: 'info' },
-          { key: 'COMPLETED', label: 'Validés', value: orders.filter((m) => m.status === 'COMPLETED').length, tone: 'success' },
+          { key: 'ALL', label: t('nav.ordres'), value: orders.length },
+          { key: 'INPROGRESS', label: t('ordres:summary.inProgress'), value: orders.filter((m) => m.status === 'INPROGRESS').length, tone: 'info' },
+          { key: 'COMPLETED', label: t('ordres:summary.validated'), value: orders.filter((m) => m.status === 'COMPLETED').length, tone: 'success' },
         ]}
       />
 
       <DataTable
-        caption="Mes ordres de mission"
+        caption={t('nav.myOrdres')}
         tableId="my-ordres"
         columns={missionColumns}
         rows={rows}
         getRowId={(m) => m.n_mission ?? `${m.motif}-${m.date_sortie}`}
         loading={loading && orders.length === 0}
-        emptyTitle="Aucun ordre de mission"
-        emptyHint="Créez un ordre de mission avec le bouton « Nouvel ordre de mission »."
+        emptyTitle={t('ordres:empty')}
+        emptyHint={t('dashboard:emptyOrdresHint')}
         exportFileName={`mes-ordres-de-mission-${selectedYear ?? ''}`}
         onRowDoubleClick={(m) => navigate(detailPath(m))}
         rowActions={actionsFor}
@@ -150,27 +151,27 @@ export default function UserDashboard() {
       <section className="mt-8" aria-labelledby="my-decomptes">
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 border-b border-border pb-1">
           <h2 id="my-decomptes" className="text-base font-semibold">
-            Mes décomptes
+            {t('decomptes:mine')}
           </h2>
           <span className="text-xs text-fg-muted">
-            {decomptes.filter((d) => d.status === 'ACCEPTED').length} accepté(s) · {rejected.length} rejeté(s)
+            {t('dashboard:decisionCounts', { accepted: decomptes.filter((d) => d.status === 'ACCEPTED').length, rejected: rejected.length })}
           </span>
         </div>
         <DataTable
-          caption="Mes décomptes"
+          caption={t('decomptes:mine')}
           tableId="my-decomptes"
           columns={decompteColumns}
           rows={decomptes}
           getRowId={(d) => d.n_decompte ?? 0}
-          emptyTitle="Aucun décompte"
-          emptyHint="Un décompte est créé quand votre ordre de mission est validé."
+          emptyTitle={t('decomptes:empty')}
+          emptyHint={t('dashboard:emptyDecomptesHint')}
           initialPageSize={10}
           onRowDoubleClick={(d) => setThread(d)}
           rowActions={(d) => ({
-            primary: [{ label: 'Voir les commentaires', icon: <MessageSquare />, onSelect: () => setThread(d) }],
+            primary: [{ label: t('decomptes:viewComments'), icon: <MessageSquare />, onSelect: () => setThread(d) }],
             menu:
               d.status === 'REGECTED'
-                ? [{ label: 'Commenter ce décompte', icon: <MessageSquarePlus />, onSelect: () => setCommentFor({ decompteId: d.n_decompte ?? null }) }]
+                ? [{ label: t('dashboard:commentDecompte'), icon: <MessageSquarePlus />, onSelect: () => setCommentFor({ decompteId: d.n_decompte ?? null }) }]
                 : undefined,
           })}
         />
@@ -188,7 +189,7 @@ export default function UserDashboard() {
       />
       <CommentsPanel
         open={thread !== null}
-        title={`Décompte N° ${thread?.n_decompte ?? ''} — commentaires`}
+        title={t('decomptes:commentsTitle', { n: thread?.n_decompte ?? '' })}
         messages={(thread?.messages ?? []) as CommentMessage[]}
         onClose={() => setThread(null)}
       />

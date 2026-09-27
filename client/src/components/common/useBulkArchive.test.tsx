@@ -24,7 +24,7 @@ function Harness({ mode = 'archive', onDone }: { mode?: 'archive' | 'restore'; o
     mode,
     idOf: (r) => r.id,
     labelOf: (r) => r.nom,
-    noun: ['utilisateur', 'utilisateurs'],
+    noun: 'user',
     onDone,
   });
   return (

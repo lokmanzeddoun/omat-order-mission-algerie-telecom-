@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import http from 'helpers/http';
+import { serverMessage } from 'helpers/errorHandler';
 import { useApiHandler } from 'components/hooks/useErrorHandler';
 import { Button, Field, Input } from 'components/ui';
 import paths from 'routes/paths';
 
 /** Sends a password-reset request to the administrators (same request as before). */
 const ForgotPassword = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   // Guard against double submission; stays locked when a request is already pending.
@@ -21,12 +24,12 @@ const ForgotPassword = () => {
     setSubmittedOnce(true);
     try {
       await http.post('/comments', { title: 'Forgot password request', type: 'FORGET_PASSWORD', email });
-      handleSuccess('Demande envoyée avec succès');
+      handleSuccess(t('auth.forgotSent'));
       navigate(paths.signin);
     } catch (err) {
       handleError(err);
-      const msg = (err as { response?: { data?: { message?: string } }; message?: string })?.response?.data?.message ?? (err as Error)?.message ?? '';
-      if (!msg.toLowerCase().includes('pending')) setSubmittedOnce(false);
+      // Match on the backend's own text: the displayed message is translated.
+      if (!serverMessage(err).toLowerCase().includes('pending')) setSubmittedOnce(false);
     } finally {
       setLoading(false);
     }
@@ -35,20 +38,18 @@ const ForgotPassword = () => {
   return (
     <>
       <div className="border-b border-border bg-surface-header px-6 py-4">
-        <h1 className="text-lg font-semibold">Mot de passe oublié</h1>
-        <p className="mt-1 text-sm text-fg-muted">
-          Indiquez votre adresse e-mail : une demande est transmise aux administrateurs, qui vous recontacteront.
-        </p>
+        <h1 className="text-lg font-semibold">{t('auth.forgotTitle')}</h1>
+        <p className="mt-1 text-sm text-fg-muted">{t('auth.forgotSubtitle')}</p>
       </div>
       <form onSubmit={submit} className="flex flex-col gap-4 px-6 py-5">
-        <Field label="Adresse e-mail" required>
-          <Input type="email" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field label={t('auth.email')} required>
+          <Input type="email" dir="ltr" autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Button type="submit" variant="primary" className="w-full" disabled={loading || submittedOnce || !email.trim()}>
-          {loading ? 'Envoi…' : 'Envoyer la demande'}
+          {loading ? t('auth.sending') : t('auth.forgotSubmit')}
         </Button>
         <Link to={paths.signin} className="self-start text-sm text-primary underline underline-offset-2 hover:no-underline">
-          Retour à la connexion
+          {t('auth.backToSignIn')}
         </Link>
       </form>
     </>

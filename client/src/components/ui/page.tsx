@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from 'lib/utils';
 
 export interface Crumb {
@@ -17,10 +18,11 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({ title, description, breadcrumbs, actions }: PageHeaderProps) {
+  const { t } = useTranslation();
   return (
     <div className="mb-4 flex flex-col gap-2">
       {breadcrumbs && breadcrumbs.length > 0 && (
-        <nav aria-label="Fil d'Ariane">
+        <nav aria-label={t('app.breadcrumb')}>
           <ol className="flex flex-wrap items-center gap-1 text-xs text-fg-muted">
             {breadcrumbs.map((c, i) => {
               const last = i === breadcrumbs.length - 1;
@@ -174,11 +176,12 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 /** Loading indicator that fills its container (never the whole viewport). */
-export function Loader({ label = 'Chargement…' }: { label?: string }) {
+export function Loader({ label }: { label?: string }) {
+  const { t } = useTranslation();
   return (
     <div role="status" className="flex min-h-40 w-full items-center justify-center gap-2 text-sm text-fg-muted">
       <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-border border-t-primary" />
-      {label}
+      {label ?? t('table.loading')}
     </div>
   );
 }

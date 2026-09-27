@@ -1,0 +1,14 @@
+{
+  "title": "Barème des frais de mission",
+  "description": "Tarifs applicables pour les frais de repas, d’hébergement et de transport, par catégorie et par direction.",
+  "caption": "Barème des frais de mission par catégorie",
+  "category": "Catégorie",
+  "label": "Libellé",
+  "north": "Direction Nord",
+  "south": "Direction Sud",
+  "perKm": "Indemnité kilométrique",
+  "meal": "Repas",
+  "lodging": "Hébergement",
+  "perKmValue": "{{amount}} / km",
+  "note": "Montants exprimés en dinars algériens (DA)."
+}

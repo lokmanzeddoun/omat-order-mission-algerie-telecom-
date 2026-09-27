@@ -24,6 +24,7 @@ export default function DecomptesPage() {
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const [tab, setTab] = useState<'all' | 'mine'>('all');
   const [status, setStatus] = useState<string | null>(null);
+  const columns = useMemo(() => decompteColumns(t), [t]);
 
   const refresh = useCallback(() => {
     if (!token) return;
@@ -38,7 +39,7 @@ export default function DecomptesPage() {
   const { actionsFor, dialogs } = useDecompteActions({ admin: isAdmin, onChanged: refresh, detailPath });
   const bulkStatus = useBulkDecompteStatus<DecompteRow>({
     idOf: (d) => d.n_decompte,
-    labelOf: (d) => `N° ${d.n_decompte} · ${agentName(d.mission?.user)}`,
+    labelOf: (d) => `${t('numbered', { n: d.n_decompte })} · ${agentName(d.mission?.user)}`,
     isPending: (d) => d.status === 'PENDING',
     onDone: refresh,
   });
@@ -46,8 +47,8 @@ export default function DecomptesPage() {
     entity: 'decomptes',
     mode: 'archive',
     idOf: (d) => d.n_decompte,
-    labelOf: (d) => `N° ${d.n_decompte} · ${agentName(d.mission?.user)}`,
-    noun: ['décompte', 'décomptes'],
+    labelOf: (d) => `${t('numbered', { n: d.n_decompte })} · ${agentName(d.mission?.user)}`,
+    noun: 'decompte',
     onDone: refresh,
   });
 
@@ -60,8 +61,8 @@ export default function DecomptesPage() {
   return (
     <>
       <PageHeader
-        title="Décomptes"
-        description={`Décomptes des ordres de mission validés — exercice ${selectedYear ?? ''}.`}
+        title={t('nav.decomptes')}
+        description={t('decomptes:description', { year: selectedYear ?? '' })}
         breadcrumbs={[{ label: t('nav.home'), to: paths.admins }, { label: t('nav.decomptes') }]}
         actions={<IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={refresh} />}
       />
@@ -70,32 +71,32 @@ export default function DecomptesPage() {
         active={status ?? 'ALL'}
         onSelect={(k) => setStatus(k === 'ALL' || k === null ? null : k)}
         items={[
-          { key: 'ALL', label: 'Total', value: scoped.length },
-          { key: 'PENDING', label: 'En attente', value: count('PENDING'), tone: 'warning' },
-          { key: 'ACCEPTED', label: 'Acceptés', value: count('ACCEPTED'), tone: 'success' },
-          { key: 'REGECTED', label: 'Rejetés', value: count('REGECTED'), tone: 'danger' },
+          { key: 'ALL', label: t('summary.total'), value: scoped.length },
+          { key: 'PENDING', label: t('decomptes:summary.pending'), value: count('PENDING'), tone: 'warning' },
+          { key: 'ACCEPTED', label: t('decomptes:summary.accepted'), value: count('ACCEPTED'), tone: 'success' },
+          { key: 'REGECTED', label: t('decomptes:summary.rejected'), value: count('REGECTED'), tone: 'danger' },
         ]}
       />
 
       <DataTable
-        caption="Liste des décomptes"
+        caption={t('decomptes:caption')}
         tableId="decomptes"
-        columns={decompteColumns}
+        columns={columns}
         rows={rows}
         getRowId={(d) => d.n_decompte ?? 0}
         loading={loading && decomptes.length === 0}
-        emptyTitle="Aucun décompte"
-        emptyHint="Aucun décompte pour cet exercice et ces critères."
+        emptyTitle={t('decomptes:empty')}
+        emptyHint={t('decomptes:emptyHint')}
         exportFileName={`decomptes-${selectedYear ?? ''}`}
         toolbar={
           isAdmin && (
             <Tabs
-              label="Périmètre"
+              label={t('scope.label')}
               value={tab}
               onValueChange={(v) => setTab(v as 'all' | 'mine')}
               items={[
-                { value: 'all', label: 'Tous', count: decomptes.length },
-                { value: 'mine', label: 'Mes décomptes', count: mine.length },
+                { value: 'all', label: t('scope.all'), count: decomptes.length },
+                { value: 'mine', label: t('decomptes:mine'), count: mine.length },
               ]}
             />
           )

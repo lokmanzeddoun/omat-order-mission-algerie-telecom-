@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import { directionLabels } from 'constants/labels';
 
 /** Where a meal or night was spent; each zone is paid at its own barème. */
@@ -26,12 +27,22 @@ export const field = (item: Item, zone: Zone): CountField => `${item}_${zone}`;
 export const total = (counts: Counts, item: Item) => (counts[field(item, 'nord')] ?? 0) + (counts[field(item, 'sud')] ?? 0);
 
 /** Count lines for a DescriptionList; the zone is named only on a Nord et Sud ordre. */
-export const countItems = (counts: Counts, direction?: string) => {
+export const countItems = (counts: Counts, direction?: string, t?: TFunction) => {
   const zones = zonesOf(direction);
   return zones.flatMap((zone) =>
-    ITEMS.map(({ key, label }) => ({
-      label: zones.length > 1 ? `${label} (${zoneLabel[zone]})` : label,
-      value: counts[field(key, zone)] ?? 0,
-    })),
+    ITEMS.map(({ key, label }) => {
+      let lbl: string = label;
+      if (t) {
+        if (key === 'hebergement_sans_pec') lbl = t('field.nightsNoPec');
+        else if (key === 'hebergement_pec') lbl = t('field.nightsPec');
+        else if (key === 'repas_sans_pec') lbl = t('field.mealsNoPec');
+        else if (key === 'repas_pec') lbl = t('field.mealsPec');
+      }
+      const zLbl = t ? t(`enums:direction.${zone.toUpperCase()}`) : zoneLabel[zone];
+      return {
+        label: zones.length > 1 ? `${lbl} (${zLbl})` : lbl,
+        value: counts[field(key, zone)] ?? 0,
+      };
+    }),
   );
 };

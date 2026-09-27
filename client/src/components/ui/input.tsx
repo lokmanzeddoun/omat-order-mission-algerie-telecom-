@@ -1,5 +1,6 @@
 import { forwardRef, useState, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from 'lib/utils';
 
 const fieldBase =
@@ -40,6 +41,7 @@ Checkbox.displayName = 'Checkbox';
 /** Password field with a show/hide toggle; label/ARIA props reach the <input>. */
 export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>>(
   ({ className, ...props }, ref) => {
+    const { t } = useTranslation();
     const [visible, setVisible] = useState(false);
     return (
       <div className="relative">
@@ -47,7 +49,7 @@ export const PasswordInput = forwardRef<HTMLInputElement, Omit<InputHTMLAttribut
         <button
           type="button"
           onClick={() => setVisible((v) => !v)}
-          aria-label={visible ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+          aria-label={visible ? t('auth.hidePassword') : t('auth.showPassword')}
           aria-pressed={visible}
           className="absolute inset-y-0 end-0 flex w-9 cursor-pointer items-center justify-center text-fg-muted hover:text-fg"
         >

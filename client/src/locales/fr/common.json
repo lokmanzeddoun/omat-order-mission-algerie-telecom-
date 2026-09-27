@@ -3,7 +3,9 @@
     "institution": "Algérie Télécom",
     "title": "Gestion des Ordres de Mission",
     "skipToContent": "Aller au contenu principal",
-    "footer": "OMAT — Algérie Télécom. Usage interne."
+    "footer": "OMAT — Algérie Télécom. Usage interne.",
+    "breadcrumb": "Fil d'Ariane",
+    "mainNav": "Navigation principale"
   },
   "nav": {
     "analytics": "Tableau de bord",
@@ -45,7 +47,16 @@
     "download": "Télécharger",
     "more": "Plus d'actions",
     "toggleTheme": "Changer le thème",
-    "toggleNav": "Afficher ou masquer le menu"
+    "toggleNav": "Afficher ou masquer le menu",
+    "changeLanguage": "Changer la langue",
+    "back": "Retour",
+    "backToList": "Retour à la liste",
+    "validate": "Valider",
+    "view": "Consulter",
+    "submit": "Envoyer",
+    "create": "Créer",
+    "reset": "Réinitialiser",
+    "print": "Imprimer"
   },
   "table": {
     "empty": "Aucun résultat",
@@ -73,7 +84,9 @@
     "allMatchingSelected": "Les {{total}} lignes correspondant aux filtres sont sélectionnées.",
     "clearSelection": "Effacer la sélection",
     "bulkActions": "Actions sur la sélection",
-    "exportSelection": "Exporter la sélection (CSV)"
+    "exportSelection": "Exporter la sélection (CSV)",
+    "exportCsv": "Exporter (CSV)",
+    "filterGroup": "Filtre"
   },
   "auth": {
     "signIn": "Se connecter",
@@ -97,6 +110,88 @@
     "mfaInvalid": "Code incorrect ou déjà utilisé.",
     "recoveryTitle": "Codes de secours",
     "recoverySubtitle": "Conservez ces codes en lieu sûr : chacun permet une connexion si vous perdez votre téléphone. Ils ne seront plus affichés.",
-    "recoveryDone": "J'ai conservé mes codes — continuer"
+    "recoveryDone": "J'ai conservé mes codes — continuer",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe",
+    "forgotTitle": "Mot de passe oublié",
+    "forgotSubtitle": "Indiquez votre adresse e-mail : une demande est transmise aux administrateurs, qui vous recontacteront.",
+    "forgotSubmit": "Envoyer la demande",
+    "forgotSent": "Demande envoyée avec succès",
+    "sending": "Envoi…",
+    "backToSignIn": "Retour à la connexion"
+  },
+  "currency": "DA",
+  "timeline": {
+    "done": "terminé",
+    "current": "en cours",
+    "upcoming": "à venir",
+    "failed": "refusé"
+  },
+  "language": {
+    "fr": "Français",
+    "ar": "العربية"
+  },
+  "numbered": "N° {{n}}",
+  "summary": {
+    "total": "Total"
+  },
+  "scope": {
+    "label": "Périmètre",
+    "all": "Tous"
+  },
+  "units": {
+    "km": "{{value}} km"
+  },
+  "duration": {
+    "days_one": "{{count}} jour(s)",
+    "days_many": "{{count}} jour(s)",
+    "days_other": "{{count}} jour(s)",
+    "hours_one": "{{count}} heure(s)",
+    "hours_many": "{{count}} heure(s)",
+    "hours_other": "{{count}} heure(s)"
+  },
+  "field": {
+    "number": "N°",
+    "agent": "Agent",
+    "missionOrder": "Ordre de mission",
+    "date": "Date",
+    "days": "Jours",
+    "daysCount": "Nombre de jours",
+    "amount": "Montant",
+    "totalAmount": "Montant total",
+    "status": "Statut",
+    "matricule": "Matricule",
+    "departure": "Départ",
+    "return": "Retour",
+    "motif": "Motif",
+    "destination": "Destination",
+    "transport": "Transport",
+    "transportMode": "Moyen de transport",
+    "direction": "Direction",
+    "duration": "Durée",
+    "distanceKm": "Distance (km)",
+    "distance": "Distance parcourue",
+    "mealsPec": "Repas avec prise en charge",
+    "mealsNoPec": "Repas sans prise en charge",
+    "nightsPec": "Nuitées avec prise en charge",
+    "nightsNoPec": "Nuitées sans prise en charge",
+    "mealsPecShort": "Repas PEC",
+    "mealsNoPecShort": "Repas non PEC",
+    "nightsPecShort": "Nuitées PEC",
+    "nightsNoPecShort": "Nuitées non PEC",
+    "transportFees": "Frais de transport",
+    "createdOn": "Créé le",
+    "fullName": "Nom et prénom"
+  },
+  "notFound": {
+    "code": "Erreur 404",
+    "title": "Page introuvable",
+    "hint": "La page demandée n’existe pas ou a été déplacée. Vérifiez l’adresse ou revenez à l’accueil.",
+    "home": "Retour à l’accueil"
+  },
+  "scan": {
+    "adminOnly": "Accès réservé aux administrateurs",
+    "adminOnlyHint": "Le détail d’un décompte n’est consultable que par le service gestionnaire. Vous pouvez suivre vos missions depuis votre tableau de bord.",
+    "myDashboard": "Mon tableau de bord"
   }
 }

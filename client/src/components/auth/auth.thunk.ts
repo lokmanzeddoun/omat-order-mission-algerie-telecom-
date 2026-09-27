@@ -1,5 +1,7 @@
 import { loginSuccess, userLoaded, authFailed, logoutSuccess } from './auth.reducers';
 import http, { refreshAccessToken, setAccessToken } from 'helpers/http';
+import i18n from 'i18n';
+import { extractErrorMessage } from 'helpers/errorHandler';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
@@ -9,6 +11,7 @@ export const loadUser = () => async (dispatch: AppDispatch, getState: () => Root
   const matricule = getState().auth.user?.matricule;
   if (!matricule) {
     dispatch(authFailed());
+    dispatch(setAlert({ msg: i18n.t('toasts:userLoadFailed'), type: AlertTypes.ERROR }));
     return;
   }
   try {
@@ -16,12 +19,12 @@ export const loadUser = () => async (dispatch: AppDispatch, getState: () => Root
     if (res.data) {
       return dispatch(userLoaded(res.data));
     }
-    dispatch(setAlert({ msg: 'Get user error!', type: AlertTypes.ERROR }));
+    dispatch(authFailed());
+    dispatch(setAlert({ msg: i18n.t('toasts:userLoadFailed'), type: AlertTypes.ERROR }));
+    return;
   } catch (error) {
-    let errorMessage = 'Failed Loading User';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    dispatch(authFailed());
+    const errorMessage = extractErrorMessage(error);
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
   }
 };
@@ -54,7 +57,7 @@ function failure(error: unknown): LoginResult {
 function startSession(dispatch: AppDispatch, data: ResLoginApi) {
   setAccessToken(data.token);
   dispatch(loginSuccess(data));
-  dispatch(setAlert({ msg: 'Connexion réussie', type: AlertTypes.SUCCESS }));
+  dispatch(setAlert({ msg: i18n.t('toasts:signedIn'), type: AlertTypes.SUCCESS }));
 }
 
 export const login =
@@ -129,7 +132,7 @@ export const logout = () => async (dispatch: AppDispatch) => {
   dispatch(endSession());
   dispatch(
     setAlert({
-      msg: 'Vous êtes déconnecté',
+      msg: i18n.t('toasts:signedOut'),
       type: AlertTypes.WARNING,
     }),
   );

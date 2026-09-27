@@ -1,0 +1,13 @@
+{
+  "description": "Vos informations et la sécurité de votre compte.",
+  "personalInfo": "Informations personnelles",
+  "contactAdmin": "Pour corriger ces informations, contactez l’administrateur de votre direction.",
+  "changePassword": "Changer le mot de passe",
+  "currentPassword": "Mot de passe actuel",
+  "hint": "12 caractères minimum.",
+  "errors": {
+    "currentRequired": "Saisissez votre mot de passe actuel.",
+    "min": "Le mot de passe doit contenir au moins 12 caractères.",
+    "confirmRequired": "Confirmez le nouveau mot de passe."
+  }
+}
