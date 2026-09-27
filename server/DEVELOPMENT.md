@@ -216,3 +216,17 @@ Database migration note:
 npm install
 npx prisma generate
 ```
+
+## End-to-end tests
+
+`npm run test:e2e` boots the whole `AppModule` over HTTP, configured by the same `configureApp()` as `main.ts`, against a real Postgres. It needs Node 20 (`nvm use`; see `.nvmrc`).
+
+- **Database:** `DATABASE_URL_TEST`. If it is unset, your `DATABASE_URL` is reused with the database renamed to `omat_test`.
+  - The run **resets that database** with `prisma migrate reset`.
+  - It refuses any database whose name does not end in `_test`, so your dev data is never touched.
+- **Fixture:** `test/setup/fixture.ts` → `seedFixture(prisma)`. It creates:
+  - two structures, `STR_A` and `STR_B`,
+  - a USER and an ADMIN in each, plus a SUPER_ADMIN,
+  - one ordre de mission and one décompte per USER.
+- **Logging in:** `loginAs(app, 'userA')` (`test/setup/app.ts`) goes through `POST /auth/login` and returns the Bearer header and the refresh cookie.
+- **PDF rendering is faked in e2e.** react-pdf is ESM-only. The suites check who may download a PDF, not its content.

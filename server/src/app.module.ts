@@ -23,6 +23,7 @@ import { RolesGuard } from './roles/roles.guard';
   imports: [
     PinoLoggerModule.forRoot({
       pinoHttp: {
+        level: process.env.LOG_LEVEL ?? 'info',
         transport: {
           target: 'pino-pretty',
           options: {
