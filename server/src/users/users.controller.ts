@@ -96,6 +96,7 @@ export class UsersController {
   }
 
   @Patch(':id/archive')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @ApiOperation({
     summary: 'ARCHIVE USER',
     description: 'Archive a user by setting soft_delete to true',

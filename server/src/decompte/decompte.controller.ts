@@ -69,6 +69,7 @@ export class DecompteController {
   }
 
   @Delete(':id')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   remove(@Param('id') id: string) {
     return this.decompteService.remove(+id);
   }

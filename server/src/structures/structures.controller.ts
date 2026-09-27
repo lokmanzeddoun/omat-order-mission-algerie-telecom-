@@ -18,6 +18,7 @@ import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Structure } from './entities/structure.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { SUPPORTED_FILES } from 'src/utils/upload';
+import { Auth } from 'src/auth/guards/auth-role.guard';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
 import { Response } from 'express';
 @ApiTags('Structures')
@@ -68,6 +69,7 @@ export class StructuresController {
   }
 
   @Patch(':id/archive')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @ApiOperation({
     summary: 'ARCHIVE STRUCTURE',
     description: 'Archive a structure by setting soft_delete to true',
