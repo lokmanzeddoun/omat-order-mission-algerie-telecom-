@@ -21,6 +21,7 @@ import {
 import { Response as ExpressResponse } from 'express';
 import { PdfService } from 'src/pdf/pdf.service';
 import { toDecomptePdfData } from 'src/pdf/mappers/decompte.mapper';
+import { AccessPolicy } from 'src/common/policy/access-policy';
 
 /** Comment titles written when a décompte is accepted or rejected. */
 export const statusCommentTitle = {
@@ -39,6 +40,7 @@ export class DecompteService {
     private readonly exercicesService: ExercicesService,
     private readonly commentsService: CommentsService,
     private readonly pdfService: PdfService,
+    private readonly accessPolicy: AccessPolicy,
   ) {}
 
   private async getCurrentExerciceId(): Promise<number | null> {
@@ -49,7 +51,11 @@ export class DecompteService {
     return ex?.id ?? null;
   }
 
-  async create(createDecompteDto: CreateDecompteDto, id: number) {
+  async create(
+    createDecompteDto: CreateDecompteDto,
+    id: number,
+    actor: User,
+  ) {
     const mission = await this.databaseService.mission.findUnique({
       where: {
         n_mission: id,
@@ -57,6 +63,11 @@ export class DecompteService {
       include: { user: true, _count: { select: { decompte: true } } },
     });
     if (!mission) {
+      throw new NotFoundException(`Mission ${id} not found`);
+    }
+    // An ADMIN may only validate a mission inside their own structure (ADR 0001);
+    // an out-of-scope mission is a 404, not a hint that it exists.
+    if (!this.accessPolicy.canActInStructure(actor, mission.user.serviceId)) {
       throw new NotFoundException(`Mission ${id} not found`);
     }
     if (
@@ -161,7 +172,12 @@ export class DecompteService {
     return this.databaseService.$transaction([updateMission, createDecomte]);
   }
 
-  async findAll(status: string, archive: string, exercice?: string) {
+  async findAll(
+    actor: User,
+    status: string,
+    archive: string,
+    exercice?: string,
+  ) {
     // convert status to DcompteStatus
     let sat: DecompteStatus | undefined;
     if (status === 'accepted') {
@@ -187,6 +203,8 @@ export class DecompteService {
 
     return this.databaseService.decompte.findMany({
       where: {
+        // Only the décomptes the caller may see (own / structure / all).
+        ...this.accessPolicy.scopeDecomptes(actor),
         soft_delete: softDeleteFilter,
         ...(sat ? { status: sat } : {}),
         ...(year ? { exercice: { year } } : {}),
@@ -240,11 +258,13 @@ export class DecompteService {
     });
   }
 
-  findOne(id: number) {
-    return this.databaseService.decompte.findUniqueOrThrow({
+  async findOne(id: number, actor: User) {
+    // Scoped read: out-of-scope or missing ids return 404, so ids don't leak.
+    const decompte = await this.databaseService.decompte.findFirst({
       where: {
         n_decompte: id,
         soft_delete: false,
+        ...this.accessPolicy.scopeDecomptes(actor),
       },
       select: {
         n_decompte: true,
@@ -305,18 +325,28 @@ export class DecompteService {
         },
       },
     });
+    if (!decompte) {
+      throw new NotFoundException(`Décompte ${id} introuvable.`);
+    }
+    return decompte;
   }
 
-  async update(id: number, updateDecompteDto: CreateDecompteDto) {
-    const decompte = await this.databaseService.decompte.findUniqueOrThrow({
+  async update(id: number, updateDecompteDto: CreateDecompteDto, actor: User) {
+    // Scoped fetch: an ADMIN only within their structure (404 otherwise).
+    const decompte = await this.databaseService.decompte.findFirst({
       where: {
         n_decompte: id,
         soft_delete: false,
+        ...this.accessPolicy.scopeDecomptes(actor),
       },
       include: {
         mission: { include: { user: true } },
       },
     });
+    if (!decompte) {
+      throw new NotFoundException(`Décompte ${id} introuvable.`);
+    }
+    // An accepted/rejected décompte is locked: only a pending one can be edited.
     if (decompte.status !== DecompteStatus.PENDING) {
       throw new BadRequestException(
         'Seul un décompte en attente peut être modifié',
@@ -415,12 +445,20 @@ export class DecompteService {
     return this.databaseService.$transaction([updateMission, updateDecompte]);
   }
 
-  remove(id: number, actorId: number) {
+  async remove(id: number, actor: User) {
+    // Scope first (ADR 0001): an out-of-scope id is a 404.
+    const decompte = await this.databaseService.decompte.findFirst({
+      where: { n_decompte: id, ...this.accessPolicy.scopeDecomptes(actor) },
+      select: { n_decompte: true },
+    });
+    if (!decompte) {
+      throw new NotFoundException(`Décompte ${id} introuvable.`);
+    }
     return this.databaseService.decompte.update({
       where: {
         n_decompte: id,
       },
-      data: archiveStamp(actorId),
+      data: archiveStamp(actor.matricule),
     });
   }
 
@@ -468,9 +506,10 @@ export class DecompteService {
     });
   }
 
-  async downloadDecompte(id: number, res: ExpressResponse) {
-    const decompte = await this.databaseService.decompte.findUnique({
-      where: { n_decompte: id },
+  async downloadDecompte(id: number, res: ExpressResponse, actor: User) {
+    // A décompte PDF is confidential financial data: scope the read (404 out of scope).
+    const decompte = await this.databaseService.decompte.findFirst({
+      where: { n_decompte: id, ...this.accessPolicy.scopeDecomptes(actor) },
       include: {
         mission: { include: { user: { include: { structure: true } } } },
       },
@@ -511,15 +550,22 @@ export class DecompteService {
    * Changes status to ACCEPTED
    */
   async acceptDecompte(id: number, user: User, message?: string): Promise<any> {
-    // Verify decompte exists and is in PENDING status
-    const decompte = await this.databaseService.decompte.findUnique({
-      where: { n_decompte: id, soft_delete: false },
+    // Scoped fetch: an ADMIN only decides within their structure (404 otherwise).
+    const decompte = await this.databaseService.decompte.findFirst({
+      where: {
+        n_decompte: id,
+        soft_delete: false,
+        ...this.accessPolicy.scopeDecomptes(user),
+      },
       include: { mission: { include: { user: true } } },
     });
 
     if (!decompte) {
-      throw new BadRequestException(`Decompte with ID ${id} not found.`);
+      throw new NotFoundException(`Decompte with ID ${id} not found.`);
     }
+
+    // Separation of duties: an approver may not decide on their own décompte.
+    this.accessPolicy.assertNotSelfApproval(user, decompte.mission.userId);
 
     if (decompte.status !== DecompteStatus.PENDING) {
       throw new BadRequestException(
@@ -527,15 +573,19 @@ export class DecompteService {
       );
     }
 
-    // Update decompte status to ACCEPTED
+    // Update decompte status to ACCEPTED, recording who decided (ADR 0001).
     const updatedDecompte = await this.databaseService.decompte.update({
       where: { n_decompte: id },
-      data: { status: DecompteStatus.ACCEPTED },
+      data: {
+        status: DecompteStatus.ACCEPTED,
+        decidedById: user.matricule,
+        decidedAt: new Date(),
+      },
     });
 
     // Optionally create a comment if a message was provided
     if (message && message.trim() !== '') {
-      await this.commentsService.create(
+      await this.commentsService.recordStatusComment(
         {
           title: statusCommentTitle.accepted(id, message.trim()),
           type: 'DECOMPTE_STATUS',
@@ -554,15 +604,22 @@ export class DecompteService {
    * Changes status to REJECTED and creates a comment with rejection reason
    */
   async rejectDecompte(id: number, user: User, message: string): Promise<any> {
-    // Verify decompte exists and is in PENDING status
-    const decompte = await this.databaseService.decompte.findUnique({
-      where: { n_decompte: id, soft_delete: false },
+    // Scoped fetch: an ADMIN only decides within their structure (404 otherwise).
+    const decompte = await this.databaseService.decompte.findFirst({
+      where: {
+        n_decompte: id,
+        soft_delete: false,
+        ...this.accessPolicy.scopeDecomptes(user),
+      },
       include: { mission: { include: { user: true } } },
     });
 
     if (!decompte) {
-      throw new BadRequestException(`Decompte with ID ${id} not found.`);
+      throw new NotFoundException(`Decompte with ID ${id} not found.`);
     }
+
+    // Separation of duties: an approver may not decide on their own décompte.
+    this.accessPolicy.assertNotSelfApproval(user, decompte.mission.userId);
 
     if (decompte.status !== DecompteStatus.PENDING) {
       throw new BadRequestException(
@@ -570,14 +627,18 @@ export class DecompteService {
       );
     }
 
-    // Update decompte status to REJECTED
+    // Update decompte status to REJECTED, recording who decided (ADR 0001).
     const updatedDecompte = await this.databaseService.decompte.update({
       where: { n_decompte: id },
-      data: { status: DecompteStatus.REGECTED },
+      data: {
+        status: DecompteStatus.REGECTED,
+        decidedById: user.matricule,
+        decidedAt: new Date(),
+      },
     });
 
     // Create a comment with the rejection reason
-    await this.commentsService.create(
+    await this.commentsService.recordStatusComment(
       {
         title: statusCommentTitle.rejected(id, message),
         type: 'DECOMPTE_STATUS',
@@ -599,14 +660,24 @@ export class DecompteService {
   bulkSetStatus(
     ids: number[],
     decision: 'accept' | 'reject',
-    actorId: number,
+    actor: User,
     message?: string,
   ) {
     const text = message?.trim();
     return this.databaseService.$transaction(async (tx) => {
+      // Scope the rows to the actor (ADR 0001); ids outside scope are simply
+      // absent from `rows` and reported as not_found by partitionIds.
       const rows = await tx.decompte.findMany({
-        where: { n_decompte: { in: ids } },
-        select: { n_decompte: true, status: true, soft_delete: true },
+        where: {
+          n_decompte: { in: ids },
+          ...this.accessPolicy.scopeDecomptes(actor),
+        },
+        select: {
+          n_decompte: true,
+          status: true,
+          soft_delete: true,
+          mission: { select: { userId: true } },
+        },
       });
       const result = partitionIds(
         ids,
@@ -616,7 +687,10 @@ export class DecompteService {
             ? 'archived'
             : r.status !== DecompteStatus.PENDING
               ? 'not_pending'
-              : null,
+              : // Separation of duties: never decide on your own décompte.
+                r.mission.userId === actor.matricule
+                ? 'self_owned'
+                : null,
       );
       if (result.done.length === 0) return result;
 
@@ -627,6 +701,8 @@ export class DecompteService {
             decision === 'accept'
               ? DecompteStatus.ACCEPTED
               : DecompteStatus.REGECTED,
+          decidedById: actor.matricule,
+          decidedAt: new Date(),
         },
       });
       if (decision === 'reject' || text) {
@@ -638,7 +714,7 @@ export class DecompteService {
             type: 'DECOMPTE_STATUS' as const,
             status: decision === 'accept' ? 'ACCEPTED' : 'REJECTED',
             decompteId: id,
-            userId: actorId,
+            userId: actor.matricule,
           })),
         });
       }

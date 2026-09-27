@@ -28,28 +28,22 @@ export class DecompteController {
   // Bulk routes come first so 'bulk' is never read as an :id.
   @Patch('bulk/accept')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  acceptMany(
-    @Body() body: BulkAcceptDto,
-    @GetUser('matricule') actorId: number,
-  ) {
+  acceptMany(@Body() body: BulkAcceptDto, @GetUser() actor: User) {
     return this.decompteService.bulkSetStatus(
       body.ids,
       'accept',
-      actorId,
+      actor,
       body.message,
     );
   }
 
   @Patch('bulk/reject')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  rejectMany(
-    @Body() body: BulkRejectDto,
-    @GetUser('matricule') actorId: number,
-  ) {
+  rejectMany(@Body() body: BulkRejectDto, @GetUser() actor: User) {
     return this.decompteService.bulkSetStatus(
       body.ids,
       'reject',
-      actorId,
+      actor,
       body.message,
     );
   }
@@ -60,17 +54,20 @@ export class DecompteController {
   create(
     @Body() createDecompteDto: CreateDecompteDto,
     @Param('id') id: string,
+    @GetUser() actor: User,
   ) {
-    return this.decompteService.create(createDecompteDto, +id);
+    return this.decompteService.create(createDecompteDto, +id, actor);
   }
 
   @Get()
+  @Auth()
   findAll(
+    @GetUser() actor: User,
     @Query('status') status: string,
     @Query('archive') archive: string,
     @Query('exercice') exercice?: string,
   ) {
-    return this.decompteService.findAll(status, archive, exercice);
+    return this.decompteService.findAll(actor, status, archive, exercice);
   }
 
   @Get('user')
@@ -84,8 +81,9 @@ export class DecompteController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.decompteService.findOne(+id);
+  @Auth()
+  findOne(@Param('id') id: string, @GetUser() actor: User) {
+    return this.decompteService.findOne(+id, actor);
   }
 
   @Patch(':id')
@@ -93,20 +91,25 @@ export class DecompteController {
   update(
     @Param('id') id: string,
     @Body() updateDecompteDto: CreateDecompteDto,
+    @GetUser() actor: User,
   ) {
-    return this.decompteService.update(+id, updateDecompteDto);
+    return this.decompteService.update(+id, updateDecompteDto, actor);
   }
 
   @Delete(':id')
   @Auth('ADMIN', 'SUPER_ADMIN')
-  remove(@Param('id') id: string, @GetUser('matricule') actorId: number) {
-    return this.decompteService.remove(+id, actorId);
+  remove(@Param('id') id: string, @GetUser() actor: User) {
+    return this.decompteService.remove(+id, actor);
   }
 
   @Get(':id/download')
   @Auth()
-  download(@Param('id') id: string, @Res() res: Response) {
-    return this.decompteService.downloadDecompte(+id, res);
+  download(
+    @Param('id') id: string,
+    @Res() res: Response,
+    @GetUser() actor: User,
+  ) {
+    return this.decompteService.downloadDecompte(+id, res, actor);
   }
 
   @Patch(':id/accept')

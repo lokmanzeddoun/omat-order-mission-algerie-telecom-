@@ -21,6 +21,7 @@ import { CommentsModule } from './comments/comments.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './roles/roles.guard';
+import { PolicyModule } from './common/policy/policy.module';
 @Module({
   imports: [
     // First: it loads .env, which pinoParams() below reads.
@@ -29,6 +30,7 @@ import { RolesGuard } from './roles/roles.guard';
       load: [config],
       validate: validateEnv,
     }),
+    PolicyModule,
     PinoLoggerModule.forRoot(pinoParams()),
     PrismaModule.forRoot({
       isGlobal: true,

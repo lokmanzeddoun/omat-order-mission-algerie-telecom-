@@ -16,11 +16,18 @@ export type Person = keyof typeof PEOPLE;
 
 export const emailOf = (who: Person) => `${who.toLowerCase()}@omat.test`;
 
+/**
+ * People who own an ordre de mission + décompte in the fixture. adminA owns one
+ * too, so the self-approval rule (an admin may not decide on their own décompte)
+ * can be exercised.
+ */
+export type MissionOwner = 'userA' | 'userB' | 'adminA';
+
 export interface Fixture {
-  /** n_mission of each USER's ordre de mission. */
-  missions: Record<'userA' | 'userB', number>;
-  /** n_decompte of each USER's décompte. */
-  decomptes: Record<'userA' | 'userB', number>;
+  /** n_mission of each owner's ordre de mission. */
+  missions: Record<MissionOwner, number>;
+  /** n_decompte of each owner's décompte. */
+  decomptes: Record<MissionOwner, number>;
 }
 
 /** Wipes the test database and seeds the fixture. */
@@ -59,7 +66,7 @@ export async function seedFixture(prisma: PrismaClient): Promise<Fixture> {
 
   const missions = {} as Fixture['missions'];
   const decomptes = {} as Fixture['decomptes'];
-  for (const who of ['userA', 'userB'] as const) {
+  for (const who of ['userA', 'userB', 'adminA'] as const) {
     const mission = await prisma.mission.create({
       data: {
         userId: PEOPLE[who].matricule,

@@ -1,61 +1,100 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
+import { MessageType, User } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
+import { AccessPolicy } from 'src/common/policy/access-policy';
 import { CreateCommentDto } from './dto/create-comment.dto';
+
+/** A status comment the system writes when a décompte is accepted/rejected. */
+interface StatusComment {
+  title: string;
+  type: MessageType;
+  status: string;
+  decompteId: number;
+}
 
 @Injectable()
 export class CommentsService {
-  constructor(private readonly databaseService: DatabaseService) {}
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly accessPolicy: AccessPolicy,
+  ) {}
 
-  async create(dto: CreateCommentDto, userId?: number) {
-    // If userId not provided, try to find by email (allowing unauthenticated users to submit email)
-    let user;
-    if (userId) {
-      user = await this.databaseService.user.findUnique({
-        where: { matricule: userId },
+  /**
+   * A user opens a support ticket, or comments on a décompte they can see.
+   * Authorship is the authenticated actor (never a body-supplied id/email) and
+   * the status is server-controlled, so neither can be spoofed (ADR 0001).
+   */
+  async create(dto: CreateCommentDto, actor: User) {
+    // A comment tied to a décompte is only allowed on one the actor may see.
+    if (dto.decompteId != null) {
+      const visible = await this.databaseService.decompte.findFirst({
+        where: {
+          n_decompte: dto.decompteId,
+          ...this.accessPolicy.scopeDecomptes(actor),
+        },
+        select: { n_decompte: true },
       });
-    } else if (dto.email) {
-      user = await this.databaseService.user.findUnique({
-        where: { email: dto.email },
-      });
+      if (!visible) {
+        throw new NotFoundException(`Décompte ${dto.decompteId} introuvable.`);
+      }
     }
-    if (!user)
-      throw new BadRequestException(
-        'User not found. Provide a valid email or authenticate.',
-      );
 
-    // Prevent multiple pending forget-password requests per user
-    if (dto.type === 'FORGET_PASSWORD') {
+    // One pending password-reset request per user.
+    if (dto.type === MessageType.FORGET_PASSWORD) {
       const existing = await this.databaseService.commentaire.findFirst({
         where: {
-          userId: user.matricule,
-          type: 'FORGET_PASSWORD',
+          userId: actor.matricule,
+          type: MessageType.FORGET_PASSWORD,
           status: 'PENDING',
           soft_delete: false,
         },
       });
-      if (existing)
+      if (existing) {
         throw new BadRequestException(
           'A pending password reset request already exists for this user.',
         );
+      }
     }
 
-    const data: any = {
-      title: dto.title,
-      type: dto.type,
-      status: dto.status ?? 'PENDING',
-      user: { connect: { matricule: user.matricule } },
-      ...(dto.decompteId
-        ? { decompte: { connect: { n_decompte: dto.decompteId } } }
-        : {}),
-    };
-
-    return this.databaseService.commentaire.create({ data });
+    return this.databaseService.commentaire.create({
+      data: {
+        title: dto.title,
+        type: dto.type,
+        // Never trust a client-set status: a new comment always starts PENDING.
+        status: 'PENDING',
+        user: { connect: { matricule: actor.matricule } },
+        ...(dto.decompteId
+          ? { decompte: { connect: { n_decompte: dto.decompteId } } }
+          : {}),
+      },
+    });
   }
 
-  async findForAdmins() {
-    // Return all non-soft-deleted comments with user information included
+  /**
+   * Trusted, internal write used when a décompte is accepted/rejected. The
+   * caller (DecompteService) has already authorized the action and sets the
+   * status; this is not reachable from a request body.
+   */
+  async recordStatusComment(input: StatusComment, actorMatricule: number) {
+    return this.databaseService.commentaire.create({
+      data: {
+        title: input.title,
+        type: input.type,
+        status: input.status,
+        user: { connect: { matricule: actorMatricule } },
+        decompte: { connect: { n_decompte: input.decompteId } },
+      },
+    });
+  }
+
+  /** Support inbox, scoped to the caller (own structure for an ADMIN). */
+  async findForAdmins(actor: User) {
     return this.databaseService.commentaire.findMany({
-      where: { soft_delete: false },
+      where: { soft_delete: false, ...this.accessPolicy.scopeComments(actor) },
       include: {
         user: {
           select: {

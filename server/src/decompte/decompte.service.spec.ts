@@ -14,6 +14,7 @@ import { DatabaseService } from 'src/database/database.service';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import { PdfService } from 'src/pdf/pdf.service';
 import { CommentsService } from 'src/comments/comments.service';
+import { AccessPolicy } from 'src/common/policy/access-policy';
 
 const barem = {
   id: 1,
@@ -44,8 +45,12 @@ const N_MISSION = 7;
 const NORD_OVERNIGHT = 3 * 100 + 1 * 1000;
 
 // The admin validating or reviewing (their own category is irrelevant).
+// SUPER_ADMIN so structure scope is unrestricted in these montant-focused
+// tests; matricule 42 differs from the mission owner (1), so no self-approval.
 const user = {
   matricule: 42,
+  role: 'SUPER_ADMIN',
+  serviceId: null,
   category: Category.EXECUTION_MAITRISE,
 } as unknown as User;
 
@@ -68,7 +73,7 @@ const overnightDto = (overrides: Partial<CreateDecompteDto> = {}) =>
 describe('DecompteService', () => {
   let service: DecompteService;
   let db: any;
-  let comments: { create: jest.Mock };
+  let comments: { recordStatusComment: jest.Mock };
 
   beforeEach(async () => {
     db = {
@@ -80,16 +85,17 @@ describe('DecompteService', () => {
       exercice: { findFirst: jest.fn().mockResolvedValue({ id: 3 }) },
       decompte: {
         create: jest.fn((args) => ({ op: 'decompte.create', args })),
-        findUnique: jest.fn(),
+        findFirst: jest.fn(),
         update: jest.fn((args) => ({ n_decompte: args.where.n_decompte })),
       },
       $transaction: jest.fn(async (ops) => ops),
     };
-    comments = { create: jest.fn() };
+    comments = { recordStatusComment: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DecompteService,
+        AccessPolicy,
         { provide: DatabaseService, useValue: db },
         {
           provide: ExercicesService,
@@ -103,16 +109,27 @@ describe('DecompteService', () => {
     service = module.get<DecompteService>(DecompteService);
   });
 
+  // create now takes the acting user (for structure scope); these montant tests
+  // all validate as the SUPER_ADMIN actor above.
+  const runCreate = (dto: CreateDecompteDto, id = N_MISSION) =>
+    service.create(dto, id, user);
+
   const createdData = () => db.decompte.create.mock.calls[0][0].data;
+  // The décompte a scoped accept/reject/update finds. Owner is matricule 1
+  // (not the acting admin 42), so self-approval does not trip.
   const givenDecompte = (status: DecompteStatus) =>
-    db.decompte.findUnique.mockResolvedValue({ status });
+    db.decompte.findFirst.mockResolvedValue({
+      status,
+      missionId: N_MISSION,
+      mission: mission(),
+    });
 
   // Windows come from docs/decompte-workflow.md (lunch 11-14, dinner 18-21,
   // night 00-06). That an item counts only when its whole window, bounds
   // included, lies inside the trip is the code's rule; the doc is silent.
   describe('create: meal and night count validation', () => {
     it('accepts a same-day trip covering lunch and dinner as 2 meals, 0 nights', async () => {
-      await service.create(
+      await runCreate(
         overnightDto({
           date_retour: '2026-03-10',
           heure_retour: '22:00',
@@ -125,7 +142,7 @@ describe('DecompteService', () => {
     });
 
     it('accepts an overnight trip as 3 meals and 1 night', async () => {
-      await service.create(overnightDto(), N_MISSION);
+      await runCreate(overnightDto(), N_MISSION);
       expect(db.$transaction).toHaveBeenCalledTimes(1);
     });
 
@@ -150,29 +167,29 @@ describe('DecompteService', () => {
           repas_sans_pec: meals,
           hebergement_sans_pec: nights,
         });
-        await service.create(dto, N_MISSION);
+        await runCreate(dto, N_MISSION);
         expect(db.$transaction).toHaveBeenCalledTimes(1);
         await expect(
-          service.create({ ...dto, repas_sans_pec: meals + 1 }, N_MISSION),
+          runCreate({ ...dto, repas_sans_pec: meals + 1 }, N_MISSION),
         ).rejects.toThrow(BadRequestException);
       },
     );
 
     it('rejects a declared meal count that does not match the trip', async () => {
       await expect(
-        service.create(overnightDto({ repas_sans_pec: 4 }), N_MISSION),
+        runCreate(overnightDto({ repas_sans_pec: 4 }), N_MISSION),
       ).rejects.toThrow(BadRequestException);
       expect(db.$transaction).not.toHaveBeenCalled();
     });
 
     it('rejects a declared night count that does not match the trip', async () => {
       await expect(
-        service.create(overnightDto({ hebergement_sans_pec: 2 }), N_MISSION),
+        runCreate(overnightDto({ hebergement_sans_pec: 2 }), N_MISSION),
       ).rejects.toThrow('Le nombre de repas et hebergement non valid');
     });
 
     it('counts pec and sans_pec together against the trip', async () => {
-      await service.create(
+      await runCreate(
         overnightDto({
           repas_pec: 1,
           hebergement_pec: 1,
@@ -190,17 +207,17 @@ describe('DecompteService', () => {
         repas_sans_pec: 0,
         hebergement_sans_pec: 0,
       });
-      await service.create(dto, N_MISSION);
+      await runCreate(dto, N_MISSION);
       expect(db.$transaction).toHaveBeenCalledTimes(1);
       await expect(
-        service.create({ ...dto, repas_sans_pec: 1 }, N_MISSION),
+        runCreate({ ...dto, repas_sans_pec: 1 }, N_MISSION),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('create: montant', () => {
     it('NORD: pays every meal and night at the nord rates', async () => {
-      await service.create(overnightDto(), N_MISSION);
+      await runCreate(overnightDto(), N_MISSION);
       expect(createdData().montant).toBe(NORD_OVERNIGHT);
     });
 
@@ -209,7 +226,7 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ direction: Direction.SUD }),
       );
-      await service.create(overnightDto(), N_MISSION);
+      await runCreate(overnightDto(), N_MISSION);
       expect(createdData().montant).toBe(3 * 200 + 1 * 2000);
     });
 
@@ -217,18 +234,18 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ transport: TransportType.PERSONAL_CAR }),
       );
-      await service.create(overnightDto({ parcours: 50 }), N_MISSION);
+      await runCreate(overnightDto({ parcours: 50 }), N_MISSION);
       expect(createdData().montant).toBe(NORD_OVERNIGHT + 50 * 10);
     });
 
     it('ignores parcours when the mission does not use a personal car', async () => {
-      await service.create(overnightDto({ parcours: 50 }), N_MISSION);
+      await runCreate(overnightDto({ parcours: 50 }), N_MISSION);
       expect(createdData().montant).toBe(NORD_OVERNIGHT);
     });
 
     // Code behaviour: the doc's montant formula does not mention fees_transport.
     it('adds fees_transport on top, after any reduction', async () => {
-      await service.create(
+      await runCreate(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2, fees_transport: 30 }),
         N_MISSION,
       );
@@ -239,7 +256,7 @@ describe('DecompteService', () => {
     // ("montant * 0.25"); only the code comment says "reduce 25%". Pending a
     // business decision.
     it('NORD with any pec item: keeps 25% of the total', async () => {
-      await service.create(
+      await runCreate(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
         N_MISSION,
       );
@@ -253,7 +270,7 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ direction: Direction.SUD }),
       );
-      await service.create(
+      await runCreate(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
         N_MISSION,
       );
@@ -261,7 +278,7 @@ describe('DecompteService', () => {
     });
 
     it("uses the barème of the mission's agent, not the admin's", async () => {
-      await service.create(overnightDto(), N_MISSION);
+      await runCreate(overnightDto(), N_MISSION);
       expect(db.barem.findFirstOrThrow).toHaveBeenCalledWith({
         where: { libell: Category.CADRE },
       });
@@ -271,7 +288,7 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ user: { matricule: 1, category: null } }),
       );
-      await expect(service.create(overnightDto(), N_MISSION)).rejects.toThrow(
+      await expect(runCreate(overnightDto(), N_MISSION)).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -279,7 +296,7 @@ describe('DecompteService', () => {
 
   describe('create: persistence', () => {
     it('sets the ordre to COMPLETED and creates the décompte in one transaction', async () => {
-      const result = await service.create(overnightDto(), N_MISSION);
+      const result = await runCreate(overnightDto(), N_MISSION);
 
       expect(db.$transaction).toHaveBeenCalledTimes(1);
       expect((result as any[]).map((op) => op.op)).toEqual([
@@ -292,7 +309,7 @@ describe('DecompteService', () => {
     });
 
     it('links the decompte to the mission and the current exercice', async () => {
-      await service.create(overnightDto(), N_MISSION);
+      await runCreate(overnightDto(), N_MISSION);
       expect(createdData().mission).toEqual({
         connect: { n_mission: N_MISSION },
       });
@@ -301,12 +318,12 @@ describe('DecompteService', () => {
 
     it('omits the exercice link when there is no current exercice', async () => {
       db.exercice.findFirst.mockResolvedValue(null);
-      await service.create(overnightDto(), N_MISSION);
+      await runCreate(overnightDto(), N_MISSION);
       expect(createdData()).not.toHaveProperty('exercice');
     });
 
     it('stores parcours 0 as null and missing fees as 0', async () => {
-      await service.create(
+      await runCreate(
         overnightDto({ fees_transport: undefined }),
         N_MISSION,
       );
@@ -392,7 +409,7 @@ describe('DecompteService', () => {
     it('404s on an unknown ordre', async () => {
       db.mission.findUnique.mockResolvedValue(null);
       await expect(
-        service.create(overnightDto(), N_MISSION),
+        runCreate(overnightDto(), N_MISSION),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 
@@ -403,7 +420,7 @@ describe('DecompteService', () => {
     ])('refuses an ordre that is %s', async (_label, over) => {
       db.mission.findUnique.mockResolvedValue(mission(over));
       await expect(
-        service.create(overnightDto(), N_MISSION),
+        runCreate(overnightDto(), N_MISSION),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(db.$transaction).not.toHaveBeenCalled();
     });

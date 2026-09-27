@@ -15,6 +15,8 @@ import { MissionStatus, Prisma, User } from '@prisma/client';
 import { Response as ExpressResponse } from 'express';
 import { PdfService } from 'src/pdf/pdf.service';
 import { toOrdrePdfData } from 'src/pdf/mappers/ordre.mapper';
+import { AccessPolicy } from 'src/common/policy/access-policy';
+import { UpdateMissionDto } from './dto/update-mission.dto';
 @Injectable()
 export class MissionsService {
   private readonly logger = new Logger(MissionsService.name);
@@ -23,6 +25,7 @@ export class MissionsService {
     private readonly databaseService: DatabaseService,
     private readonly exercicesService: ExercicesService,
     private readonly pdfService: PdfService,
+    private readonly accessPolicy: AccessPolicy,
   ) {}
   private async getCurrentExerciceId(): Promise<number | null> {
     await this.exercicesService.ensureCurrentForNow();
@@ -56,14 +59,20 @@ export class MissionsService {
           `${user.nom} is not authorized to create missions for other users`,
         );
       }
-      // Optionally, ensure the target user exists
+      // Ensure the target user exists, and that an ADMIN stays inside their
+      // own structure (SUPER_ADMIN may target anyone) — ADR 0001.
       const exists = await this.databaseService.user.findUnique({
         where: { matricule: candidateMatricule },
-        select: { matricule: true },
+        select: { matricule: true, serviceId: true },
       });
       if (!exists) {
         throw new BadRequestException(
           `Target user with matricule ${candidateMatricule} not found`,
+        );
+      }
+      if (!this.accessPolicy.canActInStructure(user, exists.serviceId)) {
+        throw new ForbiddenException(
+          'Administrators may create missions only for users in their own structure.',
         );
       }
       targetMatricule = candidateMatricule;
@@ -105,7 +114,12 @@ export class MissionsService {
     });
   }
 
-  async findAll(delete_status: string, status: string, exercice?: string) {
+  async findAll(
+    actor: User,
+    delete_status: string,
+    status: string,
+    exercice?: string,
+  ) {
     let missionStatus: MissionStatus | undefined;
     if (status === 'completed') {
       missionStatus = MissionStatus.COMPLETED;
@@ -124,6 +138,8 @@ export class MissionsService {
     }
     return this.databaseService.mission.findMany({
       where: {
+        // Only the missions the caller may see (own / structure / all).
+        ...this.accessPolicy.scopeMissions(actor),
         soft_delete: delete_status === 'true',
         ...(missionStatus ? { status: missionStatus } : {}),
         ...(year ? { exercice: { year } } : {}),
@@ -158,12 +174,21 @@ export class MissionsService {
     });
   }
 
-  findOne(id: number) {
-    return this.databaseService.mission.findUnique({
+  /**
+   * A single mission, but only if it is within the caller's scope. Out-of-scope
+   * (or missing) ids return 404 so ids don't leak (ADR 0001).
+   */
+  async findOne(id: number, actor: User) {
+    const mission = await this.databaseService.mission.findFirst({
       where: {
         n_mission: id,
+        ...this.accessPolicy.scopeMissions(actor),
       },
     });
+    if (!mission) {
+      throw new NotFoundException(`Ordre de mission ${id} introuvable.`);
+    }
+    return mission;
   }
   async findByUser(
     user: User,
@@ -223,7 +248,20 @@ export class MissionsService {
     });
   }
 
-  update(id: number, updateMissionDto: Prisma.MissionUpdateInput) {
+  async update(id: number, updateMissionDto: UpdateMissionDto, actor: User) {
+    // The mission must be within the caller's scope (404 otherwise), and a
+    // validated ordre is locked (ADR 0001). A USER may not change `direction`.
+    const existing = await this.databaseService.mission.findFirst({
+      where: { n_mission: id, ...this.accessPolicy.scopeMissions(actor) },
+      select: { n_mission: true, status: true },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Ordre de mission ${id} introuvable.`);
+    }
+    this.accessPolicy.assertMissionEditable(existing.status);
+    if (actor.role === 'USER') {
+      delete (updateMissionDto as Record<string, unknown>).direction;
+    }
     // Normalize possible Prisma update inputs for date fields.
     const normalizeDateInput = (input: any): Date | null | undefined => {
       if (input === undefined) return undefined; // do not touch field
@@ -300,20 +338,18 @@ export class MissionsService {
 
   async remove(id: number, user: User) {
     try {
-      const mission = await this.databaseService.mission.findUnique({
-        where: { n_mission: id },
+      // Scope first: an ADMIN only sees their structure, a USER only their own
+      // (ADR 0001) — an out-of-scope id is a 404, not a hint that it exists.
+      const mission = await this.databaseService.mission.findFirst({
+        where: { n_mission: id, ...this.accessPolicy.scopeMissions(user) },
       });
 
       if (!mission) {
-        throw new BadRequestException(`Mission with ID ${id} not found`);
+        throw new NotFoundException(`Mission with ID ${id} not found`);
       }
 
       // Agents may only cancel their own ordres, and only before validation.
-      if (
-        user.role === 'USER' &&
-        (mission.userId !== user.matricule ||
-          mission.status === MissionStatus.COMPLETED)
-      ) {
+      if (user.role === 'USER' && mission.status === MissionStatus.COMPLETED) {
         throw new ForbiddenException('You cannot cancel this mission');
       }
 
@@ -335,7 +371,9 @@ export class MissionsService {
       throw error;
     }
   }
-  async downloadOrdre(id: number, res: ExpressResponse) {
+  async downloadOrdre(id: number, res: ExpressResponse, actor: User) {
+    // A PDF is business data: only render it for a mission in the caller's scope.
+    await this.findOne(id, actor);
     const pdf = await this.buildOrdrePdf(id);
     res.set({
       'Content-Type': 'application/pdf',
@@ -344,7 +382,10 @@ export class MissionsService {
     return res.send(pdf);
   }
 
-  /** Renders the ordre for the mission's owner, whoever requests it. */
+  /**
+   * Renders the ordre PDF. Callers must have already checked the caller's
+   * scope (see downloadOrdre / create); this only builds the document.
+   */
   private async buildOrdrePdf(n_mission: number): Promise<Buffer> {
     const mission = await this.databaseService.mission.findUnique({
       where: { n_mission },
