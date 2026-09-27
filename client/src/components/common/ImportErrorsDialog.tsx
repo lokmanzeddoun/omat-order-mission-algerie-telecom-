@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Button, Dialog } from 'components/ui';
 import type { ImportRowError } from './importFile';
 
@@ -11,6 +12,7 @@ export function ImportErrorsDialog({
   errors: ImportRowError[] | null;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const count = errors?.length ?? 0;
   return (
     <Dialog
@@ -19,7 +21,7 @@ export function ImportErrorsDialog({
       size="lg"
       title={`Import refusé — ${count} erreur${count > 1 ? 's' : ''}`}
       description="Aucune ligne n'a été importée. Corrigez le fichier puis réimportez-le."
-      footer={<Button onClick={onClose}>Fermer</Button>}
+      footer={<Button onClick={onClose}>{t('actions.close')}</Button>}
     >
       <table className="w-full border-collapse text-sm">
         <thead className="sticky -top-4 bg-surface-header">
