@@ -157,11 +157,7 @@ export class MissionsController {
 
   @Get(':id/download')
   @Auth()
-  download(
-    @Param('id') id: string,
-    @GetUser() user: User,
-    @Res() res: Response,
-  ) {
-    return this.missionsService.downloadOrdre(+id, user, res);
+  download(@Param('id') id: string, @Res() res: Response) {
+    return this.missionsService.downloadOrdre(+id, res);
   }
 }

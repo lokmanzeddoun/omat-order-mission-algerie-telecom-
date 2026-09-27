@@ -4,6 +4,7 @@ import { User } from '@prisma/client';
 import { MissionsService } from './missions.service';
 import { DatabaseService } from 'src/database/database.service';
 import { ExercicesService } from 'src/exercices/exercices.service';
+import { PdfService } from 'src/pdf/pdf.service';
 
 describe('MissionsService', () => {
   let service: MissionsService;
@@ -21,6 +22,7 @@ describe('MissionsService', () => {
         MissionsService,
         { provide: DatabaseService, useValue: db },
         { provide: ExercicesService, useValue: {} },
+        { provide: PdfService, useValue: {} },
       ],
     }).compile();
 

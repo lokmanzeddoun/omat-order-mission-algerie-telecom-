@@ -40,6 +40,17 @@ export const addOrder =
         responseType: 'blob', // Ensure Axios treats the response as a Blob (file)
       });
 
+      if (res && res.data && res.data.size === 0) {
+        // Saved, but the server could not render the PDF: don't invite a retry
+        // that would create a duplicate.
+        dispatch(setAlert({
+          msg: "Ordre de mission créé, mais le PDF n'a pas pu être généré. Téléchargez-le depuis la liste des ordres.",
+          type: AlertTypes.WARNING,
+        }));
+        await dispatch(fetchUserOrders(token));
+        return true;
+      }
+
       if (res && res.data) {
         const contentDisposition = res.headers['content-disposition'];
         const fileName = contentDisposition
