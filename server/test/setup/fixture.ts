@@ -1,5 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
+import { encrypt } from 'src/auth/crypto.util';
+
+/** The TOTP secret of every fixture ADMIN / SUPER_ADMIN (already enrolled). */
+export const ADMIN_TOTP_SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
 
 export const FIXTURE_PASSWORD = 'e2e-Password-123!';
 
@@ -33,6 +37,7 @@ export interface Fixture {
 /** Wipes the test database and seeds the fixture. */
 export async function seedFixture(prisma: PrismaClient): Promise<Fixture> {
   await prisma.$transaction([
+    prisma.session.deleteMany(),
     prisma.commentaire.deleteMany(),
     prisma.decompte.deleteMany(),
     prisma.mission.deleteMany(),
@@ -49,8 +54,12 @@ export async function seedFixture(prisma: PrismaClient): Promise<Fixture> {
   });
 
   const password = await bcrypt.hash(FIXTURE_PASSWORD, 4);
+  const mfaSecret = encrypt(process.env.MFA_ENCRYPTION_KEY, ADMIN_TOTP_SECRET);
   await prisma.user.createMany({
     data: (Object.keys(PEOPLE) as Person[]).map((who) => ({
+      ...(PEOPLE[who].role === 'USER'
+        ? {}
+        : { mfaSecret, mfaEnabledAt: new Date() }),
       matricule: PEOPLE[who].matricule,
       nom: who,
       prenom: 'E2E',

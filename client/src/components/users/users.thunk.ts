@@ -1,3 +1,4 @@
+import { endSession } from 'components/auth/auth.thunk';
 import axios from 'axios';
 import http from 'helpers/http';
 import {
@@ -231,8 +232,11 @@ export const changePassword =
         },
       });
       if (res.data) {
-        await dispatch(setAlert({ msg: 'Mot de passe modifié avec succès', type: AlertTypes.SUCCESS }));
-        dispatch(editUser(res.data));
+        // The server ends every session on a password change: sign in again.
+        dispatch(endSession());
+        await dispatch(
+          setAlert({ msg: 'Mot de passe modifié. Reconnectez-vous avec le nouveau mot de passe.', type: AlertTypes.SUCCESS }),
+        );
         return true;
       }
       dispatch(setAlert({ msg: 'Erreur lors de la modification du mot de passe', type: AlertTypes.ERROR }));

@@ -39,7 +39,7 @@ describe('Authentication (e2e)', () => {
     request(app.getHttpServer())
       .post('/auth/login')
       .send({ email: emailOf('userA'), password: 'not-the-password' })
-      .expect((res) => expect(res.status).toBeGreaterThanOrEqual(400)));
+      .expect(401));
 
   it('accepts the issued token on a protected route', async () => {
     const { auth } = await loginAs(app, 'userA');

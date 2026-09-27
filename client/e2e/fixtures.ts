@@ -1,6 +1,8 @@
 import { Page, expect } from '@playwright/test';
 
 // Seeded accounts from server/prisma/seed.ts (local development data only).
+// Run the server with AUTH_MFA_REQUIRED=false (development only): the admins'
+// TOTP second factor is covered by the server e2e suite (sessions.e2e-spec.ts).
 export const accounts = {
   superAdmin: { email: 'superadmin@algérietelecom.dz', password: 'password123', home: /dashboard\/admins$/ },
   admin: { email: 'ahmed.benali@algérietelecom.dz', password: 'password123', home: /dashboard\/admins$/ },

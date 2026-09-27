@@ -1,3 +1,8 @@
 export { ValidRoles } from './valid-roles';
-export { JwtPayload } from './jwt-payload.interface';
+export {
+  AccessPayload,
+  JwtPayload,
+  MfaPayload,
+  MfaStage,
+} from './jwt-payload.interface';
 export { LoginResponse } from './responses/login';

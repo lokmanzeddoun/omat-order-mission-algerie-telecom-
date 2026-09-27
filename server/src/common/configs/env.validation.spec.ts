@@ -7,6 +7,7 @@ const valid = {
   DATABASE_URL: 'postgresql://u:p@localhost:5432/omat',
   JWT_SECRET: SECRET_A,
   JWT_REFRESH_SECRET: SECRET_B,
+  MFA_ENCRYPTION_KEY: 'c'.repeat(32),
 };
 
 describe('validateEnv', () => {
@@ -26,8 +27,30 @@ describe('validateEnv', () => {
     ['a missing DATABASE_URL', { DATABASE_URL: undefined }, /DATABASE_URL/],
     ['an unknown NODE_ENV', { NODE_ENV: 'staging' }, /NODE_ENV/],
     ['a bad TRUST_PROXY', { TRUST_PROXY: 'yes please' }, /TRUST_PROXY/],
+    [
+      'a missing MFA_ENCRYPTION_KEY',
+      { MFA_ENCRYPTION_KEY: undefined },
+      /MFA_ENCRYPTION_KEY/,
+    ],
+    [
+      'an MFA key equal to the JWT secret',
+      { MFA_ENCRYPTION_KEY: SECRET_A },
+      /MFA_ENCRYPTION_KEY/,
+    ],
+    [
+      'MFA turned off outside development',
+      { NODE_ENV: 'test', AUTH_MFA_REQUIRED: 'false' },
+      /AUTH_MFA_REQUIRED/,
+    ],
+    ['a year-long access token', { JWT_EXPIRES_IN: '365d' }, /JWT_EXPIRES_IN/],
   ])('refuses %s', (_, override, message) => {
     expect(() => validateEnv({ ...valid, ...override })).toThrow(message);
+  });
+
+  it('lets development turn MFA off', () => {
+    expect(() =>
+      validateEnv({ ...valid, AUTH_MFA_REQUIRED: 'false' }),
+    ).not.toThrow();
   });
 
   it('requires APP_PUBLIC_URL in production', () => {

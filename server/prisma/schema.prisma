@@ -32,6 +32,40 @@ model User {
   archivedStructures Structure[] @relation("StructureArchivedBy")
   archivedMissions Mission[] @relation("MissionArchivedBy")
   archivedDecomptes Decompte[] @relation("DecompteArchivedBy")
+  // Sessions & credentials (ADR 0002)
+  sessions Session[]
+  // Access tokens issued before this instant are refused; so are sessions opened before it.
+  passwordChangedAt DateTime?
+  failedLoginCount Int @default(0)
+  lockedUntil DateTime?
+  // TOTP MFA (ADMIN / SUPER_ADMIN). Secrets are AES-256-GCM encrypted.
+  mfaSecret String?
+  mfaPendingSecret String?
+  mfaEnabledAt DateTime?
+  // Last accepted TOTP time step, so a code cannot be replayed.
+  mfaLastStep Int?
+  // sha256 hashes of the unused recovery codes.
+  mfaRecoveryCodes String[] @default([])
+}
+
+/// A refresh-token session. The cookie holds `<id>.<secret>`; only an HMAC of
+/// the secret is stored. Rotation creates a new row in the same family;
+/// presenting a rotated (or revoked) token revokes the whole family.
+model Session {
+  id String @id @default(uuid())
+  user User @relation(fields: [userMatricule], references: [matricule], onDelete: Cascade)
+  userMatricule Int
+  familyId String
+  tokenHash String
+  expiresAt DateTime
+  revokedAt DateTime?
+  rotatedAt DateTime?
+  createdAt DateTime @default(now())
+  userAgent String?
+  ip String?
+
+  @@index([userMatricule])
+  @@index([familyId])
 }
 
 model Structure {

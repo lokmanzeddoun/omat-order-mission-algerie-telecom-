@@ -360,7 +360,8 @@ export class UsersService {
     const hashedPassword = await bcrypt.hash(changePassword.password, 10);
     await this.databaseService.user.update({
       where: { matricule },
-      data: { password: hashedPassword },
+      // Every earlier access token and session stops working (ADR 0002).
+      data: { password: hashedPassword, passwordChangedAt: new Date() },
     });
     return { matricule, message: 'Password changed successfully' };
   }
@@ -382,7 +383,13 @@ export class UsersService {
     const hashed = await bcrypt.hash(newPassword, 10);
     await this.databaseService.user.update({
       where: { matricule },
-      data: { password: hashed },
+      // Ends the user's sessions and lifts a lockout (ADR 0002).
+      data: {
+        password: hashed,
+        passwordChangedAt: new Date(),
+        failedLoginCount: 0,
+        lockedUntil: null,
+      },
     });
 
     return {

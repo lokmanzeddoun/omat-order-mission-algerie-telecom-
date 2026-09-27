@@ -9,6 +9,8 @@ import { validateEnv } from './common/configs/env.validation';
 import { pinoParams } from './common/configs/logger';
 import { Logger, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { AppThrottlerGuard } from './auth/guards/app-throttler.guard';
 import { StructuresModule } from './structures/structures.module';
 import { AuthModule } from './auth/auth.module';
 import { MissionsModule } from './missions/missions.module';
@@ -32,6 +34,12 @@ import { PolicyModule } from './common/policy/policy.module';
     }),
     PolicyModule,
     PinoLoggerModule.forRoot(pinoParams()),
+    // Default: 300 requests per minute per client IP. Credential routes are
+    // stricter (see AuthController).
+    ThrottlerModule.forRoot({
+      throttlers: [{ name: 'default', ttl: 60_000, limit: 300 }],
+      errorMessage: 'Trop de requêtes, réessayez dans une minute',
+    }),
     PrismaModule.forRoot({
       isGlobal: true,
       prismaServiceOptions: {
@@ -59,6 +67,8 @@ import { PolicyModule } from './common/policy/policy.module';
   controllers: [AppController],
   providers: [
     AppService,
+    // Order matters: rate limit first, then authentication, then roles.
+    { provide: APP_GUARD, useClass: AppThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
   ],

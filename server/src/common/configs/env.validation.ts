@@ -39,6 +39,30 @@ export class EnvironmentVariables {
   JWT_REFRESH_SECRET: string;
 
   @IsOptional()
+  @Matches(/^\d+[smh]$/, {
+    message: 'JWT_EXPIRES_IN must look like 15m (seconds, minutes or hours)',
+  })
+  JWT_EXPIRES_IN?: string;
+
+  /** Key for the TOTP secrets stored in the database (AES-256-GCM). */
+  @IsString()
+  @MinLength(32, {
+    message: `MFA_ENCRYPTION_KEY must be at least 32 characters; ${SECRET_HINT}`,
+  })
+  MFA_ENCRYPTION_KEY: string;
+
+  /** ADMIN / SUPER_ADMIN must pass TOTP MFA. Only development may turn it off. */
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  AUTH_MFA_REQUIRED?: string;
+
+  /** Login / MFA attempts per minute per IP and account (default 5). */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  AUTH_RATE_LIMIT?: number;
+
+  @IsOptional()
   @IsInt()
   @Min(1)
   @Max(65535)
@@ -77,6 +101,12 @@ export function validateEnv(raw: Record<string, unknown>) {
   );
   if (env.JWT_SECRET && env.JWT_SECRET === env.JWT_REFRESH_SECRET) {
     problems.push('JWT_REFRESH_SECRET must differ from JWT_SECRET.');
+  }
+  if (env.MFA_ENCRYPTION_KEY && env.MFA_ENCRYPTION_KEY === env.JWT_SECRET) {
+    problems.push('MFA_ENCRYPTION_KEY must differ from JWT_SECRET.');
+  }
+  if (env.NODE_ENV !== 'development' && env.AUTH_MFA_REQUIRED === 'false') {
+    problems.push('AUTH_MFA_REQUIRED=false is only allowed in development.');
   }
   if (problems.length) {
     throw new Error(`Invalid environment:\n - ${problems.join('\n - ')}`);

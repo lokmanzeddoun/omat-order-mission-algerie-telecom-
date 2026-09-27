@@ -32,4 +32,8 @@ export function applyTestEnv() {
   process.env.JWT_SECRET = 'e2e-access-secret-at-least-32-bytes-long!!';
   process.env.JWT_REFRESH_SECRET = 'e2e-refresh-secret-at-least-32-bytes-long!';
   process.env.JWT_EXPIRES_IN = '15m';
+  process.env.MFA_ENCRYPTION_KEY = 'e2e-mfa-encryption-key-at-least-32-bytes!';
+  process.env.AUTH_MFA_REQUIRED = 'true';
+  // The suites log in far more often than a person would.
+  process.env.AUTH_RATE_LIMIT = '1000';
 }

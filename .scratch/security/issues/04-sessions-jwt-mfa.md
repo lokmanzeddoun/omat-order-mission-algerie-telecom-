@@ -1,6 +1,6 @@
 # 04 — Sessions, JWT hardening and admin MFA (A07, A02)
 
-Status: ready-for-agent
+Status: resolved
 Type: task
 Blocked by: 01, 02
 
@@ -57,3 +57,17 @@ See [ADR 0002](../../../docs/adr/0002-session-and-token-strategy.md).
   - An admin without MFA gets no token.
 - **Throttling:** a burst of logins → 429.
 - **Client:** after login and reload, there's no token in `localStorage` and the session is still alive (Playwright).
+
+## Comments
+
+**Resolved (security/04-sessions).** What differs from the plan:
+
+- **Refresh tokens are opaque,** stored as an HMAC keyed with `JWT_REFRESH_SECRET`, instead of JWTs.
+- **INACTIVE users are not refused.** `INACTIVE` means "never signed in", and the first sign-in activates the account. Archived users are refused at login, at refresh, and on every request.
+- **Revocation:** a password change or reset stamps `passwordChangedAt`. That kills older access tokens (`iat`) and sessions (`createdAt`), so `users.service` needs no dependency on `SessionsService`.
+- **Environment:** `MFA_ENCRYPTION_KEY` is new and required. `AUTH_MFA_REQUIRED=false` is allowed in development only. `AUTH_RATE_LIMIT` defaults to 5.
+- **Node:** the client test stack (jsdom) needs Node ≥ 20.19. `.nvmrc` is now 24.
+- **Tests:**
+  - `test/sessions.e2e-spec.ts`: token attacks (none/other secret/expired/aud/iss/typ/refresh secret/forged role), MFA token as access, archived user, lockout, throttling, cookie flags, rotation, reuse → family revoked, logout, password change, Origin, MFA verify/replay/enroll/recovery/reset.
+  - `client/src/helpers/http.test.ts`: single-flight refresh.
+  - `client/e2e/session.spec.ts`: no token in storage (Playwright, needs the running stack).
