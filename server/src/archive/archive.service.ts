@@ -2,47 +2,31 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp, restoreStamp } from './archive-stamp';
+import { BulkResult, partitionIds } from 'src/common/bulk';
 
 const ARCHIVED_BY = {
   select: { matricule: true, nom: true, prenom: true },
 } as const;
 
-export type BulkSkipReason =
-  | 'not_found'
-  | 'already_archived'
-  | 'not_archived'
-  | 'self';
-
-export interface BulkResult<K> {
-  done: K[];
-  skipped: { id: K; reason: BulkSkipReason }[];
-}
+export type BulkSkipReason = 'already_archived' | 'not_archived' | 'self';
 
 /**
- * Splits requested ids into the ones to update and the ones to skip.
- * `archived` maps each existing id to its current soft_delete state.
+ * Archive/restore flavour of partitionIds: `archived` maps each existing id
+ * to its current soft_delete state.
  */
 export function partitionBulk<K>(
   ids: K[],
   archived: Map<K, boolean>,
   archive: boolean,
   extraRule?: (id: K) => BulkSkipReason | null,
-): BulkResult<K> {
-  const result: BulkResult<K> = { done: [], skipped: [] };
-  for (const id of new Set(ids)) {
-    const state = archived.get(id);
-    const reason: BulkSkipReason | null =
-      state === undefined
-        ? 'not_found'
-        : state === archive
-          ? archive
-            ? 'already_archived'
-            : 'not_archived'
-          : (extraRule?.(id) ?? null);
-    if (reason) result.skipped.push({ id, reason });
-    else result.done.push(id);
-  }
-  return result;
+): BulkResult<K, BulkSkipReason> {
+  return partitionIds(ids, archived, (state, id) =>
+    state === archive
+      ? archive
+        ? 'already_archived'
+        : 'not_archived'
+      : (extraRule?.(id) ?? null),
+  );
 }
 
 type Tx = Prisma.TransactionClient;
@@ -211,7 +195,7 @@ export class ArchiveService {
     update: (tx: Tx, done: K[], data: object) => Promise<unknown>,
     actorId: number,
     extraRule?: (id: K) => BulkSkipReason | null,
-  ): Promise<BulkResult<K>> {
+  ): Promise<BulkResult<K, BulkSkipReason>> {
     return this.db.$transaction(async (tx) => {
       const result = partitionBulk(
         ids,
