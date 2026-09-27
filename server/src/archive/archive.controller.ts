@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { ArchiveService } from './archive.service';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
@@ -9,6 +18,35 @@ export class ArchiveController {
   constructor(private readonly archive: ArchiveService) {}
 
   // Bulk routes are declared first so 'bulk' is never read as an :id.
+
+  // Permanent delete: SUPER_ADMIN only, archived rows only.
+  @Post('missions/bulk-delete')
+  @HttpCode(200)
+  @Auth('SUPER_ADMIN')
+  deleteMissions(@Body() body: BulkIdsDto) {
+    return this.archive.bulkDeleteMissions(body.ids);
+  }
+
+  @Post('decomptes/bulk-delete')
+  @HttpCode(200)
+  @Auth('SUPER_ADMIN')
+  deleteDecomptes(@Body() body: BulkIdsDto) {
+    return this.archive.bulkDeleteDecomptes(body.ids);
+  }
+
+  @Post('users/bulk-delete')
+  @HttpCode(200)
+  @Auth('SUPER_ADMIN')
+  deleteUsers(@Body() body: BulkIdsDto, @GetUser('matricule') actorId: number) {
+    return this.archive.bulkDeleteUsers(body.ids, actorId);
+  }
+
+  @Post('structures/bulk-delete')
+  @HttpCode(200)
+  @Auth('SUPER_ADMIN')
+  deleteStructures(@Body() body: BulkCodesDto) {
+    return this.archive.bulkDeleteStructures(body.ids);
+  }
 
   @Patch('missions/bulk')
   @Auth('ADMIN', 'SUPER_ADMIN')

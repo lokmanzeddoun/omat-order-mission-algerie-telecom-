@@ -282,4 +282,108 @@ export class ArchiveService {
       actorId,
     );
   }
+
+  // ---- Permanent delete ------------------------------------------------
+  // Only rows already in the archive can go, and never rows other data
+  // still points at (those FKs are RESTRICT): they come back as skipped.
+
+  bulkDeleteMissions(ids: number[]) {
+    return this.db.$transaction(async (tx) => {
+      const rows = await tx.mission.findMany({
+        where: { n_mission: { in: ids } },
+        select: {
+          n_mission: true,
+          soft_delete: true,
+          _count: { select: { decompte: true } },
+        },
+      });
+      const result = partitionIds(
+        ids,
+        new Map(rows.map((r) => [r.n_mission, r])),
+        (r) =>
+          !r.soft_delete
+            ? 'not_archived'
+            : r._count.decompte > 0
+              ? 'has_decomptes'
+              : null,
+      );
+      if (result.done.length)
+        await tx.mission.deleteMany({
+          where: { n_mission: { in: result.done } },
+        });
+      return result;
+    });
+  }
+
+  bulkDeleteDecomptes(ids: number[]) {
+    return this.db.$transaction(async (tx) => {
+      const rows = await tx.decompte.findMany({
+        where: { n_decompte: { in: ids } },
+        select: { n_decompte: true, soft_delete: true },
+      });
+      // Comments on a deleted décompte are kept (decompteId becomes null).
+      const result = partitionIds(
+        ids,
+        new Map(rows.map((r) => [r.n_decompte, r])),
+        (r) => (!r.soft_delete ? 'not_archived' : null),
+      );
+      if (result.done.length)
+        await tx.decompte.deleteMany({
+          where: { n_decompte: { in: result.done } },
+        });
+      return result;
+    });
+  }
+
+  bulkDeleteUsers(ids: number[], actorId: number) {
+    return this.db.$transaction(async (tx) => {
+      const rows = await tx.user.findMany({
+        where: { matricule: { in: ids } },
+        select: {
+          matricule: true,
+          soft_delete: true,
+          _count: { select: { missions: true, messages: true } },
+        },
+      });
+      const result = partitionIds(
+        ids,
+        new Map(rows.map((r) => [r.matricule, r])),
+        (r, id) =>
+          id === actorId
+            ? 'self'
+            : !r.soft_delete
+              ? 'not_archived'
+              : r._count.missions > 0
+                ? 'has_missions'
+                : r._count.messages > 0
+                  ? 'has_comments'
+                  : null,
+      );
+      if (result.done.length)
+        await tx.user.deleteMany({
+          where: { matricule: { in: result.done } },
+        });
+      return result;
+    });
+  }
+
+  bulkDeleteStructures(codes: string[]) {
+    return this.db.$transaction(async (tx) => {
+      const rows = await tx.structure.findMany({
+        where: { code: { in: codes } },
+        select: { code: true, soft_delete: true },
+      });
+      // Users of a deleted service simply lose their service (SET NULL).
+      const result = partitionIds(
+        codes,
+        new Map(rows.map((r) => [r.code, r])),
+        (r) => (!r.soft_delete ? 'not_archived' : null),
+      );
+      if (result.done.length)
+        await tx.structure.deleteMany({
+          where: { code: { in: result.done } },
+        });
+      return result;
+    });
+  }
 }

@@ -11,6 +11,7 @@ describe('ArchiveController (HTTP)', () => {
     bulkMissions: jest.fn().mockResolvedValue({ done: [], skipped: [] }),
     bulkStructures: jest.fn().mockResolvedValue({ done: [], skipped: [] }),
     moveMissionToArchive: jest.fn().mockResolvedValue({}),
+    bulkDeleteUsers: jest.fn().mockResolvedValue({ done: [], skipped: [] }),
   };
 
   beforeAll(async () => {
@@ -64,5 +65,24 @@ describe('ArchiveController (HTTP)', () => {
     ],
   ])('rejects %s', async (_label, body) => {
     await patch('/archive/missions/bulk').send(body).expect(400);
+  });
+
+  describe('permanent delete', () => {
+    const post = (url: string, role: string) =>
+      request(app.getHttpServer()).post(url).set('x-role', role);
+
+    it('is reserved to SUPER_ADMIN', async () => {
+      await post('/archive/users/bulk-delete', 'ADMIN')
+        .send({ ids: [1] })
+        .expect(403);
+      expect(archive.bulkDeleteUsers).not.toHaveBeenCalled();
+    });
+
+    it('passes the acting admin so they cannot delete themselves', async () => {
+      await post('/archive/users/bulk-delete', 'SUPER_ADMIN')
+        .send({ ids: [1] })
+        .expect(200);
+      expect(archive.bulkDeleteUsers).toHaveBeenCalledWith([1], 42);
+    });
   });
 });

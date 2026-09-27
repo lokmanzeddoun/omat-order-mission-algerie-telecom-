@@ -44,7 +44,11 @@ describe('partitionBulk', () => {
 
 describe('ArchiveService bulk', () => {
   let service: ArchiveService;
-  const model = () => ({ findMany: jest.fn(), updateMany: jest.fn() });
+  const model = () => ({
+    findMany: jest.fn(),
+    updateMany: jest.fn(),
+    deleteMany: jest.fn(),
+  });
   const db = {
     mission: model(),
     decompte: model(),
@@ -119,5 +123,69 @@ describe('ArchiveService bulk', () => {
 
     expect(result.done).toEqual([]);
     expect(db.structure.updateMany).not.toHaveBeenCalled();
+  });
+
+  describe('permanent delete', () => {
+    it('deletes archived ordres without décomptes, skips the rest', async () => {
+      db.mission.findMany.mockResolvedValue([
+        { n_mission: 1, soft_delete: true, _count: { decompte: 0 } },
+        { n_mission: 2, soft_delete: false, _count: { decompte: 0 } },
+        { n_mission: 3, soft_delete: true, _count: { decompte: 2 } },
+      ]);
+
+      const result = await service.bulkDeleteMissions([1, 2, 3, 4]);
+
+      expect(result).toEqual({
+        done: [1],
+        skipped: [
+          { id: 2, reason: 'not_archived' },
+          { id: 3, reason: 'has_decomptes' },
+          { id: 4, reason: 'not_found' },
+        ],
+      });
+      expect(db.mission.deleteMany).toHaveBeenCalledWith({
+        where: { n_mission: { in: [1] } },
+      });
+    });
+
+    it('never deletes a user with history, nor the acting admin', async () => {
+      const user = (matricule: number, missions = 0, messages = 0) => ({
+        matricule,
+        soft_delete: true,
+        _count: { missions, messages },
+      });
+      db.user.findMany.mockResolvedValue([
+        user(42),
+        user(1, 3),
+        user(2, 0, 1),
+        user(3),
+      ]);
+
+      const result = await service.bulkDeleteUsers([42, 1, 2, 3], 42);
+
+      expect(result).toEqual({
+        done: [3],
+        skipped: [
+          { id: 42, reason: 'self' },
+          { id: 1, reason: 'has_missions' },
+          { id: 2, reason: 'has_comments' },
+        ],
+      });
+    });
+
+    it('deletes archived décomptes and services only', async () => {
+      db.decompte.findMany.mockResolvedValue([
+        { n_decompte: 1, soft_delete: true },
+        { n_decompte: 2, soft_delete: false },
+      ]);
+      expect((await service.bulkDeleteDecomptes([1, 2])).done).toEqual([1]);
+
+      db.structure.findMany.mockResolvedValue([
+        { code: 'DRH', soft_delete: false },
+      ]);
+      const result = await service.bulkDeleteStructures(['DRH']);
+      expect(result.skipped).toEqual([{ id: 'DRH', reason: 'not_archived' }]);
+      expect(db.structure.deleteMany).not.toHaveBeenCalled();
+    });
   });
 });
