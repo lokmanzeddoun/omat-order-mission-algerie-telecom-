@@ -15,18 +15,17 @@ export class RolesGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
-    const roles: string[] = this.reflector.get(
-      META_ROLES,
+    const roles: string[] = this.reflector.getAllAndOverride(META_ROLES, [
       context.getHandler(),
-    );
+      context.getClass(),
+    ]);
     if (!roles || !roles.length) {
       return true;
     }
     const request = context.switchToHttp().getRequest();
     const user = request.user as User;
-    if (roles.includes(user.role)) return true;
-    throw new ForbiddenException(
-      `${user.nom} is not authorized for this resource.`,
-    );
+    if (user && roles.includes(user.role)) return true;
+    if (!user) throw new ForbiddenException('Authenticated user required.');
+    throw new ForbiddenException('You are not authorized for this resource.');
   }
 }

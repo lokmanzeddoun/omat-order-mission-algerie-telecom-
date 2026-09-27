@@ -1,10 +1,11 @@
 import {
   BadRequestException,
-  Body,
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
-import { Category, Prisma, Role } from '@prisma/client';
+import { Category, Prisma, Role, User } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp } from 'src/archive/archive-stamp';
 import { createUserDto } from './dtos/create-user.dto';
@@ -14,11 +15,37 @@ import * as bcrypt from 'bcryptjs';
 import { ImportExcel } from './dtos/import-Excel.dto';
 import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { Response } from 'express';
+import { MAX_IMPORT_ROWS } from 'src/utils/upload';
+import { UpdateUserDto } from './dtos/update-user.dto';
+
+const SAFE_USER_SELECT = {
+  matricule: true,
+  email: true,
+  nom: true,
+  prenom: true,
+  role: true,
+  category: true,
+  userSince: true,
+  grade: true,
+  status: true,
+  serviceId: true,
+  structure: { select: { code: true, name: true } },
+} as const;
 
 @Injectable()
 export class UsersService {
   constructor(private readonly databaseService: DatabaseService) {}
-  async create(createUserDto: createUserDto) {
+  async create(createUserDto: createUserDto, actor: User) {
+    if (
+      actor.role === Role.ADMIN &&
+      (!actor.serviceId ||
+        (createUserDto.serviceId && createUserDto.serviceId !== actor.serviceId) ||
+        createUserDto.role !== Role.USER)
+    ) {
+      throw new ForbiddenException(
+        'Administrators may create only regular users in their own structure.',
+      );
+    }
     let userSince: Date;
     // check if the user exist
     const user = await this.databaseService.user.findUnique({
@@ -43,9 +70,13 @@ export class UsersService {
       return await this.databaseService.user.create({
         data: {
           ...createUserDto,
+          role: actor.role === Role.ADMIN ? Role.USER : createUserDto.role,
+          serviceId:
+            actor.role === Role.ADMIN ? actor.serviceId : createUserDto.serviceId,
           password: hashedPassword,
           userSince: userSince ?? undefined, // Will be set only if userSince is defined
         },
+        select: SAFE_USER_SELECT,
       });
     } catch (error) {
       // Check if the error is from Prisma and specifically a unique constraint violation
@@ -60,10 +91,11 @@ export class UsersService {
     }
   }
 
-  findAll() {
+  findAll(actor: User) {
     return this.databaseService.user.findMany({
       where: {
         soft_delete: false,
+        ...this.userScope(actor),
       },
       orderBy: [
         {
@@ -90,23 +122,28 @@ export class UsersService {
     });
   }
 
-  findOne(matricule: number) {
-    return this.databaseService.user.findUnique({
+  async findOne(matricule: number, actor: User) {
+    const user = await this.databaseService.user.findFirst({
       where: {
         matricule,
+        ...this.userScope(actor),
       },
-      include: {
-        structure: true,
-      },
+      select: SAFE_USER_SELECT,
     });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
   }
 
-  async findUsersInService(matricule: number) {
+  async findUsersInService(matricule: number, actor: User) {
     const user = await this.databaseService.user.findUnique({
       where: {
         matricule,
       },
     });
+    if (!user) throw new NotFoundException('User not found');
+    if (!this.canAccessUser(actor, user)) {
+      throw new ForbiddenException('You cannot access users in another structure.');
+    }
     if (!user.serviceId) {
       throw new BadRequestException(
         "cette Utilisateur n'est pas attache a un service",
@@ -137,63 +174,127 @@ export class UsersService {
     });
   }
 
-  async update(
-    matricule: number,
-    @Body() updateUserDto: Prisma.UserUpdateInput,
-  ) {
-    // Prevent changing immutable identifiers
+  async update(matricule: number, updateUserDto: UpdateUserDto, actor: User) {
+    const existing = await this.databaseService.user.findUnique({
+      where: { matricule },
+      select: { matricule: true, role: true, serviceId: true },
+    });
+    if (!existing) throw new NotFoundException('User not found');
     if (
-      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'matricule') &&
-      (updateUserDto as any).matricule !== undefined &&
-      (updateUserDto as any).matricule !== matricule
+      updateUserDto.matricule !== undefined &&
+      updateUserDto.matricule !== matricule
     ) {
       throw new BadRequestException("You can't modify user's matricule");
+    }
+    if (!this.canAccessUser(actor, existing)) {
+      throw new ForbiddenException('You cannot update a user in another structure.');
+    }
+    if (
+      actor.role === Role.ADMIN &&
+      updateUserDto.role !== undefined &&
+      updateUserDto.role !== existing.role
+    ) {
+      throw new ForbiddenException('Only super administrators may change roles.');
+    }
+    if (
+      actor.role === Role.ADMIN &&
+      updateUserDto.serviceId !== undefined &&
+      updateUserDto.serviceId !== actor.serviceId
+    ) {
+      throw new ForbiddenException(
+        'Administrators cannot move users to another structure.',
+      );
     }
 
     // Validate serviceId if it's being updated
     if (
-      Object.prototype.hasOwnProperty.call(updateUserDto as any, 'serviceId') &&
-      (updateUserDto as any).serviceId !== undefined &&
-      (updateUserDto as any).serviceId !== null
+      updateUserDto.serviceId !== undefined && updateUserDto.serviceId !== null
     ) {
       const structureExists = await this.databaseService.structure.findUnique({
-        where: { code: (updateUserDto as any).serviceId },
+        where: { code: updateUserDto.serviceId },
       });
 
       if (!structureExists) {
         throw new BadRequestException(
-          `Structure with code '${(updateUserDto as any).serviceId}' does not exist`,
+          `Structure with code '${updateUserDto.serviceId}' does not exist`,
         );
       }
     }
 
-    const data = { ...(updateUserDto as any) };
-    delete (data as any).matricule;
-    delete (data as any).structure; // Remove relation field, only serviceId should be updated
-    delete (data as any).id; // Remove any client-side ID fields
-    delete (data as any).service; // Remove computed service field if present
+    const data: Prisma.UserUpdateInput = {
+      ...(updateUserDto.nom !== undefined && { nom: updateUserDto.nom }),
+      ...(updateUserDto.prenom !== undefined && { prenom: updateUserDto.prenom }),
+      ...(updateUserDto.email !== undefined && { email: updateUserDto.email }),
+      ...(updateUserDto.grade !== undefined && { grade: updateUserDto.grade }),
+      ...(updateUserDto.category !== undefined && {
+        category: updateUserDto.category,
+      }),
+      ...(updateUserDto.role !== undefined && { role: updateUserDto.role }),
+      ...(updateUserDto.serviceId !== undefined && {
+        structure: updateUserDto.serviceId
+          ? { connect: { code: updateUserDto.serviceId } }
+          : { disconnect: true },
+      }),
+    };
 
     return this.databaseService.user.update({
       where: { matricule },
       data,
+      select: SAFE_USER_SELECT,
     });
   }
 
-  archive(matricule: number, actorId: number) {
-    if (matricule === actorId)
+  archive(matricule: number, actor: User) {
+    if (matricule === actor.matricule)
       throw new BadRequestException('You cannot archive yourself');
+    return this.assertAndArchive(matricule, actor);
+  }
+
+  private async assertAndArchive(matricule: number, actor: User) {
+    const target = await this.databaseService.user.findUnique({
+      where: { matricule },
+      select: { matricule: true, serviceId: true },
+    });
+    if (!target) throw new NotFoundException('User not found');
+    if (!this.canAccessUser(actor, target)) {
+      throw new ForbiddenException('You cannot archive a user in another structure.');
+    }
     return this.databaseService.user.update({
       where: {
         matricule,
       },
-      data: archiveStamp(actorId),
+      data: archiveStamp(actor.matricule),
+      select: SAFE_USER_SELECT,
     });
+  }
+
+  private userScope(actor: User): Prisma.UserWhereInput {
+    if (actor.role === Role.SUPER_ADMIN) return {};
+    if (actor.role === Role.ADMIN) {
+      return { serviceId: actor.serviceId ?? '__NO_ASSIGNED_STRUCTURE__' };
+    }
+    return { matricule: actor.matricule };
+  }
+
+  private canAccessUser(
+    actor: User,
+    target: Pick<User, 'matricule' | 'serviceId'>,
+  ) {
+    if (actor.role === Role.SUPER_ADMIN) return true;
+    if (actor.role === Role.ADMIN) {
+      return Boolean(actor.serviceId && actor.serviceId === target.serviceId);
+    }
+    return actor.matricule === target.matricule;
   }
   async uploadUsers(file: ImportExcel) {
     try {
       const wb: WorkBook = xlsx.read(file.buffer, { type: 'buffer' });
       const sheet: WorkSheet = wb.Sheets[wb.SheetNames[0]];
+      if (!sheet?.['!ref']) throw new BadRequestException('Spreadsheet is empty.');
       const range = xlsx.utils.decode_range(sheet['!ref']);
+      if (range.e.r - range.s.r > MAX_IMPORT_ROWS) {
+        throw new BadRequestException('Spreadsheet row limit exceeded.');
+      }
       for (let R = range.s.r; R <= range.e.r; ++R) {
         if (R === 0 || !sheet[xlsx.utils.encode_cell({ c: 0, r: R })]) {
           continue;
@@ -257,18 +358,25 @@ export class UsersService {
     }
 
     const hashedPassword = await bcrypt.hash(changePassword.password, 10);
-    return this.databaseService.user.update({
+    await this.databaseService.user.update({
       where: { matricule },
       data: { password: hashedPassword },
     });
+    return { matricule, message: 'Password changed successfully' };
   }
 
   // Admin reset password: accept a custom password from admin
-  async resetPassword(matricule: number, newPassword: string) {
+  async resetPassword(matricule: number, newPassword: string, actor: User) {
     const user = await this.databaseService.user.findUnique({
       where: { matricule },
+      select: { matricule: true, serviceId: true },
     });
     if (!user) throw new BadRequestException('User not found');
+    if (!this.canAccessUser(actor, user)) {
+      throw new ForbiddenException(
+        'You cannot reset a password in another structure.',
+      );
+    }
 
     // Hash the new password provided by admin
     const hashed = await bcrypt.hash(newPassword, 10);
@@ -284,12 +392,13 @@ export class UsersService {
     };
   }
 
-  async exportUsers(res: Response) {
+  async exportUsers(res: Response, actor: User) {
     try {
       // Fetch all users from database (server-side, not client-side)
       const users = await this.databaseService.user.findMany({
         where: {
           soft_delete: false,
+          ...this.userScope(actor),
         },
         include: {
           structure: {

@@ -17,6 +17,7 @@ export class BaremController {
   constructor(private readonly baremService: BaremService) {}
 
   @Post()
+  @Auth('ADMIN', 'SUPER_ADMIN')
   create(@Body() createBaremDto: Prisma.BaremCreateInput) {
     return this.baremService.create(createBaremDto);
   }
@@ -30,6 +31,7 @@ export class BaremController {
   }
 
   @Patch(':id')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   update(
     @Param('id') id: string,
     @Body() updateBaremDto: Prisma.BaremUpdateInput,
@@ -38,6 +40,7 @@ export class BaremController {
   }
 
   @Delete(':id')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   remove(@Param('id') id: string) {
     return this.baremService.remove(+id);
   }

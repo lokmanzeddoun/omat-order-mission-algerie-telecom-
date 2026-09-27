@@ -14,8 +14,10 @@ import { LoginResponse } from './interfaces';
 import { Auth } from './guards/auth-role.guard';
 import { GetUser } from './decorators/getUser.decorator';
 import { User } from '@prisma/client';
+import { Public } from './guards/public.decorator';
 
 @Controller('auth')
+@Public()
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

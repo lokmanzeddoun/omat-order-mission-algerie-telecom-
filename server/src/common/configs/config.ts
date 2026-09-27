@@ -6,9 +6,13 @@ const config: Config = {
   },
   cors: {
     enabled: true,
+    origins: (process.env.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((origin) => origin.trim())
+      .filter(Boolean),
   },
   swagger: {
-    enabled: true,
+    enabled: process.env.NODE_ENV !== 'production',
     title: 'OMAT API',
     description: 'The OMAT API For Order Mission',
     version: '1.0',

@@ -12,7 +12,7 @@ import {
   Res,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { Prisma } from '@prisma/client';
+import { User as AuthenticatedUser } from '@prisma/client';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { createUserDto } from './dtos/create-user.dto';
 import { User } from './entities/user.entity';
@@ -24,6 +24,7 @@ import { ChangePasswordDto } from './dtos/changePassword.dto';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { Response } from 'express';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { UpdateUserDto } from './dtos/update-user.dto';
 
 @ApiTags('User')
 @Controller('users')
@@ -39,12 +40,17 @@ export class UsersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'Server error' })
   @Post()
-  create(@Body() createUserDto: createUserDto) {
-    return this.usersService.create(createUserDto);
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  create(
+    @Body() createUserDto: createUserDto,
+    @GetUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.create(createUserDto, actor);
   }
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @Auth('SUPER_ADMIN')
+  @UseInterceptors(FileInterceptor('file', multerOptions))
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new HttpException(
@@ -57,10 +63,11 @@ export class UsersController {
       buffer: file.buffer, // Store the file buffer to process the Excel file
     };
     // file is the uploaded file
-    this.usersService.uploadUsers(file);
+    return this.usersService.uploadUsers(importUsers);
   }
 
   @Get('export')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @ApiOperation({
     summary: 'EXPORT USERS TO EXCEL',
     description: 'Export all users from database to Excel file',
@@ -69,30 +76,44 @@ export class UsersController {
     status: 200,
     description: 'Excel file downloaded successfully',
   })
-  async exportUsers(@Res() res: Response) {
-    return this.usersService.exportUsers(res);
+  async exportUsers(
+    @Res() res: Response,
+    @GetUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.exportUsers(res, actor);
   }
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  findAll(@GetUser() actor: AuthenticatedUser) {
+    return this.usersService.findAll(actor);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+  @Auth()
+  findOne(
+    @Param('id') id: string,
+    @GetUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.findOne(+id, actor);
   }
   @Get(':id/service')
-  findUserService(@Param('id') id: string) {
-    return this.usersService.findUsersInService(+id);
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  findUserService(
+    @Param('id') id: string,
+    @GetUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.findUsersInService(+id, actor);
   }
 
   @Patch(':id')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   update(
     @Param('id') id: string,
-    @Body() updateUserDto: Prisma.UserCreateInput,
+    @Body() updateUserDto: UpdateUserDto,
+    @GetUser() actor: AuthenticatedUser,
   ) {
-    return this.usersService.update(+id, updateUserDto);
+    return this.usersService.update(+id, updateUserDto, actor);
   }
 
   @Patch(':id/archive')
@@ -103,8 +124,11 @@ export class UsersController {
   })
   @ApiResponse({ status: 200, description: 'User archived successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  archive(@Param('id') id: string, @GetUser('matricule') actorId: number) {
-    return this.usersService.archive(+id, actorId);
+  archive(
+    @Param('id') id: string,
+    @GetUser() actor: AuthenticatedUser,
+  ) {
+    return this.usersService.archive(+id, actor);
   }
   // Admin-only endpoint to reset a user's password
   @Auth('ADMIN', 'SUPER_ADMIN')
@@ -119,8 +143,13 @@ export class UsersController {
   async resetPassword(
     @Param('id') id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
+    @GetUser() actor: AuthenticatedUser,
   ) {
-    return this.usersService.resetPassword(+id, resetPasswordDto.newPassword);
+    return this.usersService.resetPassword(
+      +id,
+      resetPasswordDto.newPassword,
+      actor,
+    );
   }
   @Auth()
   @Post('/changePassword')

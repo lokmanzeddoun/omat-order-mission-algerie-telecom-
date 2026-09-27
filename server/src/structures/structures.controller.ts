@@ -17,7 +17,7 @@ import { UpdateStructureDto } from './dto/update-structure.dto';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Structure } from './entities/structure.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { SUPPORTED_FILES } from 'src/utils/upload';
+import { multerOptions, SUPPORTED_FILES } from 'src/utils/upload';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
@@ -34,6 +34,7 @@ export class StructuresController {
   @ApiResponse({ status: 201, description: 'Created', type: Structure })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @Post()
+  @Auth('SUPER_ADMIN')
   create(@Body() createStructureDto: CreateStructureDto) {
     return this.structuresService.create(createStructureDto);
   }
@@ -44,6 +45,7 @@ export class StructuresController {
   }
 
   @Get('export')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @ApiOperation({
     summary: 'EXPORT STRUCTURES TO EXCEL',
     description: 'Export all structures from database to Excel file',
@@ -62,6 +64,7 @@ export class StructuresController {
   }
 
   @Patch(':id')
+  @Auth('SUPER_ADMIN')
   update(
     @Param('id') id: string,
     @Body() updateStructureDto: UpdateStructureDto,
@@ -82,7 +85,8 @@ export class StructuresController {
   }
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @Auth('SUPER_ADMIN')
+  @UseInterceptors(FileInterceptor('file', multerOptions))
   async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new HttpException(
@@ -95,6 +99,6 @@ export class StructuresController {
       buffer: file.buffer, // Store the file buffer to process the Excel file
     };
     // file is the uploaded file
-    this.structuresService.uploadStructure(importStructure);
+    return this.structuresService.uploadStructure(importStructure);
   }
 }

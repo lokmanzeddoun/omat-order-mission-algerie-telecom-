@@ -11,6 +11,7 @@ import * as xlsx from 'xlsx';
 import { WorkBook, WorkSheet } from 'xlsx';
 import { ImportExcel } from 'src/users/dtos/import-Excel.dto';
 import { Response } from 'express';
+import { MAX_IMPORT_ROWS } from 'src/utils/upload';
 
 @Injectable()
 export class StructuresService {
@@ -67,7 +68,11 @@ export class StructuresService {
     try {
       const wb: WorkBook = xlsx.read(file.buffer, { type: 'buffer' });
       const sheet: WorkSheet = wb.Sheets[wb.SheetNames[0]];
+      if (!sheet?.['!ref']) throw new BadRequestException('Spreadsheet is empty.');
       const range = xlsx.utils.decode_range(sheet['!ref']);
+      if (range.e.r - range.s.r > MAX_IMPORT_ROWS) {
+        throw new BadRequestException('Spreadsheet row limit exceeded.');
+      }
       for (let R = range.s.r; R <= range.e.r; ++R) {
         if (R === 0 || !sheet[xlsx.utils.encode_cell({ c: 0, r: R })]) {
           continue;
