@@ -3,6 +3,8 @@ import { ContextMenu as RadixContextMenu, DropdownMenu as RadixDropdown } from '
 import { cn } from 'lib/utils';
 
 export interface MenuAction {
+  /** Stable identifier, so callers can find an action without depending on its (translated) label. */
+  id?: string;
   label: string;
   icon?: ReactNode;
   onSelect: () => void;
@@ -29,7 +31,7 @@ export function DropdownMenu({ trigger, actions, align = 'end' }: { trigger: Rea
       <RadixDropdown.Portal>
         <RadixDropdown.Content align={align} sideOffset={4} className={contentClass}>
           {visible.map((a) => (
-            <RadixDropdown.Item key={a.label} className={itemClass(a.tone)} disabled={a.disabled} onSelect={a.onSelect}>
+            <RadixDropdown.Item key={a.id ?? a.label} className={itemClass(a.tone)} disabled={a.disabled} onSelect={a.onSelect}>
               {a.icon}
               {a.label}
             </RadixDropdown.Item>
@@ -50,7 +52,7 @@ export function ContextMenu({ children, actions }: { children: ReactNode; action
       <RadixContextMenu.Portal>
         <RadixContextMenu.Content className={contentClass}>
           {visible.map((a) => (
-            <RadixContextMenu.Item key={a.label} className={itemClass(a.tone)} disabled={a.disabled} onSelect={a.onSelect}>
+            <RadixContextMenu.Item key={a.id ?? a.label} className={itemClass(a.tone)} disabled={a.disabled} onSelect={a.onSelect}>
               {a.icon}
               {a.label}
             </RadixContextMenu.Item>

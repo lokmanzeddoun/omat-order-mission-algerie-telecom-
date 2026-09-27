@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { RootState } from 'store/rootReducer';
@@ -12,28 +14,29 @@ import type { IMission } from './orderReducer';
 export type MissionFormMode = 'create' | 'edit' | 'view';
 
 // Mirrors the server's CreateMissionDto so errors are caught before submitting.
-const schema = z
-  .object({
-    date_sortie: z.string().min(1, 'La date de départ est obligatoire.'),
-    heure_sortie: z.string(),
-    date_retour: z.string(),
-    heure_retour: z.string(),
-    motif: z.string().trim().min(1, 'Le motif est obligatoire.'),
-    destination: z.string().trim().min(2, 'La destination doit contenir au moins 2 caractères.'),
-    transport: z.string().min(1, 'Choisissez un moyen de transport.'),
-    direction: z.string().min(1),
-  })
-  .refine(
-    (v) => {
-      if (!v.date_retour) return true;
-      const start = dayjs(`${v.date_sortie}T${v.heure_sortie || '00:00'}`);
-      const end = dayjs(`${v.date_retour}T${v.heure_retour || '00:00'}`);
-      return !end.isBefore(start);
-    },
-    { path: ['date_retour'], message: 'Le retour doit être postérieur au départ.' },
-  );
+const schemaFor = (t: TFunction) =>
+  z
+    .object({
+      date_sortie: z.string().min(1, t('ordres:form.errors.departureRequired')),
+      heure_sortie: z.string(),
+      date_retour: z.string(),
+      heure_retour: z.string(),
+      motif: z.string().trim().min(1, t('ordres:form.errors.motifRequired')),
+      destination: z.string().trim().min(2, t('ordres:form.errors.destinationMin')),
+      transport: z.string().min(1, t('ordres:form.errors.transportRequired')),
+      direction: z.string().min(1),
+    })
+    .refine(
+      (v) => {
+        if (!v.date_retour) return true;
+        const start = dayjs(`${v.date_sortie}T${v.heure_sortie || '00:00'}`);
+        const end = dayjs(`${v.date_retour}T${v.heure_retour || '00:00'}`);
+        return !end.isBefore(start);
+      },
+      { path: ['date_retour'], message: t('ordres:form.errors.returnAfterDeparture') },
+    );
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = z.infer<ReturnType<typeof schemaFor>>;
 
 const EMPTY: FormValues = {
   date_sortie: '',
@@ -57,11 +60,6 @@ const toForm = (m: IMission): FormValues => ({
   direction: m.direction ?? 'NORD',
 });
 
-const titles: Record<MissionFormMode, string> = {
-  create: 'Nouvel ordre de mission',
-  edit: 'Modifier l’ordre de mission',
-  view: 'Ordre de mission',
-};
 
 export interface MissionTarget {
   matricule: number;
@@ -81,8 +79,10 @@ interface Props {
 }
 
 export default function MissionFormDialog({ open, mode, initial, target, onClose, onSubmit }: Props) {
+  const { t } = useTranslation();
   const me = useSelector((s: RootState) => s.auth.user) as IUser | null;
   const readOnly = mode === 'view';
+  const schema = useMemo(() => schemaFor(t), [t]);
   const {
     register,
     handleSubmit,
@@ -98,8 +98,8 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
     target ?? ((initial as IMission & { user?: MissionTarget })?.user as MissionTarget | undefined) ?? me ?? null;
   const ownerLabel = owner
     ? owner.matricule === me?.matricule
-      ? 'vous-même'
-      : `${owner.prenom ?? ''} ${owner.nom ?? ''}`.trim() || `matricule ${owner.matricule}`
+      ? t('ordres:form.yourself')
+      : `${owner.prenom ?? ''} ${owner.nom ?? ''}`.trim() || t('ordres:form.matriculeOf', { matricule: owner.matricule })
     : '';
 
   const submit = handleSubmit(async (v) => {
@@ -115,49 +115,49 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
     <Dialog
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title={titles[mode]}
-      description={ownerLabel ? `Agent concerné : ${ownerLabel}` : undefined}
+      title={t(`ordres:form.title.${mode}`)}
+      description={ownerLabel ? t('ordres:form.owner', { name: ownerLabel }) : undefined}
       footer={
         readOnly ? (
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{t('actions.close')}</Button>
         ) : (
           <>
             <Button onClick={onClose} disabled={isSubmitting}>
-              Annuler
+              {t('actions.cancel')}
             </Button>
             <Button variant="primary" type="submit" form="mission-form" disabled={isSubmitting}>
-              {mode === 'edit' ? 'Enregistrer' : 'Créer l’ordre de mission'}
+              {mode === 'edit' ? t('actions.save') : t('ordres:form.create')}
             </Button>
           </>
         )
       }
     >
       <form id="mission-form" noValidate onSubmit={submit} className="flex flex-col gap-4">
-        <Field label="Motif de la mission" error={errors.motif?.message} required={!readOnly}>
+        <Field label={t('ordres:form.motif')} error={errors.motif?.message} required={!readOnly}>
           <Textarea rows={2} readOnly={readOnly} autoFocus={!readOnly} {...register('motif')} />
         </Field>
         <FormGrid>
-          <Field label="Date de départ" error={errors.date_sortie?.message} required={!readOnly}>
+          <Field label={t('ordres:form.departureDate')} error={errors.date_sortie?.message} required={!readOnly}>
             <Input type="date" readOnly={readOnly} {...register('date_sortie')} />
           </Field>
-          <Field label="Heure de départ">
+          <Field label={t('ordres:form.departureTime')}>
             <Input type="time" readOnly={readOnly} {...register('heure_sortie')} />
           </Field>
-          <Field label="Date de retour" error={errors.date_retour?.message}>
+          <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message}>
             <Input type="date" readOnly={readOnly} {...register('date_retour')} />
           </Field>
-          <Field label="Heure de retour">
+          <Field label={t('ordres:form.returnTime')}>
             <Input type="time" readOnly={readOnly} {...register('heure_retour')} />
           </Field>
           <Field
-            label="Destination"
-            hint="Communes séparées par un tiret, ex. Alger-Oran."
+            label={t('field.destination')}
+            hint={t('ordres:form.destinationHint')}
             error={errors.destination?.message}
             required={!readOnly}
           >
             <Input readOnly={readOnly} {...register('destination')} />
           </Field>
-          <Field label="Direction" required={!readOnly}>
+          <Field label={t('field.direction')} required={!readOnly}>
             <Select disabled={readOnly} {...register('direction')}>
               {Object.entries(directionLabels).map(([value, label]) => (
                 <option key={value} value={value}>
@@ -166,9 +166,9 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
               ))}
             </Select>
           </Field>
-          <Field label="Moyen de transport" error={errors.transport?.message} required={!readOnly} full>
+          <Field label={t('field.transportMode')} error={errors.transport?.message} required={!readOnly} full>
             <Select disabled={readOnly} {...register('transport')}>
-              <option value="">— Choisir —</option>
+              <option value="">{t('ordres:form.choose')}</option>
               {Object.entries(transportLabels).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}

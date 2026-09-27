@@ -5,18 +5,13 @@ import http from 'helpers/http';
 import { extractErrorMessage } from 'helpers/errorHandler';
 import { ConfirmDialog, type MenuAction } from 'components/ui';
 import { toast } from 'components/ui/toaster';
-import { countOf, idsOf, reportBulkResult, type BulkResult, type Id } from './bulk';
+import { countOf, idsOf, reportBulkResult, type BulkNoun, type BulkResult, type Id } from './bulk';
 import { BulkPreview } from './BulkPreview';
 
 export type ArchiveEntity = 'missions' | 'decomptes' | 'users' | 'structures';
 export type { BulkResult };
 
-const skipLabels: Record<string, string> = {
-  not_found: 'introuvable',
-  already_archived: 'déjà archivé',
-  not_archived: 'déjà actif',
-  self: 'votre propre compte',
-};
+const skipReasons = ['not_found', 'already_archived', 'not_archived', 'self'];
 
 export const bulkArchiveRequest = (entity: ArchiveEntity, ids: Id[], restore: boolean) =>
   http.patch<BulkResult>(`/archive/${entity}/bulk${restore ? '/restore' : ''}`, { ids }).then((r) => r.data);
@@ -26,8 +21,8 @@ export interface BulkRowOptions<Row> {
   idOf: (row: Row) => Id | null | undefined;
   /** Name shown in the confirmation, e.g. "Karim Benali" or "N° 42". */
   labelOf: (row: Row) => string;
-  /** Singular and plural noun, e.g. ['utilisateur', 'utilisateurs']. */
-  noun: [string, string];
+  /** What the rows are, for counts in messages (e.g. 'user' → "3 utilisateurs"). */
+  noun: BulkNoun;
   /** Refetch the list; rows that changed then leave the table and its selection. */
   onDone: () => unknown;
 }
@@ -52,7 +47,7 @@ export function useBulkArchive<Row>({ entity, mode, idOf, labelOf, noun, onDone 
   const undo = async (ids: Id[]) => {
     try {
       await bulkArchiveRequest(entity, ids, !restore);
-      toast.success('Action annulée');
+      toast.success(t('bulk:undone'));
     } catch (error) {
       toast.error(extractErrorMessage(error));
     }
@@ -67,8 +62,8 @@ export function useBulkArchive<Row>({ entity, mode, idOf, labelOf, noun, onDone 
       reportBulkResult({
         result: await bulkArchiveRequest(entity, ids, restore),
         noun,
-        participle: restore ? ['désarchivé', 'désarchivés'] : ['archivé', 'archivés'],
-        skipLabels,
+        outcome: restore ? 'restored' : 'archived',
+        skipReasons,
         undo: { label: t('actions.cancel'), run: (done) => void undo(done) },
       });
     } catch (error) {
@@ -94,15 +89,13 @@ export function useBulkArchive<Row>({ entity, mode, idOf, labelOf, noun, onDone 
     <ConfirmDialog
       open={pending !== null}
       onOpenChange={(o) => !o && !busy && setPending(null)}
-      title={`${verb} ${countOf(rows.length, noun)} ?`}
+      title={t('bulk:confirmTitle', { verb, what: countOf(rows.length, noun) })}
       tone={restore ? 'primary' : 'danger'}
       confirmLabel={verb}
       confirmDisabled={busy}
       onConfirm={() => void run(rows)}
       description={
-        restore
-          ? 'Ils redeviendront visibles dans les listes.'
-          : 'Ils disparaîtront des listes et resteront consultables depuis la page Archive, d’où ils pourront être restaurés.'
+        restore ? t('bulk:restoreHint') : t('bulk:archiveHint')
       }
     >
       <BulkPreview names={rows.map(labelOf)} total={rows.length} />

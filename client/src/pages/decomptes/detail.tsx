@@ -39,23 +39,23 @@ export default function DecompteDetailPage() {
   const breadcrumbs = [
     { label: t('nav.home'), to: paths.admins },
     { label: t('nav.decomptes'), to: `${paths.admins}/decomptes` },
-    { label: `N° ${id}` },
+    { label: t('numbered', { n: id }) },
   ];
 
   if (!decompte) {
     return (
       <>
-        <PageHeader title={`Décompte N° ${id}`} breadcrumbs={breadcrumbs} />
+        <PageHeader title={t('decomptes:title', { n: id })} breadcrumbs={breadcrumbs} />
         {loading ? (
           <Loader />
         ) : (
           <Panel>
             <EmptyState
-              title="Décompte introuvable"
-              hint="Il n’appartient pas à l’exercice sélectionné, ou il a été archivé."
+              title={t('decomptes:notFound')}
+              hint={t('decomptes:notFoundHint')}
               action={
                 <Button asChild>
-                  <Link to={`${paths.admins}/decomptes`}>Retour à la liste</Link>
+                  <Link to={`${paths.admins}/decomptes`}>{t('actions.backToList')}</Link>
                 </Button>
               }
             />
@@ -66,10 +66,10 @@ export default function DecompteDetailPage() {
   }
 
   const { menu = [] } = actionsFor(decompte);
-  const find = (label: string) => menu.find((a) => a.label === label && !a.hidden);
-  const accept = find('Accepter');
-  const reject = find('Rejeter');
-  const others = menu.filter((a) => a.label !== 'Accepter' && a.label !== 'Rejeter' && a.label !== 'Voir les commentaires');
+  const find = (id: string) => menu.find((a) => a.id === id && !a.hidden);
+  const accept = find('accept');
+  const reject = find('reject');
+  const others = menu.filter((a) => a.id !== 'accept' && a.id !== 'reject' && a.id !== 'comments');
   const m = decompte.mission;
   const messages = (decompte.messages ?? []) as CommentMessage[];
 
@@ -78,7 +78,7 @@ export default function DecompteDetailPage() {
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
-            Décompte N° {decompte.n_decompte}
+            {t('decomptes:title', { n: decompte.n_decompte })}
             <StatusBadge map={decompteStatus} code={decompte.status} />
           </span>
         }
@@ -88,18 +88,18 @@ export default function DecompteDetailPage() {
           <>
             <Button onClick={() => download(decompte)}>
               <Download />
-              Télécharger
+              {t('actions.download')}
             </Button>
             {reject && (
               <Button variant="danger" onClick={reject.onSelect}>
                 <XCircle />
-                Rejeter
+                {t('decomptes:reject')}
               </Button>
             )}
             {accept && (
               <Button variant="primary" onClick={accept.onSelect}>
                 <CheckCircle2 />
-                Accepter
+                {t('decomptes:accept')}
               </Button>
             )}
             {others.some((a) => !a.hidden) && <DropdownMenu actions={others} trigger={<Button>{t('actions.more')}</Button>} />}
@@ -109,55 +109,55 @@ export default function DecompteDetailPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-2">
-          <Panel title="Montants">
+          <Panel title={t('decomptes:amounts')}>
             <DescriptionList
               columns={3}
               items={[
-                { label: 'Repas avec prise en charge', value: decompte.repas_pec ?? 0 },
-                { label: 'Repas sans prise en charge', value: decompte.repas_sans_pec ?? 0 },
-                { label: 'Nuitées avec prise en charge', value: decompte.hebergement_pec ?? 0 },
-                { label: 'Nuitées sans prise en charge', value: decompte.hebergement_sans_pec ?? 0 },
-                { label: 'Distance parcourue', value: `${decompte.parcours ?? 0} km` },
-                { label: 'Frais de transport', value: da(decompte.fees_transport) },
-                { label: 'Montant total', value: <strong className="text-base">{da(decompte.montant)}</strong> },
-                { label: 'Créé le', value: formatDate(decompte.createdAt) },
+                { label: t('field.mealsPec'), value: decompte.repas_pec ?? 0 },
+                { label: t('field.mealsNoPec'), value: decompte.repas_sans_pec ?? 0 },
+                { label: t('field.nightsPec'), value: decompte.hebergement_pec ?? 0 },
+                { label: t('field.nightsNoPec'), value: decompte.hebergement_sans_pec ?? 0 },
+                { label: t('field.distance'), value: t('units.km', { value: decompte.parcours ?? 0 }) },
+                { label: t('field.transportFees'), value: da(decompte.fees_transport) },
+                { label: t('field.totalAmount'), value: <strong className="text-base">{da(decompte.montant)}</strong> },
+                { label: t('field.createdOn'), value: formatDate(decompte.createdAt) },
               ]}
             />
           </Panel>
           <Panel
-            title="Ordre de mission"
+            title={t('field.missionOrder')}
             actions={
               m?.n_mission ? (
                 <Link to={`${paths.admins}/ordres/${m.n_mission}`} className="text-sm text-primary underline underline-offset-2">
-                  Ouvrir l’ordre N° {m.n_mission}
+                  {t('decomptes:openMission', { n: m.n_mission })}
                 </Link>
               ) : undefined
             }
           >
             <DescriptionList
               items={[
-                { label: 'Agent', value: agentName(m?.user) },
-                { label: 'Matricule', value: m?.user?.matricule },
-                { label: 'Destination', value: m?.destination },
-                { label: 'Motif', value: m?.motif },
-                { label: 'Départ', value: formatDateTime(m?.date_sortie) },
-                { label: 'Retour', value: formatDateTime(m?.date_retour) },
-                { label: 'Nombre de jours', value: missionDays(decompte) },
-                { label: 'Transport', value: transportLabels[m?.transport ?? ''] ?? m?.transport },
+                { label: t('field.agent'), value: agentName(m?.user) },
+                { label: t('field.matricule'), value: m?.user?.matricule },
+                { label: t('field.destination'), value: m?.destination },
+                { label: t('field.motif'), value: m?.motif },
+                { label: t('field.departure'), value: formatDateTime(m?.date_sortie) },
+                { label: t('field.return'), value: formatDateTime(m?.date_retour) },
+                { label: t('field.daysCount'), value: missionDays(decompte) },
+                { label: t('field.transport'), value: transportLabels[m?.transport ?? ''] ?? m?.transport },
               ]}
             />
           </Panel>
         </div>
 
-        <Panel title={`Commentaires (${messages.length})`} className="self-start">
+        <Panel title={t('decomptes:commentsCount', { count: messages.length })} className="self-start">
           {messages.length === 0 ? (
-            <p className="text-sm text-fg-muted">Aucun commentaire.</p>
+            <p className="text-sm text-fg-muted">{t('comments:none')}</p>
           ) : (
             <ol className="flex flex-col gap-3">
               {messages.map((msg, i) => (
                 <li key={msg.id ?? i} className="border-s-4 border-border-strong ps-3">
                   <p className="text-xs text-fg-muted">
-                    {msg.user ? `${agentName(msg.user)} · ${roleLabels[msg.user.role ?? ''] ?? ''}` : 'Administration'}
+                    {msg.user ? `${agentName(msg.user)} · ${roleLabels[msg.user.role ?? ''] ?? ''}` : t('comments:administration')}
                     {msg.createdAt ? ` — ${dayjs(msg.createdAt).format('DD/MM/YYYY HH:mm')}` : ''}
                   </p>
                   <p className="text-sm whitespace-pre-line">{msg.title}</p>

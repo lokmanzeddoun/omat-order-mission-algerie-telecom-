@@ -1,0 +1,35 @@
+{
+  "none": "Aucun commentaire.",
+  "noneForDecompte": "Aucun commentaire pour ce décompte.",
+  "administration": "Administration",
+  "add": "Ajouter un commentaire",
+  "description": "Messages adressés à l’administration par les agents.",
+  "caption": "Liste des commentaires",
+  "empty": "Aucun commentaire",
+  "others": "Autres",
+  "matricule": "Matricule {{matricule}}",
+  "openDecompte": "Ouvrir le décompte N° {{n}}",
+  "type": {
+    "FORGET_PASSWORD": "Mot de passe oublié",
+    "DECOMPTE_STATUS": "Décompte",
+    "OTHER": "Autre"
+  },
+  "field": {
+    "type": "Type",
+    "message": "Message",
+    "author": "Auteur"
+  },
+  "form": {
+    "description": "Votre message est transmis à l’administration.",
+    "subject": "Objet",
+    "general": "Commentaire général",
+    "aboutRejected": "À propos d’un décompte rejeté",
+    "decompte": "Décompte concerné",
+    "noRejected": "Aucun décompte rejeté.",
+    "text": "Votre commentaire",
+    "errors": {
+      "textRequired": "Saisissez votre commentaire.",
+      "decompteRequired": "Choisissez le décompte concerné."
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { AxiosError } from 'axios';
+import i18n from 'i18n';
 
 /**
  * Standard error response from backend
@@ -11,81 +12,78 @@ export interface ApiErrorResponse {
   path?: string;
 }
 
+// Known backend messages (English or French, not localized by the API) mapped to
+// translated keys. Anything else falls back to a message chosen from the HTTP status.
+const KNOWN_SERVER_MESSAGES: [RegExp, string][] = [
+  [/pending password reset/i, 'errors:pendingReset'],
+  [/wrong credentials|invalid password/i, 'errors:invalidCredentials'],
+  [/already exists|existe déjà|cette email exist/i, 'errors:alreadyExists'],
+  [/date_retour must be strictly after/i, 'errors:returnBeforeDeparture'],
+  [/nombre de repas/i, 'errors:invalidMealsCount'],
+  [/not in PENDING status/i, 'errors:decompteNotPending'],
+  [/unsupported file type|correct file name/i, 'errors:unsupportedFile'],
+  [/pdf/i, 'errors:pdfFailed'],
+];
+
+const STATUS_KEYS: Record<number, string> = {
+  400: 'errors:badRequest',
+  401: 'errors:unauthorized',
+  403: 'errors:forbidden',
+  404: 'errors:notFound',
+  409: 'errors:conflict',
+  413: 'errors:tooLarge',
+  422: 'errors:invalidData',
+  429: 'errors:tooManyRequests',
+  500: 'errors:server',
+  502: 'errors:unavailable',
+  503: 'errors:maintenance',
+};
+
+/** Raw message sent by the backend, if any (kept for logic that must not depend on the UI language). */
+export const serverMessage = (error: unknown): string => {
+  if (!isAxiosError(error)) return '';
+  const data = (error as AxiosError<ApiErrorResponse & { serverMessage?: string }>).response?.data;
+  if (!data || typeof data !== 'object') return typeof data === 'string' ? data : '';
+  if (data.serverMessage !== undefined) return data.serverMessage;
+  const message = data.message as unknown;
+  if (Array.isArray(message)) return message.join(', ');
+  if (typeof message === 'string') return message;
+  return typeof data.error === 'string' ? data.error : '';
+};
+
 /**
- * Extract a user-friendly error message from an axios error
- * This handles all the different error formats that might come from the backend
+ * Extract a user-friendly, translated error message from an axios error (or any thrown value).
  */
 export const extractErrorMessage = (error: unknown): string => {
-  // Default error message
-  const defaultMessage = 'Une erreur est survenue';
+  const generic = i18n.t('errors:generic');
+  if (!error) return generic;
 
-  // Not an error object
-  if (!error) {
-    return defaultMessage;
-  }
-
-  // If it's an axios error
   if (isAxiosError(error)) {
-    const axiosError = error as AxiosError<ApiErrorResponse>;
+    const axiosError = error as AxiosError<ApiErrorResponse & { normalizedMessage?: string }>;
 
     // Network error (no response from server)
     if (!axiosError.response) {
-      if (axiosError.code === 'ECONNABORTED') {
-        return 'La requête a expiré. Veuillez réessayer.';
-      }
-      if (axiosError.code === 'ERR_NETWORK') {
-        return 'Erreur de connexion. Vérifiez votre connexion internet.';
-      }
-      return 'Impossible de contacter le serveur';
+      if (axiosError.code === 'ECONNABORTED') return i18n.t('errors:timeout');
+      if (axiosError.code === 'ERR_NETWORK') return i18n.t('errors:network');
+      return i18n.t('errors:unreachable');
     }
 
-    // Server responded with an error
-    const responseData = axiosError.response.data;
+    // Already normalized by the http interceptor.
+    const data = axiosError.response.data;
+    if (data && typeof data === 'object' && typeof data.normalizedMessage === 'string') return data.normalizedMessage;
 
-    // Check if response has the standard format
-    if (responseData && typeof responseData === 'object') {
-      const apiError = responseData as ApiErrorResponse;
+    const raw = serverMessage(error);
+    const known = KNOWN_SERVER_MESSAGES.find(([pattern]) => pattern.test(raw));
+    if (known) return i18n.t(known[1]);
 
-      // Extract message from the standard error format
-      if (apiError.message) {
-        // If message is an array (validation errors), join them
-        if (Array.isArray(apiError.message)) {
-          return apiError.message.join(', ');
-        }
-        // If message is a string, return it
-        if (typeof apiError.message === 'string') {
-          return apiError.message;
-        }
-      }
-
-      // Fallback to error field
-      if (apiError.error && typeof apiError.error === 'string') {
-        return apiError.error;
-      }
-    }
-
-    // If response data is a string
-    if (typeof responseData === 'string') {
-      return responseData;
-    }
-
-    // Use status code to provide a generic message
     const status = axiosError.response.status;
-    return getMessageForStatusCode(status);
+    const statusKey = STATUS_KEYS[status] ?? (status >= 500 ? 'errors:server' : undefined);
+    return statusKey ? i18n.t(statusKey) : generic;
   }
 
-  // If it's a regular Error object
-  if (error instanceof Error) {
-    return error.message || defaultMessage;
-  }
-
-  // If it's a string
-  if (typeof error === 'string') {
-    return error;
-  }
-
-  // Unknown error type
-  return defaultMessage;
+  if (error instanceof Error) return error.message || generic;
+  if (typeof error === 'string') return error;
+  return generic;
 };
 
 /**
@@ -98,36 +96,6 @@ function isAxiosError(error: unknown): error is AxiosError {
     'isAxiosError' in error &&
     (error as any).isAxiosError === true
   );
-}
-
-/**
- * Get a user-friendly message based on HTTP status code
- */
-function getMessageForStatusCode(status: number): string {
-  switch (status) {
-    case 400:
-      return 'Requête invalide';
-    case 401:
-      return 'Vous devez vous connecter pour continuer';
-    case 403:
-      return "Vous n'avez pas les permissions nécessaires";
-    case 404:
-      return 'Ressource introuvable';
-    case 409:
-      return 'Cette ressource existe déjà';
-    case 422:
-      return 'Données invalides';
-    case 429:
-      return 'Trop de requêtes. Veuillez réessayer plus tard.';
-    case 500:
-      return 'Erreur serveur. Veuillez réessayer plus tard.';
-    case 502:
-      return 'Service temporairement indisponible';
-    case 503:
-      return 'Service en maintenance';
-    default:
-      return 'Une erreur est survenue';
-  }
 }
 
 /**

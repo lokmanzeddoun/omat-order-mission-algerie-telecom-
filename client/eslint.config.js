@@ -2,6 +2,7 @@ import js from "@eslint/js";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
+import i18next from "eslint-plugin-i18next";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -24,6 +25,15 @@ export default tseslint.config(
 				"warn",
 				{ allowConstantExport: true },
 			],
+		},
+	},
+	{
+		// Visible text must go through i18n (locales/fr and locales/ar): flag raw JSX text.
+		files: ["src/**/*.tsx"],
+		ignores: ["src/**/*.test.tsx"],
+		plugins: { i18next },
+		rules: {
+			"i18next/no-literal-string": ["error", { mode: "jsx-text-only" }],
 		},
 	}
 );

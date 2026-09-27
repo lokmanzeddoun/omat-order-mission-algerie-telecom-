@@ -1,0 +1,77 @@
+{
+  "title": "الأمر بمهمة رقم {{n}}",
+  "description": "الأوامر بمهمة للسنة المالية {{year}}.",
+  "summary": {
+    "inProgress": "قيد الإنجاز",
+    "validated": "مصادق عليها"
+  },
+  "caption": "قائمة الأوامر بمهمة",
+  "empty": "لا توجد أوامر بمهمة",
+  "emptyHint": "لا توجد أوامر بمهمة لهذه السنة المالية وهذه المعايير.",
+  "mine": "أوامري",
+  "notFound": "الأمر بمهمة غير موجود",
+  "notFoundHint": "ربما تم إلغاؤه أو أرشفته.",
+  "mission": "المهمة",
+  "tracking": "المتابعة",
+  "cancelOrder": "إلغاء الأمر",
+  "archiveTitle": "أرشفة الأمر بمهمة؟",
+  "archiveHint": "سيُنقل الأمر بمهمة رقم {{n}} ({{destination}}) إلى الأرشيف.",
+  "cancelTitle": "إلغاء الأمر بمهمة؟",
+  "cancelHint": "سيتم إلغاء الأمر بمهمة رقم {{n}} ({{destination}}).",
+  "timeline": {
+    "created": "إنشاء الأمر بمهمة",
+    "validation": "المصادقة",
+    "decompte": "كشف المصاريف",
+    "decompteMissing": "لم يُعثر على كشف المصاريف في السنة المالية المحددة.",
+    "decompteCreated": "إنشاء كشف المصاريف رقم {{n}}",
+    "decision": "القرار بشأن كشف المصاريف",
+    "decided": "كشف المصاريف {{status}}"
+  },
+  "form": {
+    "title": {
+      "create": "أمر بمهمة جديد",
+      "edit": "تعديل الأمر بمهمة",
+      "view": "الأمر بمهمة"
+    },
+    "yourself": "أنت",
+    "matriculeOf": "رقم التسجيل {{matricule}}",
+    "owner": "العون المعني: {{name}}",
+    "create": "إنشاء الأمر بمهمة",
+    "motif": "غرض المهمة",
+    "departureDate": "تاريخ الذهاب",
+    "departureTime": "ساعة الذهاب",
+    "returnDate": "تاريخ العودة",
+    "returnTime": "ساعة العودة",
+    "destinationHint": "البلديات مفصولة بشرطة، مثال: الجزائر-وهران.",
+    "choose": "— اختر —",
+    "errors": {
+      "departureRequired": "تاريخ الذهاب إلزامي.",
+      "motifRequired": "غرض المهمة إلزامي.",
+      "destinationMin": "يجب أن تحتوي الوجهة على حرفين على الأقل.",
+      "transportRequired": "اختر وسيلة النقل.",
+      "returnAfterDeparture": "يجب أن تكون العودة بعد الذهاب."
+    }
+  },
+  "validate": {
+    "title": "المصادقة على الأمر بمهمة",
+    "description": "تُنشئ المصادقة كشف مصاريف المهمة.",
+    "submit": "المصادقة وإنشاء كشف المصاريف",
+    "schedule": "المواقيت الفعلية",
+    "split": "التوزيع",
+    "entitlements": "الحقوق المحسوبة: <b>{{meals}}</b> وجبة و<b>{{nights}}</b> ليلة مبيت.",
+    "distanceKm": "المسافة المقطوعة (كم)",
+    "transportCost": "مصاريف النقل المدفوعة (د.ج)",
+    "errors": {
+      "wholeNumber": "{{label}}: يُنتظر عدد صحيح موجب.",
+      "returnDateRequired": "تاريخ العودة إلزامي.",
+      "departureTimeRequired": "ساعة الذهاب إلزامية.",
+      "returnTimeRequired": "ساعة العودة إلزامية.",
+      "distanceRequired": "المسافة المقطوعة إلزامية.",
+      "distanceInvalid": "مسافة غير صالحة.",
+      "amountInvalid": "مبلغ غير صالح.",
+      "returnBeforeDeparture": "لا يمكن أن تسبق العودة الذهاب.",
+      "nightsTotal": "يجب أن يساوي مجموع التوزيع {{count}} ليلة مبيت.",
+      "mealsTotal": "يجب أن يساوي مجموع التوزيع {{count}} وجبة."
+    }
+  }
+}

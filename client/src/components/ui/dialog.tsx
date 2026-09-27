@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Dialog as RadixDialog } from 'radix-ui';
 import { X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from 'lib/utils';
 
 const widths = { sm: 'max-w-md', md: 'max-w-2xl', lg: 'max-w-4xl' } as const;
@@ -18,6 +19,7 @@ interface DialogProps {
 
 /** Modal dialog with a titled header, scrollable body and a fixed footer. */
 export function Dialog({ open, onOpenChange, title, description, children, footer, size = 'md' }: DialogProps) {
+  const { t } = useTranslation();
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -39,7 +41,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
             </div>
             <RadixDialog.Close
               className="-me-1 rounded-xs p-1 text-fg-muted hover:bg-surface-muted hover:text-fg cursor-pointer"
-              aria-label="Fermer"
+              aria-label={t('actions.close')}
             >
               <X className="size-4" />
             </RadixDialog.Close>
@@ -58,6 +60,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
 
 /** Right-hand sheet for secondary details (e.g. a commentaire). */
 export function SidePanel({ open, onOpenChange, title, description, children, footer }: Omit<DialogProps, 'size'>) {
+  const { t } = useTranslation();
   return (
     <RadixDialog.Root open={open} onOpenChange={onOpenChange}>
       <RadixDialog.Portal>
@@ -73,7 +76,7 @@ export function SidePanel({ open, onOpenChange, title, description, children, fo
                 <RadixDialog.Description className="mt-0.5 text-sm text-fg-muted">{description}</RadixDialog.Description>
               )}
             </div>
-            <RadixDialog.Close className="rounded-xs p-1 text-fg-muted hover:bg-surface-muted cursor-pointer" aria-label="Fermer">
+            <RadixDialog.Close className="rounded-xs p-1 text-fg-muted hover:bg-surface-muted cursor-pointer" aria-label={t('actions.close')}>
               <X className="size-4" />
             </RadixDialog.Close>
           </header>

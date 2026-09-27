@@ -1,5 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import dayjs from 'helpers/date';
@@ -20,8 +22,8 @@ export interface DecompteFigures {
   transport_cost?: number;
 }
 
-const count = (label: string) =>
-  z.string().refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) >= 0), `${label} : nombre entier positif attendu.`);
+const count = (t: TFunction, label: string) =>
+  z.string().refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) >= 0), t('ordres:validate.errors.wholeNumber', { label }));
 
 const n = (v: string) => (v === '' ? 0 : Number(v));
 
@@ -32,36 +34,36 @@ const entitlements = (departureDate: string, v: { heure_sortie: string; date_ret
     : { meals: 0, accommodations: 0 };
 
 // Same rules as the previous dialog: schedule required, splits must add up to the entitlements.
-const schemaFor = (departureDate: string) =>
+const schemaFor = (departureDate: string, t: TFunction) =>
   z
     .object({
-      date_retour: z.string().min(1, 'La date de retour est obligatoire.'),
-      heure_sortie: z.string().min(1, 'L’heure de départ est obligatoire.'),
-      heure_retour: z.string().min(1, 'L’heure de retour est obligatoire.'),
-      hebergement_sans_pec: count('Hébergement sans prise en charge'),
-      hebergement_pec: count('Hébergement avec prise en charge'),
-      repas_sans_pec: count('Repas sans prise en charge'),
-      repas_pec: count('Repas avec prise en charge'),
+      date_retour: z.string().min(1, t('ordres:validate.errors.returnDateRequired')),
+      heure_sortie: z.string().min(1, t('ordres:validate.errors.departureTimeRequired')),
+      heure_retour: z.string().min(1, t('ordres:validate.errors.returnTimeRequired')),
+      hebergement_sans_pec: count(t, t('field.nightsNoPec')),
+      hebergement_pec: count(t, t('field.nightsPec')),
+      repas_sans_pec: count(t, t('field.mealsNoPec')),
+      repas_pec: count(t, t('field.mealsPec')),
       distance_km: z
         .string()
-        .min(1, 'La distance parcourue est obligatoire.')
-        .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, 'Distance invalide.'),
-      transport_cost: z.string().refine((v) => v === '' || (!Number.isNaN(Number(v)) && Number(v) >= 0), 'Montant invalide.'),
+        .min(1, t('ordres:validate.errors.distanceRequired'))
+        .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, t('ordres:validate.errors.distanceInvalid')),
+      transport_cost: z.string().refine((v) => v === '' || (!Number.isNaN(Number(v)) && Number(v) >= 0), t('ordres:validate.errors.amountInvalid')),
     })
     .superRefine((v, ctx) => {
       if (v.date_retour && departureDate && dayjs(v.date_retour).isBefore(dayjs(departureDate), 'day')) {
-        ctx.addIssue({ code: 'custom', path: ['date_retour'], message: 'Le retour ne peut pas précéder le départ.' });
+        ctx.addIssue({ code: 'custom', path: ['date_retour'], message: t('ordres:validate.errors.returnBeforeDeparture') });
       }
       const { meals, accommodations } = entitlements(departureDate, v);
       if (n(v.hebergement_sans_pec) + n(v.hebergement_pec) !== accommodations) {
         ctx.addIssue({
           code: 'custom',
           path: ['hebergement_sans_pec'],
-          message: `La répartition doit totaliser ${accommodations} nuitée(s).`,
+          message: t('ordres:validate.errors.nightsTotal', { count: accommodations }),
         });
       }
       if (n(v.repas_sans_pec) + n(v.repas_pec) !== meals) {
-        ctx.addIssue({ code: 'custom', path: ['repas_sans_pec'], message: `La répartition doit totaliser ${meals} repas.` });
+        ctx.addIssue({ code: 'custom', path: ['repas_sans_pec'], message: t('ordres:validate.errors.mealsTotal', { count: meals }) });
       }
     });
 
@@ -89,7 +91,8 @@ interface Props {
 /** Validates an ordre de mission and records the figures of its décompte. */
 export default function ValidateMissionForm({ open, mission, onClose, onSubmit }: Props) {
   const departureDate = mission?.date_sortie ? dayjs(mission.date_sortie).format('YYYY-MM-DD') : '';
-  const schema = useMemo(() => schemaFor(departureDate), [departureDate]);
+  const { t } = useTranslation();
+  const schema = useMemo(() => schemaFor(departureDate, t), [departureDate, t]);
   const {
     register,
     handleSubmit,
@@ -129,72 +132,72 @@ export default function ValidateMissionForm({ open, mission, onClose, onSubmit }
     <Dialog
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title="Valider l’ordre de mission"
-      description="La validation crée le décompte de la mission."
+      title={t('ordres:validate.title')}
+      description={t('ordres:validate.description')}
       size="md"
       footer={
         <>
           <Button onClick={onClose} disabled={isSubmitting}>
-            Annuler
+            {t('actions.cancel')}
           </Button>
           <Button variant="primary" type="submit" form="validate-mission-form" disabled={isSubmitting}>
-            Valider et créer le décompte
+            {t('ordres:validate.submit')}
           </Button>
         </>
       }
     >
       <form id="validate-mission-form" noValidate onSubmit={submit} className="flex flex-col gap-5">
-        <FormSection title="Ordre de mission">
+        <FormSection title={t('field.missionOrder')}>
           <DescriptionList
             items={[
-              { label: 'N°', value: mission.n_mission },
-              { label: 'Destination', value: mission.destination },
-              { label: 'Départ', value: departureDate ? dayjs(departureDate).format('DD/MM/YYYY') : '—' },
-              { label: 'Motif', value: mission.motif },
+              { label: t('field.number'), value: mission.n_mission },
+              { label: t('field.destination'), value: mission.destination },
+              { label: t('field.departure'), value: departureDate ? dayjs(departureDate).format('DD/MM/YYYY') : '—' },
+              { label: t('field.motif'), value: mission.motif },
             ]}
           />
         </FormSection>
 
-        <FormSection title="Horaires effectifs">
+        <FormSection title={t('ordres:validate.schedule')}>
           <FormGrid className="sm:grid-cols-3">
-            <Field label="Heure de départ" error={errors.heure_sortie?.message} required>
+            <Field label={t('ordres:form.departureTime')} error={errors.heure_sortie?.message} required>
               <Input type="time" {...register('heure_sortie')} />
             </Field>
-            <Field label="Date de retour" error={errors.date_retour?.message} required>
+            <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message} required>
               <Input type="date" {...register('date_retour')} />
             </Field>
-            <Field label="Heure de retour" error={errors.heure_retour?.message} required>
+            <Field label={t('ordres:form.returnTime')} error={errors.heure_retour?.message} required>
               <Input type="time" {...register('heure_retour')} />
             </Field>
           </FormGrid>
           <p className="mt-3 border-s-4 border-info bg-info-soft px-3 py-2 text-sm text-fg" aria-live="polite">
-            Droits calculés : <strong>{meals}</strong> repas et <strong>{accommodations}</strong> nuitée(s).
+            <Trans t={t} i18nKey="ordres:validate.entitlements" values={{ meals, nights: accommodations }} components={{ b: <strong /> }} />
           </p>
         </FormSection>
 
-        <FormSection title="Répartition">
+        <FormSection title={t('ordres:validate.split')}>
           <FormGrid>
-            <Field label="Nuitées sans prise en charge" error={errors.hebergement_sans_pec?.message}>
+            <Field label={t('field.nightsNoPec')} error={errors.hebergement_sans_pec?.message}>
               <Input type="number" min={0} inputMode="numeric" {...register('hebergement_sans_pec')} />
             </Field>
-            <Field label="Nuitées avec prise en charge" error={errors.hebergement_pec?.message}>
+            <Field label={t('field.nightsPec')} error={errors.hebergement_pec?.message}>
               <Input type="number" min={0} inputMode="numeric" {...register('hebergement_pec')} />
             </Field>
-            <Field label="Repas sans prise en charge" error={errors.repas_sans_pec?.message}>
+            <Field label={t('field.mealsNoPec')} error={errors.repas_sans_pec?.message}>
               <Input type="number" min={0} inputMode="numeric" {...register('repas_sans_pec')} />
             </Field>
-            <Field label="Repas avec prise en charge" error={errors.repas_pec?.message}>
+            <Field label={t('field.mealsPec')} error={errors.repas_pec?.message}>
               <Input type="number" min={0} inputMode="numeric" {...register('repas_pec')} />
             </Field>
           </FormGrid>
         </FormSection>
 
-        <FormSection title="Transport">
+        <FormSection title={t('field.transport')}>
           <FormGrid>
-            <Field label="Distance parcourue (km)" error={errors.distance_km?.message} required>
+            <Field label={t('ordres:validate.distanceKm')} error={errors.distance_km?.message} required>
               <Input type="number" min={0} inputMode="decimal" {...register('distance_km')} />
             </Field>
-            <Field label="Frais de transport engagés (DA)" error={errors.transport_cost?.message}>
+            <Field label={t('ordres:validate.transportCost')} error={errors.transport_cost?.message}>
               <Input type="number" min={0} inputMode="decimal" {...register('transport_cost')} />
             </Field>
           </FormGrid>

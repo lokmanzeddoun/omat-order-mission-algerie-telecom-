@@ -1,11 +1,13 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { saveAs } from 'file-saver';
 import { Archive, CheckCircle2, Download, Eye, MessageSquare, XCircle } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import http from 'helpers/http';
+import { extractErrorMessage } from 'helpers/errorHandler';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { acceptDecompte, archiveDecompte, rejectDecompte } from 'components/orders/decompte.thunk';
@@ -39,8 +41,7 @@ export function useDecompteDownload() {
         const raw = String(res.headers['content-disposition'] ?? '').split('filename=')[1] ?? '';
         saveAs(res.data, decodeURIComponent(raw.replace(/"/g, '')) || `decompte-${id}.pdf`);
       } catch (e) {
-        const msg = (e as { message?: string })?.message ?? 'Échec du téléchargement du décompte';
-        dispatch(setAlert({ msg, type: AlertTypes.ERROR }));
+        dispatch(setAlert({ msg: extractErrorMessage(e), type: AlertTypes.ERROR }));
       }
     },
     [dispatch, token],
@@ -59,6 +60,7 @@ export function useDecompteActions({
   onChanged?: () => void | Promise<void>;
   detailPath?: (d: DecompteRow) => string;
 }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const token = useSelector((s: RootState) => s.auth.token);
@@ -80,13 +82,13 @@ export function useDecompteActions({
 
   const actionsFor = (d: DecompteRow): RowActions => {
     const isPending = d.status === 'PENDING';
-    const primary: MenuAction[] = [{ label: 'Télécharger', icon: <Download />, onSelect: () => download(d) }];
-    if (detailPath) primary.push({ label: 'Voir le détail', icon: <Eye />, onSelect: () => navigate(detailPath(d)) });
+    const primary: MenuAction[] = [{ id: 'download', label: t('actions.download'), icon: <Download />, onSelect: () => download(d) }];
+    if (detailPath) primary.push({ id: 'details', label: t('actions.details'), icon: <Eye />, onSelect: () => navigate(detailPath(d)) });
     const menu: MenuAction[] = [
-      { label: 'Voir les commentaires', icon: <MessageSquare />, onSelect: () => open('comments', d) },
-      { label: 'Accepter', icon: <CheckCircle2 />, hidden: !admin || !isPending, onSelect: () => open('accept', d) },
-      { label: 'Rejeter', icon: <XCircle />, tone: 'danger', hidden: !admin || !isPending, onSelect: () => open('reject', d) },
-      { label: 'Archiver', icon: <Archive />, hidden: !admin, onSelect: () => open('archive', d) },
+      { id: 'comments', label: t('decomptes:viewComments'), icon: <MessageSquare />, onSelect: () => open('comments', d) },
+      { id: 'accept', label: t('decomptes:accept'), icon: <CheckCircle2 />, hidden: !admin || !isPending, onSelect: () => open('accept', d) },
+      { id: 'reject', label: t('decomptes:reject'), icon: <XCircle />, tone: 'danger', hidden: !admin || !isPending, onSelect: () => open('reject', d) },
+      { id: 'archive', label: t('actions.archive'), icon: <Archive />, hidden: !admin, onSelect: () => open('archive', d) },
     ];
     return { primary, menu };
   };
@@ -100,15 +102,15 @@ export function useDecompteActions({
       <ConfirmDialog
         open={pending?.kind === 'accept'}
         onOpenChange={(o) => !o && close()}
-        title={`Accepter le décompte N° ${n ?? ''} ?`}
-        description="L’agent sera informé de l’acceptation."
-        confirmLabel="Accepter"
+        title={t('decomptes:acceptTitle', { n: n ?? '' })}
+        description={t('decomptes:acceptHint')}
+        confirmLabel={t('decomptes:accept')}
         onConfirm={async () => {
           if (n != null) await dispatch(acceptDecompte(n, token, message.trim() || undefined, admin));
           await done();
         }}
       >
-        <Field label="Message à l’agent (facultatif)">
+        <Field label={t('decomptes:messageToAgent')}>
           <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} />
         </Field>
       </ConfirmDialog>
@@ -116,9 +118,9 @@ export function useDecompteActions({
       <ConfirmDialog
         open={pending?.kind === 'reject'}
         onOpenChange={(o) => !o && close()}
-        title={`Rejeter le décompte N° ${n ?? ''} ?`}
-        description="Le motif du rejet est transmis à l’agent."
-        confirmLabel="Rejeter"
+        title={t('decomptes:rejectTitle', { n: n ?? '' })}
+        description={t('decomptes:rejectHint')}
+        confirmLabel={t('decomptes:reject')}
         tone="danger"
         confirmDisabled={reasonMissing}
         onConfirm={async () => {
@@ -126,7 +128,7 @@ export function useDecompteActions({
           await done();
         }}
       >
-        <Field label="Motif du rejet" required error={touched && reasonMissing ? 'Le motif du rejet est obligatoire.' : undefined}>
+        <Field label={t('decomptes:rejectReason')} required error={touched && reasonMissing ? t('decomptes:rejectReasonRequired') : undefined}>
           <Textarea rows={3} value={message} onChange={(e) => setMessage(e.target.value)} onBlur={() => setTouched(true)} />
         </Field>
       </ConfirmDialog>
@@ -134,9 +136,9 @@ export function useDecompteActions({
       <ConfirmDialog
         open={pending?.kind === 'archive'}
         onOpenChange={(o) => !o && close()}
-        title={`Archiver le décompte N° ${n ?? ''} ?`}
-        description="Le décompte sera déplacé dans l’archive. Vous pourrez le désarchiver plus tard."
-        confirmLabel="Archiver"
+        title={t('decomptes:archiveTitle', { n: n ?? '' })}
+        description={t('decomptes:archiveHint')}
+        confirmLabel={t('actions.archive')}
         onConfirm={async () => {
           if (n != null) await dispatch(archiveDecompte(n, token, admin));
           await done();
@@ -145,7 +147,7 @@ export function useDecompteActions({
 
       <CommentsPanel
         open={pending?.kind === 'comments'}
-        title={`Décompte N° ${n ?? ''} — commentaires`}
+        title={t('decomptes:commentsTitle', { n: n ?? '' })}
         messages={(d?.messages ?? []) as CommentMessage[]}
         onClose={close}
       />

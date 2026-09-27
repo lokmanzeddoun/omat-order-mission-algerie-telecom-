@@ -1,5 +1,7 @@
 import { loginSuccess, userLoaded, authFailed, logoutSuccess } from './auth.reducers';
 import http from 'helpers/http';
+import i18n from 'i18n';
+import { extractErrorMessage } from 'helpers/errorHandler';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
@@ -9,7 +11,7 @@ export const loadUser = () => async (dispatch: AppDispatch) => {
   const matricule = user.matricule;
   if (!matricule) {
     dispatch(authFailed());
-    dispatch(setAlert({ msg: 'Cant not load user!', type: AlertTypes.ERROR }));
+    dispatch(setAlert({ msg: i18n.t('toasts:userLoadFailed'), type: AlertTypes.ERROR }));
 
     return;
   }
@@ -19,14 +21,11 @@ export const loadUser = () => async (dispatch: AppDispatch) => {
       return dispatch(userLoaded(res.data));
     }
     dispatch(authFailed());
-    dispatch(setAlert({ msg: 'Get user error!', type: AlertTypes.ERROR }));
+    dispatch(setAlert({ msg: i18n.t('toasts:userLoadFailed'), type: AlertTypes.ERROR }));
     return;
   } catch (error) {
     dispatch(authFailed());
-    let errorMessage = 'Failed Loading User';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     return;
   }
@@ -61,7 +60,7 @@ export const login =
         // server sets refresh cookie; client receives access token in body
         http.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
         dispatch(loginSuccess(data));
-        dispatch(setAlert({ msg: 'Connexion réussie', type: AlertTypes.SUCCESS }));
+        dispatch(setAlert({ msg: i18n.t('toasts:signedIn'), type: AlertTypes.SUCCESS }));
         return { ok: true };
       }
       dispatch(authFailed());
@@ -92,7 +91,7 @@ export const logout = () => async (dispatch: any) => {
   dispatch(logoutSuccess());
   dispatch(
     setAlert({
-      msg: 'Vous êtes déconnecté',
+      msg: i18n.t('toasts:signedOut'),
       type: AlertTypes.WARNING,
     }),
   );

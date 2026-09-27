@@ -1,5 +1,6 @@
-import axios from 'axios';
 import http from 'helpers/http';
+import i18n from 'i18n';
+import { extractErrorMessage } from 'helpers/errorHandler';
 import {
   fetchStructuresSuccess,
   fetchStructuresStart,
@@ -21,18 +22,10 @@ export const getAllStructures = () => async (dispatch: AppDispatch) => {
     if (res.data) {
       return dispatch(fetchStructuresSuccess(res.data));
     }
-    dispatch(setAlert({ msg: 'Problem In Getting Structures', type: AlertTypes.ERROR }));
+    dispatch(setAlert({ msg: i18n.t('toasts:structuresLoadFailed'), type: AlertTypes.ERROR }));
     return;
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -48,7 +41,7 @@ export const addStructure = (structure: IStructure) => async (dispatch: AppDispa
 
   // Validate required fields
   if (!sanitizedStructure.code || !sanitizedStructure.name) {
-    dispatch(setAlert({ msg: 'Code et nom du service sont obligatoires', type: AlertTypes.ERROR }));
+    dispatch(setAlert({ msg: i18n.t('toasts:structureCodeNameRequired'), type: AlertTypes.ERROR }));
     return;
   }
 
@@ -59,21 +52,13 @@ export const addStructure = (structure: IStructure) => async (dispatch: AppDispa
       },
     });
     if (res) {
-      dispatch(setAlert({ msg: 'Structure Created Successfully', type: AlertTypes.SUCCESS }));
+      dispatch(setAlert({ msg: i18n.t('toasts:structureCreated'), type: AlertTypes.SUCCESS }));
       return dispatch(createStructure(res.data));
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -92,21 +77,13 @@ export const uploadStructure = (file: File) => async (dispatch: AppDispatch) => 
     });
     console.log(res);
     if (res) {
-      await dispatch(setAlert({ msg: 'File uploaded successfully', type: AlertTypes.SUCCESS }));
+      await dispatch(setAlert({ msg: i18n.t('toasts:fileImported'), type: AlertTypes.SUCCESS }));
       await dispatch(getAllStructures()); // Assuming 'res.data' contains the newly created users
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -142,18 +119,12 @@ export const exportStructures = () => async (dispatch: AppDispatch) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      dispatch(setAlert({ msg: 'Structures exported successfully', type: AlertTypes.SUCCESS }));
+      dispatch(setAlert({ msg: i18n.t('toasts:structuresExported'), type: AlertTypes.SUCCESS }));
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -164,21 +135,13 @@ export const archiveStructure = (structure: IStructure) => async (dispatch: AppD
   try {
     const res = await http.patch(`/structures/${structure.code}/archive`);
     if (res) {
-      await dispatch(setAlert({ msg: 'Structure Archivée avec Succès', type: AlertTypes.SUCCESS }));
+      await dispatch(setAlert({ msg: i18n.t('toasts:structureArchived'), type: AlertTypes.SUCCESS }));
       await dispatch(removeStructure(structure.code));
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -194,28 +157,20 @@ export const updateStructure = (structure: IStructure) => async (dispatch: AppDi
 
   // Validate required fields
   if (!sanitizedStructure.name) {
-    dispatch(setAlert({ msg: 'Le nom du service est obligatoire', type: AlertTypes.ERROR }));
+    dispatch(setAlert({ msg: i18n.t('toasts:structureNameRequired'), type: AlertTypes.ERROR }));
     return;
   }
 
   try {
     const res = await http.patch(`/structures/${sanitizedStructure.code}`, sanitizedStructure);
     if (res) {
-      await dispatch(setAlert({ msg: 'Structure Updated Successfully', type: AlertTypes.SUCCESS }));
+      await dispatch(setAlert({ msg: i18n.t('toasts:structureUpdated'), type: AlertTypes.SUCCESS }));
       dispatch(editStructure(res.data));
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);

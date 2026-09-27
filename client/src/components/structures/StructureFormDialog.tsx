@@ -1,22 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Button, Dialog, Field, FormGrid, Input } from 'components/ui';
 import type { IStructure } from './structure.reducer';
 
-const schema = z.object({
-  code: z.string().trim().min(1, 'Le code est obligatoire.'),
-  name: z.string().trim().min(1, 'Le nom du service est obligatoire.'),
-});
+const schemaFor = (t: TFunction) =>
+  z.object({
+    code: z.string().trim().min(1, t('structures:errors.codeRequired')),
+    name: z.string().trim().min(1, t('structures:errors.nameRequired')),
+  });
 
 export type StructureFormMode = 'create' | 'edit' | 'view';
-
-const titles: Record<StructureFormMode, string> = {
-  create: 'Ajouter un service',
-  edit: 'Modifier le service',
-  view: 'Détails du service',
-};
 
 interface Props {
   open: boolean;
@@ -28,7 +25,9 @@ interface Props {
 
 /** Create / edit / view a service (structure). The code cannot change once created. */
 export default function StructureFormDialog({ open, mode, initial, onClose, onSubmit }: Props) {
+  const { t } = useTranslation();
   const readOnly = mode === 'view';
+  const schema = useMemo(() => schemaFor(t), [t]);
   const {
     register,
     handleSubmit,
@@ -48,18 +47,18 @@ export default function StructureFormDialog({ open, mode, initial, onClose, onSu
     <Dialog
       open={open}
       onOpenChange={(o) => !o && onClose()}
-      title={titles[mode]}
+      title={t(`structures:form.title.${mode}`)}
       size="sm"
       footer={
         readOnly ? (
-          <Button onClick={onClose}>Fermer</Button>
+          <Button onClick={onClose}>{t('actions.close')}</Button>
         ) : (
           <>
             <Button onClick={onClose} disabled={isSubmitting}>
-              Annuler
+              {t('actions.cancel')}
             </Button>
             <Button variant="primary" type="submit" form="structure-form" disabled={isSubmitting}>
-              {mode === 'edit' ? 'Enregistrer' : 'Ajouter'}
+              {mode === 'edit' ? t('actions.save') : t('actions.add')}
             </Button>
           </>
         )
@@ -67,10 +66,10 @@ export default function StructureFormDialog({ open, mode, initial, onClose, onSu
     >
       <form id="structure-form" onSubmit={submit} noValidate>
         <FormGrid className="sm:grid-cols-1">
-          <Field label="Code" error={errors.code?.message} required={!readOnly}>
+          <Field label={t('structures:field.code')} error={errors.code?.message} required={!readOnly}>
             <Input autoFocus={mode === 'create'} readOnly={mode !== 'create'} {...register('code')} />
           </Field>
-          <Field label="Nom du service" error={errors.name?.message} required={!readOnly}>
+          <Field label={t('structures:field.name')} error={errors.name?.message} required={!readOnly}>
             <Input autoFocus={mode === 'edit'} readOnly={readOnly} {...register('name')} />
           </Field>
         </FormGrid>

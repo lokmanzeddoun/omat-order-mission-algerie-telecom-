@@ -1,4 +1,5 @@
 import { Check, Circle, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from 'lib/utils';
 
 export interface TimelineStep {
@@ -10,6 +11,7 @@ export interface TimelineStep {
 
 /** Vertical lifecycle of an ordre de mission: créé → validé → décompte → accepté/rejeté. */
 export function StatusTimeline({ steps }: { steps: TimelineStep[] }) {
+  const { t } = useTranslation();
   return (
     <ol className="flex flex-col">
       {steps.map((step, i) => {
@@ -36,7 +38,7 @@ export function StatusTimeline({ steps }: { steps: TimelineStep[] }) {
                 {step.label}
                 <span className="sr-only">
                   {' '}
-                  ({{ done: 'terminé', current: 'en cours', upcoming: 'à venir', failed: 'refusé' }[step.state]})
+                  ({t(`timeline.${step.state}`)})
                 </span>
               </p>
               {step.date && <p className="text-xs text-fg-muted">{step.date}</p>}

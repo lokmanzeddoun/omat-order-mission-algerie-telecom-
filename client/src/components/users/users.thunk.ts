@@ -1,5 +1,6 @@
-import axios from 'axios';
 import http from 'helpers/http';
+import i18n from 'i18n';
+import { extractErrorMessage } from 'helpers/errorHandler';
 import {
   fetchUsersStart,
   fetchUsersSuccess,
@@ -27,18 +28,10 @@ export const getAllUsers = () => async (dispatch: AppDispatch) => {
     if (res.data) {
       return dispatch(fetchUsersSuccess(res.data));
     }
-    dispatch(setAlert({ msg: 'Problem In Getting Users', type: AlertTypes.ERROR }));
+    dispatch(setAlert({ msg: i18n.t('toasts:usersLoadFailed'), type: AlertTypes.ERROR }));
     return;
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -61,21 +54,13 @@ export const addUser = (user: IUser) => async (dispatch: AppDispatch) => {
       },
     });
     if (res.data) {
-      dispatch(setAlert({ msg: 'Utilisateur créé', type: AlertTypes.SUCCESS }));
+      dispatch(setAlert({ msg: i18n.t('toasts:userCreated'), type: AlertTypes.SUCCESS }));
       return dispatch(createUser(res.data));
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -94,21 +79,13 @@ export const uploadUsers = (file: File) => async (dispatch: AppDispatch) => {
     });
     console.log(res);
     if (res) {
-      await dispatch(setAlert({ msg: 'File uploaded successfully', type: AlertTypes.SUCCESS }));
+      await dispatch(setAlert({ msg: i18n.t('toasts:fileImported'), type: AlertTypes.SUCCESS }));
       return dispatch(getAllUsers()); // Assuming 'res.data' contains the newly created users
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -144,18 +121,12 @@ export const exportUsers = () => async (dispatch: AppDispatch) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      dispatch(setAlert({ msg: 'Users exported successfully', type: AlertTypes.SUCCESS }));
+      dispatch(setAlert({ msg: i18n.t('toasts:usersExported'), type: AlertTypes.SUCCESS }));
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -166,22 +137,14 @@ export const archiveUser = (user: IUser) => async (dispatch: AppDispatch) => {
   try {
     const res = await http.patch(`/users/${user.matricule}/archive`);
     if (res) {
-      await dispatch(setAlert({ msg: 'Utilisateur Archivé avec Succès', type: AlertTypes.SUCCESS }));
+      await dispatch(setAlert({ msg: i18n.t('toasts:userArchived'), type: AlertTypes.SUCCESS }));
       dispatch(removeUser(user.matricule));
       return dispatch(getAllUsers());
     } else {
-      dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
     }
   } catch (error) {
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      // For Axios errors, you can extract more specific information
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      // Handle other errors
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
@@ -199,22 +162,14 @@ export const updateUser =
     try {
       const res = await http.patch(`/users/${matricule}`, sanitizedUser);
       if (res) {
-        await dispatch(setAlert({ msg: 'User Updated Successfully', type: AlertTypes.SUCCESS }));
+        await dispatch(setAlert({ msg: i18n.t('toasts:userUpdated'), type: AlertTypes.SUCCESS }));
         dispatch(editUser(res.data));
         return dispatch(getAllUsers());
       } else {
-        dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+        dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
       }
     } catch (error) {
-      let errorMessage = 'An error occurred';
-
-      if (axios.isAxiosError(error)) {
-        // For Axios errors, you can extract more specific information
-        errorMessage = error.response?.data?.message || error.message;
-      } else if (error instanceof Error) {
-        // Handle other errors
-        errorMessage = error.message;
-      }
+      const errorMessage = extractErrorMessage(error);
 
       dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
       console.error('Error:', errorMessage);
@@ -231,22 +186,14 @@ export const changePassword =
         },
       });
       if (res.data) {
-        await dispatch(setAlert({ msg: 'Mot de passe modifié avec succès', type: AlertTypes.SUCCESS }));
+        await dispatch(setAlert({ msg: i18n.t('toasts:passwordChanged'), type: AlertTypes.SUCCESS }));
         dispatch(editUser(res.data));
         return true;
       }
-      dispatch(setAlert({ msg: 'Erreur lors de la modification du mot de passe', type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: i18n.t('toasts:passwordChangeFailed'), type: AlertTypes.ERROR }));
       return false;
     } catch (error) {
-      let errorMessage = 'An error occurred';
-
-      if (axios.isAxiosError(error)) {
-        // For Axios errors, you can extract more specific information
-        errorMessage = error.response?.data?.message || error.message;
-      } else if (error instanceof Error) {
-        // Handle other errors
-        errorMessage = error.message;
-      }
+      const errorMessage = extractErrorMessage(error);
 
       dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
       return false;
@@ -260,19 +207,13 @@ export const resetUserPassword =
         newPassword,
       });
       if (res.data) {
-        dispatch(setAlert({ msg: 'Mot de passe réinitialisé avec succès', type: AlertTypes.SUCCESS }));
+        dispatch(setAlert({ msg: i18n.t('toasts:passwordReset'), type: AlertTypes.SUCCESS }));
         return res.data;
       } else {
-        dispatch(setAlert({ msg: 'Unexpected error: no data returned', type: AlertTypes.ERROR }));
+        dispatch(setAlert({ msg: i18n.t('toasts:noData'), type: AlertTypes.ERROR }));
       }
     } catch (error) {
-      let errorMessage = 'An error occurred';
-
-      if (axios.isAxiosError(error)) {
-        errorMessage = error.response?.data?.message || error.message;
-      } else if (error instanceof Error) {
-        errorMessage = error.message;
-      }
+      const errorMessage = extractErrorMessage(error);
 
       dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
       console.error('Error:', errorMessage);

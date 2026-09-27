@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { ToggleGroup } from 'radix-ui';
+import { useTranslation } from 'react-i18next';
 import { cn } from 'lib/utils';
 
 export interface TabItem {
@@ -16,7 +17,7 @@ export function Tabs({
   items,
   value,
   onValueChange,
-  label = 'Filtre',
+  label,
   className,
 }: {
   items: TabItem[];
@@ -26,13 +27,14 @@ export function Tabs({
   label?: string;
   className?: string;
 }) {
+  const { t } = useTranslation();
   return (
     <ToggleGroup.Root
       type="single"
       value={value}
       // Keep one option selected: ignore the "deselect" event Radix emits on re-click.
       onValueChange={(v) => v && onValueChange(v)}
-      aria-label={label}
+      aria-label={label ?? t('table.filterGroup')}
       className={cn('flex gap-1 border-b border-border', className)}
     >
       {items.map((item) => (

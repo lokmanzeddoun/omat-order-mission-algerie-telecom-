@@ -1,4 +1,5 @@
 // Single source of truth for how statuses are shown (see CONTEXT.md › Status labels).
+import i18n from 'i18n';
 
 export type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 
@@ -7,17 +8,25 @@ export interface StatusDisplay {
   tone: StatusTone;
 }
 
+// The label is translated when read, so it follows the current UI language.
+const status = (key: string, tone: StatusTone): StatusDisplay => ({
+  get label() {
+    return i18n.t(`enums:status.${key}`);
+  },
+  tone,
+});
+
 export const missionStatus: Record<string, StatusDisplay> = {
-  INPROGRESS: { label: 'En cours', tone: 'info' },
-  COMPLETED: { label: 'Validé', tone: 'success' },
+  INPROGRESS: status('INPROGRESS', 'info'),
+  COMPLETED: status('COMPLETED', 'success'),
 };
 
 export const decompteStatus: Record<string, StatusDisplay> = {
-  PENDING: { label: 'En attente', tone: 'warning' },
-  ACCEPTED: { label: 'Accepté', tone: 'success' },
+  PENDING: status('PENDING', 'warning'),
+  ACCEPTED: status('ACCEPTED', 'success'),
   // The API enum is spelled REGECTED; REJECTED is accepted for forward compatibility.
-  REGECTED: { label: 'Rejeté', tone: 'danger' },
-  REJECTED: { label: 'Rejeté', tone: 'danger' },
+  REGECTED: status('REJECTED', 'danger'),
+  REJECTED: status('REJECTED', 'danger'),
 };
 
 export function getStatusDisplay(map: Record<string, StatusDisplay>, code?: string | null): StatusDisplay {

@@ -10,10 +10,12 @@ import { decompteStatus, missionStatus } from 'constants/statusLabels';
 import { categoryLabels, directionLabels, transportLabels } from 'constants/labels';
 import { cn } from 'lib/utils';
 import paths from 'routes/paths';
+import { extractErrorMessage } from 'helpers/errorHandler';
+import { countOf } from 'components/common/bulk';
+import { formatDA, formatNumber } from 'lib/format';
 
-const money = new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 0 });
-const da = (v: number) => `${money.format(v)} DA`;
-const pct = (part: number, total: number) => (total > 0 ? `${((part / total) * 100).toFixed(1).replace('.', ',')} %` : '—');
+const da = (v: number) => formatDA(v, 0);
+const pct = (part: number, total: number) => (total > 0 ? `${formatNumber((part / total) * 100, 1)} %` : '—');
 const label = (map: Record<string, { label: string } | string>, key: string) => {
   const v = map[key];
   return typeof v === 'string' ? v : (v?.label ?? key);
@@ -57,8 +59,7 @@ export default function AnalyticsDashboard() {
     try {
       setData(await getAnalytics(exerciceId));
     } catch (err) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg ?? 'Échec du chargement des données analytiques');
+      setError(extractErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -70,18 +71,18 @@ export default function AnalyticsDashboard() {
 
   const header = (
     <PageHeader
-      title="Tableau de bord"
-      description={scope === 'year' ? `Indicateurs de l’exercice ${selectedYear ?? ''}.` : 'Indicateurs de tous les exercices.'}
+      title={t('nav.analytics')}
+      description={scope === 'year' ? t('analytics:descriptionYear', { year: selectedYear ?? '' }) : t('analytics:descriptionAll')}
       breadcrumbs={[{ label: t('nav.home'), to: paths.admins }, { label: t('nav.analytics') }]}
       actions={
         <>
           <Tabs
-            label="Période"
+            label={t('analytics:period')}
             value={scope}
             onValueChange={(v) => setScope(v as 'year' | 'all')}
             items={[
-              { value: 'year', label: 'Exercice sélectionné' },
-              { value: 'all', label: 'Tous les exercices' },
+              { value: 'year', label: t('analytics:selectedYear') },
+              { value: 'all', label: t('analytics:allYears') },
             ]}
           />
           <IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={() => void load()} />
@@ -117,54 +118,54 @@ export default function AnalyticsDashboard() {
     <>
       {header}
 
-      <section aria-label="Indicateurs clés" className="mb-6 grid grid-cols-2 divide-border rounded-sm border border-border bg-surface md:grid-cols-4 [&>*]:border-b [&>*]:border-e">
-        <Kpi title="Ordres de mission" value={kpis.totalMissions} detail={`${pct(kpis.completedMissions, kpis.totalMissions)} validés`} />
-        <Kpi title="En cours" value={kpis.inProgressMissions} />
-        <Kpi title="Décomptes" value={kpis.totalDecomptes} detail={`${pct(kpis.acceptedDecomptes, kpis.totalDecomptes)} acceptés`} />
-        <Kpi title="Agents actifs" value={kpis.activeUsers} />
-        <Kpi title="Montant total" value={da(kpis.totalAmount)} detail={`Moyenne : ${da(kpis.averageDecompteAmount)}`} />
-        <Kpi title="Montant accepté" value={da(kpis.acceptedAmount)} detail={`${kpis.acceptedDecomptes} décompte(s)`} tone="success" />
-        <Kpi title="Décomptes en attente" value={kpis.pendingDecomptes} detail={da(kpis.pendingAmount)} tone="warning" />
-        <Kpi title="Décomptes rejetés" value={kpis.rejectedDecomptes} tone="danger" />
+      <section aria-label={t('analytics:kpis')} className="mb-6 grid grid-cols-2 divide-border rounded-sm border border-border bg-surface md:grid-cols-4 [&>*]:border-b [&>*]:border-e">
+        <Kpi title={t('nav.ordres')} value={kpis.totalMissions} detail={t('analytics:validatedShare', { pct: pct(kpis.completedMissions, kpis.totalMissions) })} />
+        <Kpi title={t('ordres:summary.inProgress')} value={kpis.inProgressMissions} />
+        <Kpi title={t('nav.decomptes')} value={kpis.totalDecomptes} detail={t('analytics:acceptedShare', { pct: pct(kpis.acceptedDecomptes, kpis.totalDecomptes) })} />
+        <Kpi title={t('analytics:activeAgents')} value={kpis.activeUsers} />
+        <Kpi title={t('field.totalAmount')} value={da(kpis.totalAmount)} detail={t('analytics:average', { amount: da(kpis.averageDecompteAmount) })} />
+        <Kpi title={t('analytics:acceptedAmount')} value={da(kpis.acceptedAmount)} detail={countOf(kpis.acceptedDecomptes, 'decompte')} tone="success" />
+        <Kpi title={t('analytics:pendingDecomptes')} value={kpis.pendingDecomptes} detail={da(kpis.pendingAmount)} tone="warning" />
+        <Kpi title={t('analytics:rejectedDecomptes')} value={kpis.rejectedDecomptes} tone="danger" />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <PieChart
-          title="Ordres de mission par statut"
+          title={t('analytics:missionsByStatus')}
           data={data.missionStatusDistribution.map((d) => ({ name: label(missionStatus, d.status), value: d.count, tone: missionStatus[d.status]?.tone }))}
         />
         <PieChart
-          title="Décomptes par statut"
+          title={t('analytics:decomptesByStatus')}
           data={data.decompteStatusDistribution.map((d) => ({ name: label(decompteStatus, d.status), value: d.count, tone: decompteStatus[d.status]?.tone }))}
         />
         <div className="lg:col-span-2">
           <LineChart
-            title="Évolution mensuelle (12 derniers mois)"
+            title={t('analytics:monthly')}
             xAxisData={data.monthlyTrends.map((m) => m.month)}
             seriesData={[
-              { name: 'Ordres de mission', data: data.monthlyTrends.map((m) => m.missionCount) },
-              { name: 'Décomptes', data: data.monthlyTrends.map((m) => m.decompteCount) },
+              { name: t('nav.ordres'), data: data.monthlyTrends.map((m) => m.missionCount) },
+              { name: t('nav.decomptes'), data: data.monthlyTrends.map((m) => m.decompteCount) },
             ]}
           />
         </div>
         <BarChart
-          title="Ordres de mission par catégorie"
+          title={t('analytics:missionsByCategory')}
           xAxisData={data.categoryBreakdown.map((c) => label(categoryLabels, c.category))}
-          seriesData={[{ name: 'Ordres de mission', data: data.categoryBreakdown.map((c) => c.missionCount) }]}
+          seriesData={[{ name: t('nav.ordres'), data: data.categoryBreakdown.map((c) => c.missionCount) }]}
         />
         <BarChart
-          title="Montants par catégorie (DA)"
+          title={t('analytics:amountsByCategory')}
           xAxisData={data.categoryBreakdown.map((c) => label(categoryLabels, c.category))}
-          seriesData={[{ name: 'Montant total', data: data.categoryBreakdown.map((c) => c.totalAmount) }]}
+          seriesData={[{ name: t('field.totalAmount'), data: data.categoryBreakdown.map((c) => c.totalAmount) }]}
         />
-        <Panel title="Par direction" bodyClassName="p-0" className="self-start">
+        <Panel title={t('analytics:byDirection')} bodyClassName="p-0" className="self-start">
           <table className="w-full border-collapse text-sm">
-            <caption className="sr-only">Ordres de mission et montants par direction</caption>
+            <caption className="sr-only">{t('analytics:byDirectionCaption')}</caption>
             <thead className="bg-surface-header">
               <tr>
-                <th scope="col" className="border-b border-border px-4 py-2 text-start font-semibold">Direction</th>
-                <th scope="col" className="border-b border-border px-4 py-2 text-end font-semibold">Ordres de mission</th>
-                <th scope="col" className="border-b border-border px-4 py-2 text-end font-semibold">Montant total</th>
+                <th scope="col" className="border-b border-border px-4 py-2 text-start font-semibold">{t('field.direction')}</th>
+                <th scope="col" className="border-b border-border px-4 py-2 text-end font-semibold">{t('nav.ordres')}</th>
+                <th scope="col" className="border-b border-border px-4 py-2 text-end font-semibold">{t('field.totalAmount')}</th>
               </tr>
             </thead>
             <tbody>
@@ -177,23 +178,23 @@ export default function AnalyticsDashboard() {
               ))}
               {data.directionBreakdown.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-6 text-center text-fg-muted">Aucune donnée pour cette période.</td>
+                  <td colSpan={3} className="px-4 py-6 text-center text-fg-muted">{t('analytics:noData')}</td>
                 </tr>
               )}
             </tbody>
           </table>
         </Panel>
         <PieChart
-          title="Moyens de transport"
+          title={t('analytics:transportModes')}
           data={data.transportBreakdown.map((d) => ({ name: label(transportLabels, d.transportType), value: d.count }))}
         />
         <div className="lg:col-span-2">
           <BarChart
-            title="Principales destinations"
+            title={t('analytics:topDestinations')}
             horizontal
             height={Math.max(220, data.topDestinations.length * 32)}
             xAxisData={data.topDestinations.map((d) => d.destination)}
-            seriesData={[{ name: 'Ordres de mission', data: data.topDestinations.map((d) => d.count) }]}
+            seriesData={[{ name: t('nav.ordres'), data: data.topDestinations.map((d) => d.count) }]}
           />
         </div>
       </div>

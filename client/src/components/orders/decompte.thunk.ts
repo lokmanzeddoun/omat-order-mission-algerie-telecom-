@@ -1,5 +1,6 @@
-import axios from 'axios';
 import http from 'helpers/http';
+import i18n from 'i18n';
+import { extractErrorMessage } from 'helpers/errorHandler';
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
@@ -43,21 +44,13 @@ export const addDecompte =
         });
 
         if (res && res.data) {
-          dispatch(setAlert({ msg: 'Order Submitted Successfully', type: AlertTypes.SUCCESS }));
+          dispatch(setAlert({ msg: i18n.t('toasts:decompteSubmitted'), type: AlertTypes.SUCCESS }));
           return dispatch(fetchAllDecompte(token)); // Dispatch createOrder if necessary
         } else {
-          dispatch(setAlert({ msg: 'Unexpected error: no file returned', type: AlertTypes.ERROR }));
+          dispatch(setAlert({ msg: i18n.t('toasts:noFile'), type: AlertTypes.ERROR }));
         }
       } catch (error) {
-        let errorMessage = 'An error occurred';
-
-        if (axios.isAxiosError(error)) {
-          // For Axios errors, extract specific information
-          errorMessage = error.response?.data?.message || error.message;
-        } else if (error instanceof Error) {
-          // Handle other errors
-          errorMessage = error.message;
-        }
+        const errorMessage = extractErrorMessage(error);
 
         dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
         console.error('Error:', errorMessage);
@@ -93,16 +86,10 @@ export const fetchAllDecompte = (token: string | null, status?: string) => async
       return;
     }
 
-    dispatch(fetchDecompteFailure('Problem in getting decomptes'));
+    dispatch(fetchDecompteFailure(i18n.t('toasts:decomptesLoadFailed')));
   } catch (error) {
     if (requestId !== decomptesRequestId) return;
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(fetchDecompteFailure(errorMessage)); // Dispatch failure and pass the error message
     console.error('Error:', errorMessage);
@@ -133,16 +120,10 @@ export const fetchUserDecompte = (token: string | null, status?: string) => asyn
       return;
     }
 
-    dispatch(fetchDecompteFailure('Problem in getting decomptes'));
+    dispatch(fetchDecompteFailure(i18n.t('toasts:decomptesLoadFailed')));
   } catch (error) {
     if (requestId !== decomptesRequestId) return;
-    let errorMessage = 'An error occurred';
-
-    if (axios.isAxiosError(error)) {
-      errorMessage = error.response?.data?.message || error.message;
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    const errorMessage = extractErrorMessage(error);
 
     dispatch(fetchDecompteFailure(errorMessage)); // Dispatch failure and pass the error message
     console.error('Error:', errorMessage);
@@ -165,7 +146,7 @@ export const acceptDecompte =
         );
 
         if (res && res.data) {
-          dispatch(setAlert({ msg: 'Décompte accepté avec succès', type: AlertTypes.SUCCESS }));
+          dispatch(setAlert({ msg: i18n.t('toasts:decompteAccepted'), type: AlertTypes.SUCCESS }));
           // Refresh based on user role without status filter
           if (isAdmin) {
             return dispatch(fetchAllDecompte(token));
@@ -173,16 +154,10 @@ export const acceptDecompte =
             return dispatch(fetchUserDecompte(token));
           }
         } else {
-          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+          dispatch(setAlert({ msg: i18n.t('toasts:unexpected'), type: AlertTypes.ERROR }));
         }
       } catch (error) {
-        let errorMessage = 'An error occurred';
-
-        if (axios.isAxiosError(error)) {
-          errorMessage = error.response?.data?.message || error.message;
-        } else if (error instanceof Error) {
-          errorMessage = error.message;
-        }
+        const errorMessage = extractErrorMessage(error);
 
         dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
         console.error('Error:', errorMessage);
@@ -205,7 +180,7 @@ export const rejectDecompte =
         );
 
         if (res && res.data) {
-          dispatch(setAlert({ msg: 'Décompte rejeté avec succès', type: AlertTypes.SUCCESS }));
+          dispatch(setAlert({ msg: i18n.t('toasts:decompteRejected'), type: AlertTypes.SUCCESS }));
           // Refresh based on user role without status filter
           if (isAdmin) {
             return dispatch(fetchAllDecompte(token));
@@ -213,16 +188,10 @@ export const rejectDecompte =
             return dispatch(fetchUserDecompte(token));
           }
         } else {
-          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+          dispatch(setAlert({ msg: i18n.t('toasts:unexpected'), type: AlertTypes.ERROR }));
         }
       } catch (error) {
-        let errorMessage = 'An error occurred';
-
-        if (axios.isAxiosError(error)) {
-          errorMessage = error.response?.data?.message || error.message;
-        } else if (error instanceof Error) {
-          errorMessage = error.message;
-        }
+        const errorMessage = extractErrorMessage(error);
 
         dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
         console.error('Error:', errorMessage);
@@ -241,7 +210,7 @@ export const archiveDecompte =
         });
 
         if (res && res.data) {
-          dispatch(setAlert({ msg: 'Décompte archivé avec succès', type: AlertTypes.SUCCESS }));
+          dispatch(setAlert({ msg: i18n.t('toasts:decompteArchived'), type: AlertTypes.SUCCESS }));
           // Refresh based on user role without status filter
           if (isAdmin) {
             return dispatch(fetchAllDecompte(token));
@@ -249,16 +218,10 @@ export const archiveDecompte =
             return dispatch(fetchUserDecompte(token));
           }
         } else {
-          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+          dispatch(setAlert({ msg: i18n.t('toasts:unexpected'), type: AlertTypes.ERROR }));
         }
       } catch (error) {
-        let errorMessage = 'An error occurred';
-
-        if (axios.isAxiosError(error)) {
-          errorMessage = error.response?.data?.message || error.message;
-        } else if (error instanceof Error) {
-          errorMessage = error.message;
-        }
+        const errorMessage = extractErrorMessage(error);
 
         dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
         console.error('Error:', errorMessage);
@@ -281,23 +244,17 @@ export const addCommentToDecompte =
         );
 
         if (res && res.data) {
-          dispatch(setAlert({ msg: 'Commentaire ajouté avec succès', type: AlertTypes.SUCCESS }));
+          dispatch(setAlert({ msg: i18n.t('toasts:commentAdded'), type: AlertTypes.SUCCESS }));
           // Refresh decomptes if it's a decompte comment, otherwise just return
           if (comment.decompteId) {
             return dispatch(fetchUserDecompte(token));
           }
           return res.data;
         } else {
-          dispatch(setAlert({ msg: 'Unexpected error occurred', type: AlertTypes.ERROR }));
+          dispatch(setAlert({ msg: i18n.t('toasts:unexpected'), type: AlertTypes.ERROR }));
         }
       } catch (error) {
-        let errorMessage = 'An error occurred';
-
-        if (axios.isAxiosError(error)) {
-          errorMessage = error.response?.data?.message || error.message;
-        } else if (error instanceof Error) {
-          errorMessage = error.message;
-        }
+        const errorMessage = extractErrorMessage(error);
 
         dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
         console.error('Error:', errorMessage);

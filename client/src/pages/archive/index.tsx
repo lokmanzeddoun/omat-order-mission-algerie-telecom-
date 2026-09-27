@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { ArchiveRestore, Eye, RefreshCw } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
@@ -9,6 +10,8 @@ import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { categoryLabels, roleLabels } from 'constants/labels';
 import { formatDateTime } from 'components/orders/format';
+import { extractErrorMessage } from 'helpers/errorHandler';
+import { formatDA } from 'lib/format';
 import {
   ConfirmDialog,
   DataTable,
@@ -62,48 +65,50 @@ type Structure = Audit & { code: string; name: string; users?: unknown[] };
 type Kind = 'missions' | 'decomptes' | 'users' | 'structures';
 type Item = Mission | Decompte | User | Structure;
 
-const money = new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 2 });
 const archivedOn = (r: Audit) => r.archivedAt ?? r.updatedAt;
 const archivedByName = (r: Audit) => (r.archivedBy ? `${r.archivedBy.prenom} ${r.archivedBy.nom}` : '');
-const archivedAt: DataColumn<Audit> = {
-  id: 'archivedAt',
-  header: 'Archivé le',
-  filter: 'date',
-  accessor: archivedOn,
-  cell: (r) => formatDateTime(archivedOn(r)),
-};
-const archivedBy: DataColumn<Audit> = { id: 'archivedBy', header: 'Archivé par', accessor: archivedByName };
 
-const columns = {
-  missions: [
-    { id: 'n_mission', header: 'N°', width: 64, align: 'end', alwaysVisible: true },
-    { id: 'destination', header: 'Destination' },
-    { id: 'motif', header: 'Motif' },
-    archivedAt,
-    archivedBy,
-  ] as DataColumn<Mission>[],
-  decomptes: [
-    { id: 'n_decompte', header: 'N°', width: 64, align: 'end', alwaysVisible: true },
-    { id: 'ordre', header: 'Ordre de mission', accessor: (d: Decompte) => d.mission?.n_mission, cell: (d: Decompte) => (d.mission ? `N° ${d.mission.n_mission}` : '—') },
-    { id: 'montant', header: 'Montant', align: 'end', filter: false, cell: (d: Decompte) => `${money.format(d.montant ?? 0)} DA` },
-    archivedAt,
-    archivedBy,
-  ] as DataColumn<Decompte>[],
-  users: [
-    { id: 'matricule', header: 'Matricule', width: 110, alwaysVisible: true },
-    { id: 'nom', header: 'Nom' },
-    { id: 'prenom', header: 'Prénom' },
-    { id: 'email', header: 'Adresse e-mail' },
-    { id: 'service', header: 'Service', accessor: (u: User) => u.structure?.name ?? '' },
-    archivedAt,
-    archivedBy,
-  ] as DataColumn<User>[],
-  structures: [
-    { id: 'code', header: 'Code', width: 140, alwaysVisible: true },
-    { id: 'name', header: 'Nom du service' },
-    archivedAt,
-    archivedBy,
-  ] as DataColumn<Structure>[],
+// Built from `t` and memoized on it, so headers follow the UI language.
+const columnsFor = (t: TFunction) => {
+  const archivedAt: DataColumn<Audit> = {
+    id: 'archivedAt',
+    header: t('archive:archivedAt'),
+    filter: 'date',
+    accessor: archivedOn,
+    cell: (r) => formatDateTime(archivedOn(r)),
+  };
+  const archivedBy: DataColumn<Audit> = { id: 'archivedBy', header: t('archive:archivedBy'), accessor: archivedByName };
+  return {
+    missions: [
+      { id: 'n_mission', header: t('field.number'), width: 64, align: 'end', alwaysVisible: true },
+      { id: 'destination', header: t('field.destination') },
+      { id: 'motif', header: t('field.motif') },
+      archivedAt,
+      archivedBy,
+    ] as DataColumn<Mission>[],
+    decomptes: [
+      { id: 'n_decompte', header: t('field.number'), width: 64, align: 'end', alwaysVisible: true },
+      { id: 'ordre', header: t('field.missionOrder'), accessor: (d: Decompte) => d.mission?.n_mission, cell: (d: Decompte) => (d.mission ? t('numbered', { n: d.mission.n_mission }) : '—') },
+      { id: 'montant', header: t('field.amount'), align: 'end', filter: false, cell: (d: Decompte) => formatDA(d.montant) },
+      archivedAt,
+      archivedBy,
+    ] as DataColumn<Decompte>[],
+    users: [
+      { id: 'matricule', header: t('field.matricule'), width: 110, alwaysVisible: true },
+      { id: 'nom', header: t('users:field.nom') },
+      { id: 'prenom', header: t('users:field.prenom') },
+      { id: 'email', header: t('auth.email') },
+      { id: 'service', header: t('users:field.service'), accessor: (u: User) => u.structure?.name ?? '' },
+      archivedAt,
+      archivedBy,
+    ] as DataColumn<User>[],
+    structures: [
+      { id: 'code', header: t('structures:field.code'), width: 140, alwaysVisible: true },
+      { id: 'name', header: t('structures:field.name') },
+      archivedAt,
+      archivedBy,
+    ] as DataColumn<Structure>[],
+  };
 };
 
 const idOf = (kind: Kind, item: Item) =>
@@ -115,59 +120,59 @@ const idOf = (kind: Kind, item: Item) =>
         ? (item as User).matricule
         : (item as Structure).code;
 
-const labelOf = (kind: Kind, item: Item) =>
+const labelOf = (t: TFunction, kind: Kind, item: Item) =>
   kind === 'missions'
-    ? `l’ordre de mission N° ${(item as Mission).n_mission}`
+    ? t('archive:what.mission', { n: (item as Mission).n_mission })
     : kind === 'decomptes'
-      ? `le décompte N° ${(item as Decompte).n_decompte}`
+      ? t('archive:what.decompte', { n: (item as Decompte).n_decompte })
       : kind === 'users'
-        ? `le compte de ${(item as User).prenom} ${(item as User).nom}`
-        : `le service ${(item as Structure).name}`;
+        ? t('archive:what.user', { name: `${(item as User).prenom} ${(item as User).nom}` })
+        : t('archive:what.structure', { name: (item as Structure).name });
 
-function details(kind: Kind, item: Item) {
+function details(t: TFunction, kind: Kind, item: Item) {
+  const audit = (r: Audit) => [
+    { label: t('archive:archivedAt'), value: formatDateTime(archivedOn(r)) },
+    { label: t('archive:archivedBy'), value: archivedByName(r) || '—' },
+  ];
   switch (kind) {
     case 'missions': {
       const m = item as Mission;
       return [
-        { label: 'N°', value: m.n_mission },
-        { label: 'Destination', value: m.destination },
-        { label: 'Motif', value: m.motif },
-        { label: 'Archivé le', value: formatDateTime(archivedOn(m)) },
-        { label: 'Archivé par', value: archivedByName(m) || '—' },
+        { label: t('field.number'), value: m.n_mission },
+        { label: t('field.destination'), value: m.destination },
+        { label: t('field.motif'), value: m.motif },
+        ...audit(m),
       ];
     }
     case 'decomptes': {
       const d = item as Decompte;
       return [
-        { label: 'N°', value: d.n_decompte },
-        { label: 'Ordre de mission', value: d.mission ? `N° ${d.mission.n_mission}` : '—' },
-        { label: 'Montant', value: `${money.format(d.montant ?? 0)} DA` },
-        { label: 'Archivé le', value: formatDateTime(archivedOn(d)) },
-        { label: 'Archivé par', value: archivedByName(d) || '—' },
+        { label: t('field.number'), value: d.n_decompte },
+        { label: t('field.missionOrder'), value: d.mission ? t('numbered', { n: d.mission.n_mission }) : '—' },
+        { label: t('field.amount'), value: formatDA(d.montant) },
+        ...audit(d),
       ];
     }
     case 'users': {
       const u = item as User;
       return [
-        { label: 'Matricule', value: u.matricule },
-        { label: 'Nom et prénom', value: `${u.prenom} ${u.nom}` },
-        { label: 'Adresse e-mail', value: u.email },
-        { label: 'Rôle', value: roleLabels[u.role] ?? u.role },
-        { label: 'Catégorie', value: categoryLabels[u.category] ?? u.category },
-        { label: 'Grade', value: u.grade },
-        { label: 'Service', value: u.structure?.name },
-        { label: 'Archivé le', value: formatDateTime(archivedOn(u)) },
-        { label: 'Archivé par', value: archivedByName(u) || '—' },
+        { label: t('field.matricule'), value: u.matricule },
+        { label: t('field.fullName'), value: `${u.prenom} ${u.nom}` },
+        { label: t('auth.email'), value: <span dir="ltr">{u.email}</span> },
+        { label: t('users:field.role'), value: roleLabels[u.role] ?? u.role },
+        { label: t('users:field.category'), value: categoryLabels[u.category] ?? u.category },
+        { label: t('users:field.grade'), value: u.grade },
+        { label: t('users:field.service'), value: u.structure?.name },
+        ...audit(u),
       ];
     }
     default: {
       const s = item as Structure;
       return [
-        { label: 'Code', value: s.code },
-        { label: 'Nom du service', value: s.name },
-        { label: 'Agents rattachés', value: s.users?.length ?? 0 },
-        { label: 'Archivé le', value: formatDateTime(archivedOn(s)) },
-        { label: 'Archivé par', value: archivedByName(s) || '—' },
+        { label: t('structures:field.code'), value: s.code },
+        { label: t('structures:field.name'), value: s.name },
+        { label: t('archive:attachedAgents'), value: s.users?.length ?? 0 },
+        ...audit(s),
       ];
     }
   }
@@ -191,6 +196,7 @@ export default function ArchivePage() {
   const [loading, setLoading] = useState(true);
   const [viewing, setViewing] = useState<Item | null>(null);
   const [restoring, setRestoring] = useState<Item | null>(null);
+  const columns = useMemo(() => columnsFor(t), [t]);
 
   const load = useCallback(async () => {
     const headers = { Authorization: `Bearer ${token}` };
@@ -220,12 +226,11 @@ export default function ArchivePage() {
     if (!restoring) return;
     try {
       await http.patch(`${restorePath[tab]}/${idOf(tab, restoring)}/restore`, {}, { headers: { Authorization: `Bearer ${token}` } });
-      dispatch(setAlert({ msg: 'Élément désarchivé', type: AlertTypes.SUCCESS }));
+      dispatch(setAlert({ msg: t('archive:restored'), type: AlertTypes.SUCCESS }));
       await load();
     } catch (error) {
       // Previously failures were only logged to the console.
-      const msg = (error as { message?: string })?.message ?? 'Impossible de désarchiver cet élément';
-      dispatch(setAlert({ msg, type: AlertTypes.ERROR }));
+      dispatch(setAlert({ msg: extractErrorMessage(error), type: AlertTypes.ERROR }));
     } finally {
       setRestoring(null);
     }
@@ -233,29 +238,29 @@ export default function ArchivePage() {
 
   // One per tab: hooks can't be called conditionally.
   const bulk = {
-    missions: useArchiveTabBulk<Mission>({ onDone: load, entity: 'missions', idOf: (m) => m.n_mission, labelOf: (m) => `N° ${m.n_mission} · ${m.destination ?? '—'}`, noun: ['ordre de mission', 'ordres de mission'] }, isSuperAdmin),
-    decomptes: useArchiveTabBulk<Decompte>({ onDone: load, entity: 'decomptes', idOf: (d) => d.n_decompte, labelOf: (d) => `N° ${d.n_decompte}`, noun: ['décompte', 'décomptes'] }, isSuperAdmin),
-    users: useArchiveTabBulk<User>({ onDone: load, entity: 'users', idOf: (u) => u.matricule, labelOf: (u) => `${u.prenom} ${u.nom} (${u.matricule})`, noun: ['utilisateur', 'utilisateurs'] }, isSuperAdmin),
-    structures: useArchiveTabBulk<Structure>({ onDone: load, entity: 'structures', idOf: (s) => s.code, labelOf: (s) => `${s.name} (${s.code})`, noun: ['service', 'services'] }, isSuperAdmin),
+    missions: useArchiveTabBulk<Mission>({ onDone: load, entity: 'missions', idOf: (m) => m.n_mission, labelOf: (m) => `${t('numbered', { n: m.n_mission })} · ${m.destination ?? '—'}`, noun: 'mission' }, isSuperAdmin),
+    decomptes: useArchiveTabBulk<Decompte>({ onDone: load, entity: 'decomptes', idOf: (d) => d.n_decompte, labelOf: (d) => t('numbered', { n: d.n_decompte }), noun: 'decompte' }, isSuperAdmin),
+    users: useArchiveTabBulk<User>({ onDone: load, entity: 'users', idOf: (u) => u.matricule, labelOf: (u) => `${u.prenom} ${u.nom} (${u.matricule})`, noun: 'user' }, isSuperAdmin),
+    structures: useArchiveTabBulk<Structure>({ onDone: load, entity: 'structures', idOf: (s) => s.code, labelOf: (s) => `${s.name} (${s.code})`, noun: 'structure' }, isSuperAdmin),
   };
 
   const rowActions = (item: Item): RowActions => ({
     primary: [
-      { label: 'Voir le détail', icon: <Eye />, onSelect: () => setViewing(item) },
+      { label: t('actions.details'), icon: <Eye />, onSelect: () => setViewing(item) },
       { label: t('actions.unarchive'), icon: <ArchiveRestore />, onSelect: () => setRestoring(item) },
     ],
   });
 
   const tabs = (
     <Tabs
-      label="Type d’élément archivé"
+      label={t('archive:kind')}
       value={tab}
       onValueChange={(v) => setTab(v as Kind)}
       items={[
-        { value: 'missions', label: 'Ordres de mission', count: data.missions.length },
-        { value: 'decomptes', label: 'Décomptes', count: data.decomptes.length },
-        { value: 'users', label: 'Utilisateurs', count: data.users.length },
-        { value: 'structures', label: 'Services', count: data.structures.length },
+        { value: 'missions', label: t('nav.ordres'), count: data.missions.length },
+        { value: 'decomptes', label: t('nav.decomptes'), count: data.decomptes.length },
+        { value: 'users', label: t('nav.users'), count: data.users.length },
+        { value: 'structures', label: t('nav.structures'), count: data.structures.length },
       ]}
     />
   );
@@ -265,40 +270,40 @@ export default function ArchivePage() {
     toolbar: tabs,
     rowActions,
     onRowDoubleClick: (item: Item) => setViewing(item),
-    emptyTitle: 'Aucun élément archivé',
+    emptyTitle: t('archive:empty'),
   };
 
   return (
     <>
       <PageHeader
-        title="Archive"
-        description={`Éléments archivés. Les ordres de mission et décomptes sont ceux de l’exercice ${selectedYear ?? ''}.`}
+        title={t('nav.archive')}
+        description={t('archive:description', { year: selectedYear ?? '' })}
         breadcrumbs={[{ label: t('nav.home'), to: paths.admins }, { label: t('nav.archive') }]}
         actions={<IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={() => void load()} />}
       />
 
       {tab === 'missions' && (
-        <DataTable<Mission> key="missions" caption="Ordres de mission archivés" tableId="archive-missions" columns={columns.missions} rows={data.missions as Mission[]} getRowId={(m) => m.n_mission} bulkActions={bulk.missions.actions} {...common} />
+        <DataTable<Mission> key="missions" caption={t('archive:caption.missions')} tableId="archive-missions" columns={columns.missions} rows={data.missions as Mission[]} getRowId={(m) => m.n_mission} bulkActions={bulk.missions.actions} {...common} />
       )}
       {tab === 'decomptes' && (
-        <DataTable<Decompte> key="decomptes" caption="Décomptes archivés" tableId="archive-decomptes" columns={columns.decomptes} rows={data.decomptes as Decompte[]} getRowId={(d) => d.n_decompte} bulkActions={bulk.decomptes.actions} {...common} />
+        <DataTable<Decompte> key="decomptes" caption={t('archive:caption.decomptes')} tableId="archive-decomptes" columns={columns.decomptes} rows={data.decomptes as Decompte[]} getRowId={(d) => d.n_decompte} bulkActions={bulk.decomptes.actions} {...common} />
       )}
       {tab === 'users' && (
-        <DataTable<User> key="users" caption="Utilisateurs archivés" tableId="archive-users" columns={columns.users} rows={data.users as User[]} getRowId={(u) => u.matricule} bulkActions={bulk.users.actions} {...common} />
+        <DataTable<User> key="users" caption={t('archive:caption.users')} tableId="archive-users" columns={columns.users} rows={data.users as User[]} getRowId={(u) => u.matricule} bulkActions={bulk.users.actions} {...common} />
       )}
       {tab === 'structures' && (
-        <DataTable<Structure> key="structures" caption="Services archivés" tableId="archive-structures" columns={columns.structures} rows={data.structures as Structure[]} getRowId={(s) => s.code} bulkActions={bulk.structures.actions} {...common} />
+        <DataTable<Structure> key="structures" caption={t('archive:caption.structures')} tableId="archive-structures" columns={columns.structures} rows={data.structures as Structure[]} getRowId={(s) => s.code} bulkActions={bulk.structures.actions} {...common} />
       )}
 
       {bulk[tab].dialog}
-      <SidePanel open={viewing !== null} onOpenChange={(o) => !o && setViewing(null)} title="Élément archivé">
-        {viewing && <DescriptionList columns={1} items={details(tab, viewing)} />}
+      <SidePanel open={viewing !== null} onOpenChange={(o) => !o && setViewing(null)} title={t('archive:item')}>
+        {viewing && <DescriptionList columns={1} items={details(t, tab, viewing)} />}
       </SidePanel>
       <ConfirmDialog
         open={restoring !== null}
         onOpenChange={(o) => !o && setRestoring(null)}
-        title="Désarchiver ?"
-        description={restoring ? `Voulez-vous restaurer ${labelOf(tab, restoring)} ?` : ''}
+        title={t('archive:restoreTitle')}
+        description={restoring ? t('archive:restoreQuestion', { what: labelOf(t, tab, restoring) }) : ''}
         confirmLabel={t('actions.unarchive')}
         onConfirm={restore}
       />

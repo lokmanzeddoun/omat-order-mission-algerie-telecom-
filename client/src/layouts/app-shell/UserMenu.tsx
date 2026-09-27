@@ -7,12 +7,7 @@ import type { RootState } from 'store/rootReducer';
 import { logout } from 'components/auth/auth.thunk';
 import { DropdownMenu } from 'components/ui';
 import paths from 'routes/paths';
-
-const roleLabel: Record<string, string> = {
-  SUPER_ADMIN: 'Super administrateur',
-  ADMIN: 'Administrateur',
-  USER: 'Agent',
-};
+import { roleLabels } from 'constants/labels';
 
 export default function UserMenu() {
   const { t } = useTranslation();
@@ -51,7 +46,7 @@ export default function UserMenu() {
           </span>
           <span className="hidden flex-col leading-tight md:flex">
             <span className="text-sm font-medium">{fullName || '—'}</span>
-            <span className="text-xs text-white/75">{user ? (roleLabel[user.role] ?? user.role) : ''}</span>
+            <span className="text-xs text-white/75">{user ? (roleLabels[user.role] ?? user.role) : ''}</span>
           </span>
           <ChevronDown aria-hidden="true" className="hidden size-4 text-white/80 sm:block" />
         </button>

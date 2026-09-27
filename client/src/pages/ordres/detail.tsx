@@ -26,31 +26,32 @@ import {
 } from 'components/ui';
 import { decompteStatus, getStatusDisplay, missionStatus } from 'constants/statusLabels';
 import { directionLabels, transportLabels } from 'constants/labels';
+import { formatDA } from 'lib/format';
+import i18n from 'i18n';
 import { homeFor } from 'routes/navigation';
 import paths from 'routes/paths';
 
 type MissionRow = IMission & { user?: { matricule: number; nom?: string; prenom?: string }; createdAt?: string };
 
-const amount = new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 2 });
-
 function timeline(m: MissionRow, d: IDecompte | undefined): TimelineStep[] {
+  const t = i18n.t;
   const validated = isValidated(m);
   const steps: TimelineStep[] = [
-    { label: 'Ordre de mission créé', date: formatDateTime(m.createdAt), state: 'done' },
-    { label: 'Validation', date: validated ? undefined : null, state: validated ? 'done' : 'current' },
+    { label: t('ordres:timeline.created'), date: formatDateTime(m.createdAt), state: 'done' },
+    { label: t('ordres:timeline.validation'), date: validated ? undefined : null, state: validated ? 'done' : 'current' },
   ];
   if (!validated) {
-    steps.push({ label: 'Décompte', state: 'upcoming' });
+    steps.push({ label: t('ordres:timeline.decompte'), state: 'upcoming' });
     return steps;
   }
   if (!d) {
-    steps.push({ label: 'Décompte', state: 'current', note: 'Décompte non trouvé pour l’exercice sélectionné.' });
+    steps.push({ label: t('ordres:timeline.decompte'), state: 'current', note: t('ordres:timeline.decompteMissing') });
     return steps;
   }
-  steps.push({ label: `Décompte N° ${d.n_decompte} créé`, date: formatDateTime(d.createdAt), state: 'done' });
+  steps.push({ label: t('ordres:timeline.decompteCreated', { n: d.n_decompte }), date: formatDateTime(d.createdAt), state: 'done' });
   const status = getStatusDisplay(decompteStatus, d.status);
   steps.push({
-    label: d.status === 'PENDING' ? 'Décision sur le décompte' : `Décompte ${status.label.toLowerCase()}`,
+    label: d.status === 'PENDING' ? t('ordres:timeline.decision') : t('ordres:timeline.decided', { status: status.label.toLowerCase() }),
     date: d.status === 'PENDING' ? undefined : formatDateTime(d.updatedAt),
     state: d.status === 'ACCEPTED' ? 'done' : d.status === 'PENDING' ? 'current' : 'failed',
   });
@@ -107,19 +108,19 @@ export default function OrdreDetailPage() {
   const breadcrumbs = [
     { label: t('nav.home'), to: homeFor(user?.role) },
     { label: isAdmin ? t('nav.ordres') : t('nav.myOrdres'), to: listPath },
-    { label: `N° ${id}` },
+    { label: t('numbered', { n: id }) },
   ];
 
   if (!mission) {
     return (
       <>
-        <PageHeader title={`Ordre de mission N° ${id}`} breadcrumbs={breadcrumbs} />
+        <PageHeader title={t('ordres:title', { n: id })} breadcrumbs={breadcrumbs} />
         {missing ? (
           <Panel>
             <EmptyState
-              title="Ordre de mission introuvable"
-              hint="Il a peut-être été annulé ou archivé."
-              action={<Button onClick={() => navigate(listPath)}>Retour à la liste</Button>}
+              title={t('ordres:notFound')}
+              hint={t('ordres:notFoundHint')}
+              action={<Button onClick={() => navigate(listPath)}>{t('actions.backToList')}</Button>}
             />
           </Panel>
         ) : (
@@ -131,17 +132,17 @@ export default function OrdreDetailPage() {
 
   const { menu = [] } = actionsFor(mission);
   const validated = isValidated(mission);
-  const open = (label: string) => menu.find((a) => a.label === label && !a.hidden);
-  const validate = open('Valider');
-  const edit = open('Modifier');
-  const others = menu.filter((a) => a.label !== 'Valider' && a.label !== 'Modifier');
+  const open = (id: string) => menu.find((a) => a.id === id && !a.hidden);
+  const validate = open('validate');
+  const edit = open('edit');
+  const others = menu.filter((a) => a.id !== 'validate' && a.id !== 'edit');
 
   return (
     <>
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-3">
-            Ordre de mission N° {mission.n_mission}
+            {t('ordres:title', { n: mission.n_mission })}
             <StatusBadge map={missionStatus} code={mission.status} />
           </span>
         }
@@ -151,18 +152,18 @@ export default function OrdreDetailPage() {
           <>
             <Button onClick={() => download(mission)}>
               <Download />
-              Télécharger
+              {t('actions.download')}
             </Button>
             {edit && (
               <Button onClick={edit.onSelect}>
                 <Pencil />
-                Modifier
+                {t('actions.edit')}
               </Button>
             )}
             {validate && (
               <Button variant="primary" onClick={validate.onSelect}>
                 <CheckCircle2 />
-                Valider
+                {t('actions.validate')}
               </Button>
             )}
             {others.some((a) => !a.hidden) && (
@@ -174,46 +175,46 @@ export default function OrdreDetailPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="flex flex-col gap-4 lg:col-span-2">
-          <Panel title="Mission">
+          <Panel title={t('ordres:mission')}>
             <DescriptionList
               items={[
-                { label: 'Motif', value: mission.motif },
-                { label: 'Destination', value: mission.destination },
-                { label: 'Départ', value: formatDateTime(mission.date_sortie) },
-                { label: 'Retour', value: formatDateTime(mission.date_retour) },
-                { label: 'Durée', value: missionDuration(mission.date_sortie, mission.date_retour) },
-                { label: 'Direction', value: directionLabels[mission.direction] ?? mission.direction },
-                { label: 'Moyen de transport', value: transportLabels[mission.transport] ?? mission.transport },
+                { label: t('field.motif'), value: mission.motif },
+                { label: t('field.destination'), value: mission.destination },
+                { label: t('field.departure'), value: formatDateTime(mission.date_sortie) },
+                { label: t('field.return'), value: formatDateTime(mission.date_retour) },
+                { label: t('field.duration'), value: missionDuration(mission.date_sortie, mission.date_retour) },
+                { label: t('field.direction'), value: directionLabels[mission.direction] ?? mission.direction },
+                { label: t('field.transportMode'), value: transportLabels[mission.transport] ?? mission.transport },
               ]}
             />
           </Panel>
-          <Panel title="Agent">
+          <Panel title={t('field.agent')}>
             <DescriptionList
               items={[
-                { label: 'Nom et prénom', value: agentName(mission.user) },
-                { label: 'Matricule', value: mission.user?.matricule ?? mission.userId },
+                { label: t('field.fullName'), value: agentName(mission.user) },
+                { label: t('field.matricule'), value: mission.user?.matricule ?? mission.userId },
               ]}
             />
           </Panel>
           {validated && decompte && (
-            <Panel title={`Décompte N° ${decompte.n_decompte}`} actions={<StatusBadge map={decompteStatus} code={decompte.status} />}>
+            <Panel title={t('decomptes:title', { n: decompte.n_decompte })} actions={<StatusBadge map={decompteStatus} code={decompte.status} />}>
               <DescriptionList
                 columns={3}
                 items={[
-                  { label: 'Repas avec prise en charge', value: decompte.repas_pec ?? 0 },
-                  { label: 'Repas sans prise en charge', value: decompte.repas_sans_pec ?? 0 },
-                  { label: 'Nuitées avec prise en charge', value: decompte.hebergement_pec ?? 0 },
-                  { label: 'Nuitées sans prise en charge', value: decompte.hebergement_sans_pec ?? 0 },
-                  { label: 'Distance parcourue', value: `${decompte.parcours ?? 0} km` },
-                  { label: 'Frais de transport', value: `${amount.format(decompte.fees_transport ?? 0)} DA` },
-                  { label: 'Montant', value: <strong>{amount.format(decompte.montant ?? 0)} DA</strong> },
-                  { label: 'Créé le', value: formatDate(decompte.createdAt) },
+                  { label: t('field.mealsPec'), value: decompte.repas_pec ?? 0 },
+                  { label: t('field.mealsNoPec'), value: decompte.repas_sans_pec ?? 0 },
+                  { label: t('field.nightsPec'), value: decompte.hebergement_pec ?? 0 },
+                  { label: t('field.nightsNoPec'), value: decompte.hebergement_sans_pec ?? 0 },
+                  { label: t('field.distance'), value: t('units.km', { value: decompte.parcours ?? 0 }) },
+                  { label: t('field.transportFees'), value: formatDA(decompte.fees_transport) },
+                  { label: t('field.amount'), value: <strong>{formatDA(decompte.montant)}</strong> },
+                  { label: t('field.createdOn'), value: formatDate(decompte.createdAt) },
                 ]}
               />
             </Panel>
           )}
         </div>
-        <Panel title="Suivi" className="self-start">
+        <Panel title={t('ordres:tracking')} className="self-start">
           <StatusTimeline steps={timeline(mission, decompte)} />
         </Panel>
       </div>

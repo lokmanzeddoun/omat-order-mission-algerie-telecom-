@@ -1,0 +1,23 @@
+{
+  "description": "Structures organisationnelles auxquelles les agents sont rattachés.",
+  "add": "Ajouter un service",
+  "caption": "Liste des services",
+  "empty": "Aucun service",
+  "archiveTitle": "Archiver le service ?",
+  "archiveHint": "Le service <b>{{name}}</b> sera déplacé dans l’archive. Vous pourrez le désarchiver plus tard.",
+  "field": {
+    "code": "Code",
+    "name": "Nom du service"
+  },
+  "form": {
+    "title": {
+      "create": "Ajouter un service",
+      "edit": "Modifier le service",
+      "view": "Détails du service"
+    }
+  },
+  "errors": {
+    "codeRequired": "Le code est obligatoire.",
+    "nameRequired": "Le nom du service est obligatoire."
+  }
+}

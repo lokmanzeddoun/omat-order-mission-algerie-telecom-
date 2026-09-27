@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { AlertDialog } from 'radix-ui';
+import { useTranslation } from 'react-i18next';
 import { buttonVariants } from './button';
 import { cn } from 'lib/utils';
 
@@ -23,13 +24,14 @@ export function ConfirmDialog({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Confirmer',
-  cancelLabel = 'Annuler',
+  confirmLabel,
+  cancelLabel,
   tone = 'primary',
   onConfirm,
   children,
   confirmDisabled,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
@@ -41,13 +43,13 @@ export function ConfirmDialog({
             {children && <div className="mt-3">{children}</div>}
           </div>
           <div className="flex justify-end gap-2 border-t border-border bg-surface-muted px-5 py-3">
-            <AlertDialog.Cancel className={buttonVariants({ variant: 'secondary' })}>{cancelLabel}</AlertDialog.Cancel>
+            <AlertDialog.Cancel className={buttonVariants({ variant: 'secondary' })}>{cancelLabel ?? t('actions.cancel')}</AlertDialog.Cancel>
             <AlertDialog.Action
               disabled={confirmDisabled}
               onClick={onConfirm}
               className={cn(buttonVariants({ variant: tone === 'danger' ? 'danger' : 'primary' }))}
             >
-              {confirmLabel}
+              {confirmLabel ?? t('actions.confirm')}
             </AlertDialog.Action>
           </div>
         </AlertDialog.Content>

@@ -1,0 +1,8 @@
+{
+  "description": "Vos ordres de mission et décomptes pour l’exercice {{year}}.",
+  "decompte": "Décompte",
+  "emptyOrdresHint": "Créez un ordre de mission avec le bouton « Nouvel ordre de mission ».",
+  "decisionCounts": "{{accepted}} accepté(s) · {{rejected}} rejeté(s)",
+  "emptyDecomptesHint": "Un décompte est créé quand votre ordre de mission est validé.",
+  "commentDecompte": "Commenter ce décompte"
+}

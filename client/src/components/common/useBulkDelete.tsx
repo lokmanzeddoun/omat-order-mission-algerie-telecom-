@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import http from 'helpers/http';
 import { extractErrorMessage } from 'helpers/errorHandler';
 import { ConfirmDialog, Field, Input, type MenuAction } from 'components/ui';
@@ -8,14 +9,7 @@ import { countOf, idsOf, reportBulkResult, type BulkResult } from './bulk';
 import { BulkPreview } from './BulkPreview';
 import type { BulkRowOptions } from './useBulkArchive';
 
-const skipLabels: Record<string, string> = {
-  not_found: 'introuvable',
-  not_archived: 'pas archivé',
-  self: 'votre propre compte',
-  has_missions: 'a des ordres de mission',
-  has_comments: 'a des commentaires',
-  has_decomptes: 'a des décomptes',
-};
+const skipReasons = ['not_found', 'not_archived', 'self', 'has_missions', 'has_comments', 'has_decomptes'];
 
 /**
  * Permanent bulk delete from the Archive page (SUPER_ADMIN). The user must
@@ -23,6 +17,7 @@ const skipLabels: Record<string, string> = {
  * still depends on are skipped by the server and reported.
  */
 export function useBulkDelete<Row>({ entity, idOf, labelOf, noun, onDone }: BulkRowOptions<Row>) {
+  const { t } = useTranslation();
   const [pending, setPending] = useState<Row[] | null>(null);
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
@@ -41,8 +36,8 @@ export function useBulkDelete<Row>({ entity, idOf, labelOf, noun, onDone }: Bulk
       reportBulkResult({
         result: data,
         noun,
-        participle: ['supprimé définitivement', 'supprimés définitivement'],
-        skipLabels,
+        outcome: 'deleted',
+        skipReasons,
       });
     } catch (error) {
       toast.error(extractErrorMessage(error));
@@ -55,7 +50,7 @@ export function useBulkDelete<Row>({ entity, idOf, labelOf, noun, onDone }: Bulk
 
   const actions = (selected: Row[]): MenuAction[] => [
     {
-      label: `Supprimer définitivement (${selected.length})`,
+      label: `${t('bulk:deleteForever')} (${selected.length})`,
       icon: <Trash2 />,
       tone: 'danger',
       disabled: busy,
@@ -69,17 +64,17 @@ export function useBulkDelete<Row>({ entity, idOf, labelOf, noun, onDone }: Bulk
     <ConfirmDialog
       open={pending !== null}
       onOpenChange={(o) => !o && !busy && close()}
-      title={`Supprimer définitivement ${countOf(rows.length, noun)} ?`}
+      title={t('bulk:confirmTitle', { verb: t('bulk:deleteForever'), what: countOf(rows.length, noun) })}
       tone="danger"
-      confirmLabel="Supprimer définitivement"
+      confirmLabel={t('bulk:deleteForever')}
       confirmDisabled={busy || typed.trim() !== expected}
       onConfirm={() => void run(rows)}
-      description="Cette action est irréversible : les éléments seront effacés de la base de données. Ceux qui sont encore liés à d’autres données seront ignorés."
+      description={t('bulk:deleteHint')}
     >
       <div className="flex flex-col gap-3">
         <BulkPreview names={rows.map(labelOf)} total={rows.length} />
-        <Field label={`Saisissez ${expected} pour confirmer`}>
-          <Input inputMode="numeric" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
+        <Field label={t('bulk:typeToConfirm', { expected })}>
+          <Input inputMode="numeric" dir="ltr" autoComplete="off" value={typed} onChange={(e) => setTyped(e.target.value)} />
         </Field>
       </div>
     </ConfirmDialog>

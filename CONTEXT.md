@@ -55,3 +55,27 @@ _Avoid_: Barem, grille, tarif
 | Décompte `PENDING` | En attente |
 | Décompte `ACCEPTED` | Accepté |
 | Décompte `REGECTED` | Rejeté |
+
+Status labels live in `client/src/locales/*/enums.json` (`status.*`); the table above is the French wording.
+
+## Interface languages
+
+The UI is available in French (default) and Arabic (right-to-left), switched from the header and remembered per browser. PDFs stay in French.
+
+- Every visible string comes from `client/src/locales/<fr|ar>/<namespace>.json`; both languages must have the same keys (checked by `locales.test.ts`, raw JSX text is rejected by ESLint).
+- Layout uses logical sides only (`ms-`/`me-`, `ps-`/`pe-`, `start-`/`end-`, `border-s`/`border-e`, `text-start`/`text-end`); directional icons get `rtl:rotate-180`.
+- Numbers keep Latin digits and French grouping (`1 500,50`) in both languages; amounts end with `DA` / `د.ج`.
+
+| Term | Arabic |
+| --- | --- |
+| Ordre de mission | أمر بمهمة |
+| Décompte | كشف المصاريف |
+| Validation / Validé | المصادقة / مصادق عليه |
+| En cours | قيد الإنجاز |
+| En attente / Accepté / Rejeté | قيد الانتظار / مقبول / مرفوض |
+| Commentaire | تعليق |
+| Direction (Nord / Sud) | المديرية (الشمال / الجنوب) |
+| Exercice | السنة المالية |
+| Barème | سلّم التعويضات |
+| Service | المصلحة |
+| Agent | عون |

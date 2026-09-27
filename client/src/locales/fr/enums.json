@@ -1,0 +1,29 @@
+{
+  "role": {
+    "USER": "Agent",
+    "ADMIN": "Administrateur",
+    "SUPER_ADMIN": "Super administrateur"
+  },
+  "category": {
+    "CADRE": "Cadre",
+    "CADRE_SUPERIEUR": "Cadre supérieur",
+    "EXECUTION_MAITRISE": "Exécution / Maîtrise"
+  },
+  "transport": {
+    "SERVICE_CAR": "Véhicule de service",
+    "TRANSPORT_ENTREPRISE": "Autre moyen de transport pris en charge par l’entreprise",
+    "TRANSPORT_EMPLOYEE": "Moyen de transport pris en charge par le travailleur",
+    "PERSONAL_CAR": "Véhicule personnel (usage exceptionnel, à la demande de la hiérarchie)"
+  },
+  "direction": {
+    "NORD": "Nord",
+    "SUD": "Sud"
+  },
+  "status": {
+    "INPROGRESS": "En cours",
+    "COMPLETED": "Validé",
+    "PENDING": "En attente",
+    "ACCEPTED": "Accepté",
+    "REJECTED": "Rejeté"
+  }
+}

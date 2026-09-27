@@ -1,0 +1,81 @@
+{
+  "title": "Ordre de mission N° {{n}}",
+  "description": "Ordres de mission de l’exercice {{year}}.",
+  "summary": {
+    "inProgress": "En cours",
+    "validated": "Validés"
+  },
+  "caption": "Liste des ordres de mission",
+  "empty": "Aucun ordre de mission",
+  "emptyHint": "Aucun ordre de mission pour cet exercice et ces critères.",
+  "mine": "Mes ordres",
+  "notFound": "Ordre de mission introuvable",
+  "notFoundHint": "Il a peut-être été annulé ou archivé.",
+  "mission": "Mission",
+  "tracking": "Suivi",
+  "cancelOrder": "Annuler l’ordre",
+  "archiveTitle": "Archiver l’ordre de mission ?",
+  "archiveHint": "L’ordre de mission N° {{n}} ({{destination}}) sera déplacé dans l’archive.",
+  "cancelTitle": "Annuler l’ordre de mission ?",
+  "cancelHint": "L’ordre de mission N° {{n}} ({{destination}}) sera annulé.",
+  "timeline": {
+    "created": "Ordre de mission créé",
+    "validation": "Validation",
+    "decompte": "Décompte",
+    "decompteMissing": "Décompte non trouvé pour l’exercice sélectionné.",
+    "decompteCreated": "Décompte N° {{n}} créé",
+    "decision": "Décision sur le décompte",
+    "decided": "Décompte {{status}}"
+  },
+  "form": {
+    "title": {
+      "create": "Nouvel ordre de mission",
+      "edit": "Modifier l’ordre de mission",
+      "view": "Ordre de mission"
+    },
+    "yourself": "vous-même",
+    "matriculeOf": "matricule {{matricule}}",
+    "owner": "Agent concerné : {{name}}",
+    "create": "Créer l’ordre de mission",
+    "motif": "Motif de la mission",
+    "departureDate": "Date de départ",
+    "departureTime": "Heure de départ",
+    "returnDate": "Date de retour",
+    "returnTime": "Heure de retour",
+    "destinationHint": "Communes séparées par un tiret, ex. Alger-Oran.",
+    "choose": "— Choisir —",
+    "errors": {
+      "departureRequired": "La date de départ est obligatoire.",
+      "motifRequired": "Le motif est obligatoire.",
+      "destinationMin": "La destination doit contenir au moins 2 caractères.",
+      "transportRequired": "Choisissez un moyen de transport.",
+      "returnAfterDeparture": "Le retour doit être postérieur au départ."
+    }
+  },
+  "validate": {
+    "title": "Valider l’ordre de mission",
+    "description": "La validation crée le décompte de la mission.",
+    "submit": "Valider et créer le décompte",
+    "schedule": "Horaires effectifs",
+    "split": "Répartition",
+    "entitlements": "Droits calculés : <b>{{meals}}</b> repas et <b>{{nights}}</b> nuitée(s).",
+    "distanceKm": "Distance parcourue (km)",
+    "transportCost": "Frais de transport engagés (DA)",
+    "errors": {
+      "wholeNumber": "{{label}} : nombre entier positif attendu.",
+      "returnDateRequired": "La date de retour est obligatoire.",
+      "departureTimeRequired": "L’heure de départ est obligatoire.",
+      "returnTimeRequired": "L’heure de retour est obligatoire.",
+      "distanceRequired": "La distance parcourue est obligatoire.",
+      "distanceInvalid": "Distance invalide.",
+      "amountInvalid": "Montant invalide.",
+      "returnBeforeDeparture": "Le retour ne peut pas précéder le départ.",
+      "nightsTotal_one": "La répartition doit totaliser {{count}} nuitée(s).",
+      "nightsTotal_many": "La répartition doit totaliser {{count}} nuitée(s).",
+      "nightsTotal_other": "La répartition doit totaliser {{count}} nuitée(s).",
+      "mealsTotal_one": "La répartition doit totaliser {{count}} repas.",
+      "mealsTotal_many": "La répartition doit totaliser {{count}} repas.",
+      "mealsTotal_other": "La répartition doit totaliser {{count}} repas."
+    }
+  }
+}

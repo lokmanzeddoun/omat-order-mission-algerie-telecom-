@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Archive, Download, FilePlus2, KeyRound, Pencil, RefreshCw, UserPlus } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
@@ -50,29 +51,29 @@ interface UserRow {
   structure?: { name: string; code?: string } | null;
 }
 
-// Kept as a module constant so the table does not rebuild its columns every render.
-const columns: DataColumn<UserRow>[] = [
-  { id: 'matricule', header: 'Matricule', width: 110, cell: (u) => <span className="font-medium tabular-nums">{u.matricule}</span>, alwaysVisible: true },
-  { id: 'nom', header: 'Nom', alwaysVisible: true },
-  { id: 'prenom', header: 'Prénom' },
-  { id: 'email', header: 'Adresse e-mail' },
-  { id: 'service', header: 'Service', accessor: (u) => u.structure?.name ?? '' },
-  { id: 'grade', header: 'Grade' },
+// Built from `t` and memoized on it, so the table only rebuilds its columns when the language changes.
+const userColumns = (t: TFunction): DataColumn<UserRow>[] => [
+  { id: 'matricule', header: t('field.matricule'), width: 110, cell: (u) => <span className="font-medium tabular-nums">{u.matricule}</span>, alwaysVisible: true },
+  { id: 'nom', header: t('users:field.nom'), alwaysVisible: true },
+  { id: 'prenom', header: t('users:field.prenom') },
+  { id: 'email', header: t('auth.email') },
+  { id: 'service', header: t('users:field.service'), accessor: (u) => u.structure?.name ?? '' },
+  { id: 'grade', header: t('users:field.grade') },
   {
     id: 'category',
-    header: 'Catégorie',
+    header: t('users:field.category'),
     filter: { type: 'select', options: toOptions(categoryLabels) },
     cell: (u) => categoryLabels[u.category] ?? u.category,
   },
   {
     id: 'role',
-    header: 'Rôle',
+    header: t('users:field.role'),
     filter: { type: 'select', options: toOptions(roleLabels) },
     cell: (u) => <Badge tone={u.role === 'USER' ? 'neutral' : 'info'}>{roleLabels[u.role] ?? u.role}</Badge>,
   },
   {
     id: 'userSince',
-    header: 'Inscrit le',
+    header: t('users:field.userSince'),
     filter: 'date',
     defaultHidden: true,
     cell: (u) => (u.userSince ? dayjs(u.userSince).format('DD/MM/YYYY') : '—'),
@@ -100,6 +101,7 @@ export default function UsersPage() {
   const token = useSelector((s: RootState) => s.auth.token);
 
   const [tab, setTab] = useState<Tab>('all');
+  const columns = useMemo(() => userColumns(t), [t]);
   const [form, setForm] = useState<{ mode: UserFormMode; user: UserRow | null } | null>(null);
   const [toArchive, setToArchive] = useState<UserRow | null>(null);
   const [toReset, setToReset] = useState<UserRow | null>(null);
@@ -115,7 +117,7 @@ export default function UsersPage() {
     mode: 'archive',
     idOf: (u) => u.matricule,
     labelOf: (u) => `${u.prenom} ${u.nom} (${u.matricule})`,
-    noun: ['utilisateur', 'utilisateurs'],
+    noun: 'user',
     onDone: refresh,
   });
 
@@ -160,8 +162,8 @@ export default function UsersPage() {
   return (
     <>
       <PageHeader
-        title="Utilisateurs"
-        description="Comptes des agents et des administrateurs, rôles et rattachement aux services."
+        title={t('nav.users')}
+        description={t('users:description')}
         breadcrumbs={[{ label: t('nav.home'), to: paths.admins }, { label: t('nav.users') }]}
         actions={
           <>
@@ -178,7 +180,7 @@ export default function UsersPage() {
             </Button>
             <Button variant="primary" onClick={() => setForm({ mode: 'create', user: null })}>
               <UserPlus />
-              Ajouter un utilisateur
+              {t('users:add')}
             </Button>
           </>
         }
@@ -186,30 +188,30 @@ export default function UsersPage() {
 
       <SummaryStrip
         items={[
-          { key: 'total', label: 'Total', value: counts.total },
-          { key: 'active', label: 'Actifs', value: counts.active, tone: 'success' },
-          { key: 'admins', label: 'Administrateurs', value: counts.admins, tone: 'info' },
-          { key: 'agents', label: 'Agents', value: counts.agents },
+          { key: 'total', label: t('summary.total'), value: counts.total },
+          { key: 'active', label: t('users:summary.active'), value: counts.active, tone: 'success' },
+          { key: 'admins', label: t('users:summary.admins'), value: counts.admins, tone: 'info' },
+          { key: 'agents', label: t('users:summary.agents'), value: counts.agents },
         ]}
       />
 
       <DataTable
-        caption="Liste des utilisateurs"
+        caption={t('users:caption')}
         tableId="users"
         columns={columns}
         rows={rows}
         getRowId={(u) => u.matricule}
         loading={loading && users.length === 0}
-        emptyTitle="Aucun utilisateur"
+        emptyTitle={t('users:empty')}
         toolbar={
           <Tabs
-            label="Filtrer par rôle"
+            label={t('users:filterByRole')}
             value={tab}
             onValueChange={(v) => setTab(v as Tab)}
             items={[
-              { value: 'all', label: 'Tous', count: counts.total },
-              { value: 'users', label: 'Agents', count: counts.agents },
-              { value: 'admins', label: 'Administrateurs', count: counts.admins },
+              { value: 'all', label: t('scope.all'), count: counts.total },
+              { value: 'users', label: t('users:summary.agents'), count: counts.agents },
+              { value: 'admins', label: t('users:summary.admins'), count: counts.admins },
             ]}
           />
         }
@@ -217,8 +219,8 @@ export default function UsersPage() {
         rowActions={(u) => ({
           primary: [{ label: t('actions.edit'), icon: <Pencil />, onSelect: () => setForm({ mode: 'edit', user: u }) }],
           menu: [
-            { label: 'Nouvel ordre de mission', icon: <FilePlus2 />, onSelect: () => setMissionFor(u) },
-            { label: 'Réinitialiser le mot de passe', icon: <KeyRound />, onSelect: () => setToReset(u) },
+            { label: t('actions.addMission'), icon: <FilePlus2 />, onSelect: () => setMissionFor(u) },
+            { label: t('users:resetPassword'), icon: <KeyRound />, onSelect: () => setToReset(u) },
             { label: t('actions.archive'), icon: <Archive />, tone: 'danger', onSelect: () => setToArchive(u) },
           ],
         })}
@@ -245,12 +247,9 @@ export default function UsersPage() {
       <ConfirmDialog
         open={toArchive !== null}
         onOpenChange={(o) => !o && setToArchive(null)}
-        title="Archiver l’utilisateur ?"
+        title={t('users:archiveTitle')}
         description={
-          <>
-            Le compte de <strong>{fullName(toArchive)}</strong> sera archivé. Vous pourrez le
-            désarchiver depuis l’archive.
-          </>
+          <Trans t={t} i18nKey="users:archiveHint" values={{ name: fullName(toArchive) }} components={{ b: <strong /> }} />
         }
         confirmLabel={t('actions.archive')}
         tone="danger"
