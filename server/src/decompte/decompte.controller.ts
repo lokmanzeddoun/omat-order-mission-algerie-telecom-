@@ -24,15 +24,14 @@ import { Response } from 'express';
 export class DecompteController {
   constructor(private readonly decompteService: DecompteService) {}
 
-  @Auth()
+  @Auth('ADMIN', 'SUPER_ADMIN')
   @Post(':id')
   @UsePipes(new ValidationPipe({ transform: true }))
   create(
     @Body() createDecompteDto: CreateDecompteDto,
     @Param('id') id: string,
-    @GetUser() user: User,
   ) {
-    return this.decompteService.create(createDecompteDto, +id, user);
+    return this.decompteService.create(createDecompteDto, +id);
   }
 
   @Get()
@@ -60,12 +59,12 @@ export class DecompteController {
   }
 
   @Patch(':id')
+  @Auth('ADMIN', 'SUPER_ADMIN')
   update(
     @Param('id') id: string,
     @Body() updateDecompteDto: CreateDecompteDto,
-    @GetUser() user: User,
   ) {
-    return this.decompteService.update(+id, updateDecompteDto, user);
+    return this.decompteService.update(+id, updateDecompteDto);
   }
 
   @Delete(':id')

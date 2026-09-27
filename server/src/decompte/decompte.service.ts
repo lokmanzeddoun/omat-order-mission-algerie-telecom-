@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp } from 'src/archive/archive-stamp';
@@ -20,6 +24,14 @@ import { promisify } from 'util';
 import { Response as ExpressResponse } from 'express';
 
 const convertAsync = promisify(libre.convert);
+
+/** Comment titles written when a décompte is accepted or rejected. */
+export const statusCommentTitle = {
+  accepted: (id: number, message: string) =>
+    `Decompte #${id} accepted: ${message}`,
+  rejected: (id: number, message: string) =>
+    `Decompte #${id} rejected: ${message}`,
+};
 const templatePath = 'src/decompte/Template Decompte.docx';
 
 @Injectable()
@@ -38,12 +50,25 @@ export class DecompteService {
     return ex?.id ?? null;
   }
 
-  async create(createDecompteDto: CreateDecompteDto, id: number, user: User) {
+  async create(createDecompteDto: CreateDecompteDto, id: number) {
     const mission = await this.databaseService.mission.findUnique({
       where: {
         n_mission: id,
       },
+      include: { user: true, _count: { select: { decompte: true } } },
     });
+    if (!mission) {
+      throw new NotFoundException(`Mission ${id} not found`);
+    }
+    if (
+      mission.soft_delete ||
+      mission.status !== MissionStatus.INPROGRESS ||
+      mission._count.decompte > 0
+    ) {
+      throw new BadRequestException(
+        'Seul un ordre de mission en cours, non archivé et sans décompte peut être validé',
+      );
+    }
     const date_sortie = mission.date_sortie.toISOString().split('T')[0];
     const date_retour = createDecompteDto.date_retour;
     const { meals, accommodations } = calculateMealsAndAccommodation(
@@ -75,8 +100,8 @@ export class DecompteService {
         ).toISOString(),
       },
     });
-    // calculate the montant
-    const userCategory = user.category;
+    // calculate the montant with the barème of the agent on the mission
+    const userCategory = mission.user.category;
     if (!userCategory) {
       throw new BadRequestException(
         "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
@@ -284,16 +309,21 @@ export class DecompteService {
     });
   }
 
-  async update(id: number, updateDecompteDto: CreateDecompteDto, user: User) {
+  async update(id: number, updateDecompteDto: CreateDecompteDto) {
     const decompte = await this.databaseService.decompte.findUniqueOrThrow({
       where: {
         n_decompte: id,
         soft_delete: false,
       },
       include: {
-        mission: true,
+        mission: { include: { user: true } },
       },
     });
+    if (decompte.status !== DecompteStatus.PENDING) {
+      throw new BadRequestException(
+        'Seul un décompte en attente peut être modifié',
+      );
+    }
     const date_sortie = decompte.mission.date_sortie
       .toISOString()
       .split('T')[0];
@@ -326,8 +356,8 @@ export class DecompteService {
         ).toISOString(),
       },
     });
-    // calculate the montant
-    const userCategory = user.category;
+    // calculate the montant with the barème of the agent on the mission
+    const userCategory = decompte.mission.user.category;
     if (!userCategory) {
       throw new BadRequestException(
         "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
@@ -667,7 +697,7 @@ export class DecompteService {
     if (message && message.trim() !== '') {
       await this.commentsService.create(
         {
-          title: `Decompte #${id} accepted`,
+          title: statusCommentTitle.accepted(id, message.trim()),
           type: 'DECOMPTE_STATUS',
           status: 'ACCEPTED',
           decompteId: id,
@@ -709,7 +739,7 @@ export class DecompteService {
     // Create a comment with the rejection reason
     await this.commentsService.create(
       {
-        title: `Decompte #${id} rejected: ${message}`,
+        title: statusCommentTitle.rejected(id, message),
         type: 'DECOMPTE_STATUS',
         status: 'REJECTED',
         decompteId: id,
