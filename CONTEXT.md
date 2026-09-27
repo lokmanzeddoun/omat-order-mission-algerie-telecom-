@@ -46,6 +46,10 @@ _Avoid_: Year, Année (as a free-standing filter)
 The per-category rates (meals, lodging, per-km) applied to a décompte, differing by Direction; each repas and nuitée is paid at the rate of the zone where it was spent.
 _Avoid_: Barem, grille, tarif
 
+**Employé**:
+A person sent on business trips: the owner of an ordre de mission and of its décompte (role `USER` is shown as "Employé").
+_Avoid_: Agent, Salarié, عون (in UI text)
+
 ## Status labels
 
 | Code | Shown as |
@@ -78,4 +82,4 @@ The UI is available in French (default) and Arabic (right-to-left), switched fro
 | Exercice | السنة المالية |
 | Barème | سلّم التعويضات |
 | Service | المصلحة |
-| Agent | عون |
+| Employé | موظف |

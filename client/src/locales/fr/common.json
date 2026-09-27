@@ -157,7 +157,7 @@
   },
   "field": {
     "number": "N°",
-    "agent": "Agent",
+    "agent": "Employé",
     "missionOrder": "Ordre de mission",
     "date": "Date",
     "days": "Jours",
