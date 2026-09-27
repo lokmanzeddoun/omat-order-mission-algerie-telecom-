@@ -25,4 +25,5 @@ export const transportLabels: Record<string, string> = {
 export const directionLabels: Record<string, string> = {
   NORD: 'Nord',
   SUD: 'Sud',
+  MIXTE: 'Nord et Sud',
 };

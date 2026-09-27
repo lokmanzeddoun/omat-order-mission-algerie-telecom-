@@ -1,8 +1,9 @@
 import { StatusBadge, type DataColumn } from 'components/ui';
 import { decompteStatus } from 'constants/statusLabels';
-import { transportLabels } from 'constants/labels';
+import { directionLabels, transportLabels } from 'constants/labels';
 import { agentName, formatDate, formatDateTime } from 'components/orders/format';
 import type { DecompteRow } from './useDecompteActions';
+import { total } from './zones';
 
 const money = new Intl.NumberFormat('fr-DZ', { maximumFractionDigits: 2 });
 export const da = (v?: number | null) => `${money.format(v ?? 0)} DA`;
@@ -50,10 +51,12 @@ export const decompteColumns: DataColumn<DecompteRow>[] = [
   { id: 'retour', header: 'Retour', filter: 'date', defaultHidden: true, accessor: (d) => d.mission?.date_retour, cell: (d) => formatDateTime(d.mission?.date_retour), exportValue: (d) => formatDateTime(d.mission?.date_retour) },
   { id: 'motif', header: 'Motif', defaultHidden: true, accessor: (d) => d.mission?.motif },
   { id: 'transport', header: 'Transport', defaultHidden: true, accessor: (d) => transportLabels[d.mission?.transport ?? ''] ?? d.mission?.transport },
+  { id: 'direction', header: 'Direction', defaultHidden: true, accessor: (d) => directionLabels[d.mission?.direction ?? ''] ?? d.mission?.direction },
   { id: 'parcours', header: 'Distance (km)', align: 'end', filter: false, defaultHidden: true },
-  { id: 'repas_pec', header: 'Repas PEC', align: 'end', filter: false, defaultHidden: true },
-  { id: 'repas_sans_pec', header: 'Repas non PEC', align: 'end', filter: false, defaultHidden: true },
-  { id: 'hebergement_pec', header: 'Nuitées PEC', align: 'end', filter: false, defaultHidden: true },
-  { id: 'hebergement_sans_pec', header: 'Nuitées non PEC', align: 'end', filter: false, defaultHidden: true },
+  // Nord and Sud added together; the detail page shows the split.
+  { id: 'repas_pec', header: 'Repas PEC', align: 'end', filter: false, defaultHidden: true, accessor: (d) => total(d, 'repas_pec') },
+  { id: 'repas_sans_pec', header: 'Repas non PEC', align: 'end', filter: false, defaultHidden: true, accessor: (d) => total(d, 'repas_sans_pec') },
+  { id: 'hebergement_pec', header: 'Nuitées PEC', align: 'end', filter: false, defaultHidden: true, accessor: (d) => total(d, 'hebergement_pec') },
+  { id: 'hebergement_sans_pec', header: 'Nuitées non PEC', align: 'end', filter: false, defaultHidden: true, accessor: (d) => total(d, 'hebergement_sans_pec') },
   { id: 'fees_transport', header: 'Frais de transport', align: 'end', filter: false, defaultHidden: true, cell: (d) => da(d.fees_transport) },
 ];

@@ -5,17 +5,14 @@ import { z } from 'zod';
 import dayjs from 'helpers/date';
 import { calculateMealsAndAccommodation } from 'helpers/utils';
 import { Button, DescriptionList, Dialog, Field, FormGrid, FormSection, Input } from 'components/ui';
+import { ITEMS, field, zoneLabel, zonesOf, type Counts, type CountField, type Item, type Zone } from 'components/decomptes/zones';
 import type { IMission } from './orderReducer';
 
 /** Figures entered when validating an ordre de mission (sent to addDecompte). */
-export interface DecompteFigures {
+export interface DecompteFigures extends Counts {
   heure_sortie: string;
   date_retour: string;
   heure_retour: string;
-  hebergement_sans_pec?: number;
-  repas_sans_pec?: number;
-  repas_pec?: number;
-  hebergement_pec?: number;
   distance_km?: number;
   transport_cost?: number;
 }
@@ -23,7 +20,15 @@ export interface DecompteFigures {
 const count = (label: string) =>
   z.string().refine((v) => v === '' || (/^\d+$/.test(v) && Number(v) >= 0), `${label} : nombre entier positif attendu.`);
 
-const n = (v: string) => (v === '' ? 0 : Number(v));
+const n = (v: string | undefined) => (v === undefined || v === '' ? 0 : Number(v));
+
+const ZONES: Zone[] = ['nord', 'sud'];
+// Nights first, as on the paper form.
+const FORM_ORDER = [...ITEMS].reverse();
+const COUNT_FIELDS = ZONES.flatMap((zone) => ITEMS.map(({ key }) => field(key, zone)));
+
+/** One item added across both zones (a zone outside the ordre stays empty). */
+const sum = (v: Partial<Record<CountField, string>>, item: Item) => n(v[field(item, 'nord')]) + n(v[field(item, 'sud')]);
 
 /** Meals / nights the agent is entitled to for the declared schedule. */
 const entitlements = (departureDate: string, v: { heure_sortie: string; date_retour: string; heure_retour: string }) =>
@@ -32,16 +37,15 @@ const entitlements = (departureDate: string, v: { heure_sortie: string; date_ret
     : { meals: 0, accommodations: 0 };
 
 // Same rules as the previous dialog: schedule required, splits must add up to the entitlements.
-const schemaFor = (departureDate: string) =>
+const schemaFor = (departureDate: string, firstZone: Zone) =>
   z
     .object({
       date_retour: z.string().min(1, 'La date de retour est obligatoire.'),
       heure_sortie: z.string().min(1, 'L’heure de départ est obligatoire.'),
       heure_retour: z.string().min(1, 'L’heure de retour est obligatoire.'),
-      hebergement_sans_pec: count('Hébergement sans prise en charge'),
-      hebergement_pec: count('Hébergement avec prise en charge'),
-      repas_sans_pec: count('Repas sans prise en charge'),
-      repas_pec: count('Repas avec prise en charge'),
+      ...(Object.fromEntries(
+        ZONES.flatMap((zone) => ITEMS.map(({ key, label }) => [field(key, zone), count(`${label} (${zoneLabel[zone]})`)])),
+      ) as Record<CountField, ReturnType<typeof count>>),
       distance_km: z
         .string()
         .min(1, 'La distance parcourue est obligatoire.')
@@ -53,15 +57,20 @@ const schemaFor = (departureDate: string) =>
         ctx.addIssue({ code: 'custom', path: ['date_retour'], message: 'Le retour ne peut pas précéder le départ.' });
       }
       const { meals, accommodations } = entitlements(departureDate, v);
-      if (n(v.hebergement_sans_pec) + n(v.hebergement_pec) !== accommodations) {
+      // Both zones together must match the entitlements.
+      if (sum(v, 'hebergement_sans_pec') + sum(v, 'hebergement_pec') !== accommodations) {
         ctx.addIssue({
           code: 'custom',
-          path: ['hebergement_sans_pec'],
+          path: [field('hebergement_sans_pec', firstZone)],
           message: `La répartition doit totaliser ${accommodations} nuitée(s).`,
         });
       }
-      if (n(v.repas_sans_pec) + n(v.repas_pec) !== meals) {
-        ctx.addIssue({ code: 'custom', path: ['repas_sans_pec'], message: `La répartition doit totaliser ${meals} repas.` });
+      if (sum(v, 'repas_sans_pec') + sum(v, 'repas_pec') !== meals) {
+        ctx.addIssue({
+          code: 'custom',
+          path: [field('repas_sans_pec', firstZone)],
+          message: `La répartition doit totaliser ${meals} repas.`,
+        });
       }
     });
 
@@ -71,10 +80,7 @@ const fromMission = (m: IMission): FormValues => ({
   date_retour: m.date_retour ? dayjs(m.date_retour).format('YYYY-MM-DD') : '',
   heure_sortie: m.date_sortie ? dayjs(m.date_sortie).format('HH:mm') : '',
   heure_retour: m.date_retour ? dayjs(m.date_retour).format('HH:mm') : '',
-  hebergement_sans_pec: '',
-  hebergement_pec: '',
-  repas_sans_pec: '',
-  repas_pec: '',
+  ...(Object.fromEntries(COUNT_FIELDS.map((f) => [f, ''])) as Record<CountField, string>),
   distance_km: '',
   transport_cost: '',
 });
@@ -89,7 +95,9 @@ interface Props {
 /** Validates an ordre de mission and records the figures of its décompte. */
 export default function ValidateMissionForm({ open, mission, onClose, onSubmit }: Props) {
   const departureDate = mission?.date_sortie ? dayjs(mission.date_sortie).format('YYYY-MM-DD') : '';
-  const schema = useMemo(() => schemaFor(departureDate), [departureDate]);
+  const zones = zonesOf(mission?.direction);
+  const firstZone = zones[0];
+  const schema = useMemo(() => schemaFor(departureDate, firstZone), [departureDate, firstZone]);
   const {
     register,
     handleSubmit,
@@ -114,10 +122,8 @@ export default function ValidateMissionForm({ open, mission, onClose, onSubmit }
       date_retour: v.date_retour,
       heure_sortie: v.heure_sortie,
       heure_retour: v.heure_retour,
-      hebergement_sans_pec: n(v.hebergement_sans_pec),
-      hebergement_pec: n(v.hebergement_pec),
-      repas_sans_pec: n(v.repas_sans_pec),
-      repas_pec: n(v.repas_pec),
+      // A zone outside the ordre's Direction is sent as 0.
+      ...Object.fromEntries(COUNT_FIELDS.map((f) => [f, n(v[f])])),
       distance_km: Number(v.distance_km),
       transport_cost: v.transport_cost === '' ? undefined : Number(v.transport_cost),
     });
@@ -172,22 +178,17 @@ export default function ValidateMissionForm({ open, mission, onClose, onSubmit }
           </p>
         </FormSection>
 
-        <FormSection title="Répartition">
-          <FormGrid>
-            <Field label="Nuitées sans prise en charge" error={errors.hebergement_sans_pec?.message}>
-              <Input type="number" min={0} inputMode="numeric" {...register('hebergement_sans_pec')} />
-            </Field>
-            <Field label="Nuitées avec prise en charge" error={errors.hebergement_pec?.message}>
-              <Input type="number" min={0} inputMode="numeric" {...register('hebergement_pec')} />
-            </Field>
-            <Field label="Repas sans prise en charge" error={errors.repas_sans_pec?.message}>
-              <Input type="number" min={0} inputMode="numeric" {...register('repas_sans_pec')} />
-            </Field>
-            <Field label="Repas avec prise en charge" error={errors.repas_pec?.message}>
-              <Input type="number" min={0} inputMode="numeric" {...register('repas_pec')} />
-            </Field>
-          </FormGrid>
-        </FormSection>
+        {zones.map((zone) => (
+          <FormSection key={zone} title={zones.length > 1 ? `Répartition — ${zoneLabel[zone]}` : 'Répartition'}>
+            <FormGrid>
+              {FORM_ORDER.map(({ key, label }) => (
+                <Field key={key} label={label} error={errors[field(key, zone)]?.message}>
+                  <Input type="number" min={0} inputMode="numeric" {...register(field(key, zone))} />
+                </Field>
+              ))}
+            </FormGrid>
+          </FormSection>
+        ))}
 
         <FormSection title="Transport">
           <FormGrid>

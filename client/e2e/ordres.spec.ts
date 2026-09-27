@@ -3,7 +3,7 @@ import { login } from './fixtures';
 
 const year = new Date().getFullYear();
 
-async function createOrdre(page: Page, destination: string) {
+async function createOrdre(page: Page, destination: string, direction = 'Nord') {
   await page.getByRole('banner').getByRole('button', { name: 'Nouvel ordre de mission' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvel ordre de mission' });
   await dialog.getByRole('button', { name: 'Créer l’ordre de mission' }).click();
@@ -15,6 +15,7 @@ async function createOrdre(page: Page, destination: string) {
   await dialog.getByLabel('Heure de retour').fill('17:00');
   await dialog.getByLabel('Destination').fill(destination);
   await dialog.getByLabel('Moyen de transport').selectOption('SERVICE_CAR');
+  await dialog.getByLabel('Direction').selectOption({ label: direction });
   const pdf = page.waitForEvent('download');
   await dialog.getByRole('button', { name: 'Créer l’ordre de mission' }).click();
   await pdf; // creating an ordre downloads its PDF, as before
@@ -24,6 +25,37 @@ async function createOrdre(page: Page, destination: string) {
 test.describe('ordres de mission', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, 'superAdmin');
+  });
+
+  test('validate a Nord et Sud ordre with meals and nights in both zones', async ({ page }) => {
+    const destination = `Ghardaia-E2E${Date.now() % 100000}`;
+    await createOrdre(page, destination, 'Nord et Sud');
+
+    await page.goto('dashboard/admins');
+    await page.getByRole('button', { name: 'Actualiser' }).click();
+    await page.getByRole('searchbox', { name: 'Filtrer Destination' }).fill(destination);
+    const row = page.getByRole('table', { name: 'Liste des ordres de mission' }).locator('tbody tr').filter({ hasText: destination });
+    await row.dblclick();
+    await expect(page.getByText('Nord et Sud')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Valider' }).click();
+    const validate = page.getByRole('dialog', { name: 'Valider l’ordre de mission' });
+    const rights = await validate.getByText(/Droits calculés/).innerText();
+    const [meals, nights] = (rights.match(/\d+/g) ?? ['0', '0']).map(Number);
+    const nord = validate.getByRole('group', { name: 'Répartition — Nord' });
+    const sud = validate.getByRole('group', { name: 'Répartition — Sud' });
+    // First night and meal in the Nord, the rest in the Sud.
+    await nord.getByLabel('Repas sans prise en charge').fill('1');
+    await nord.getByLabel('Nuitées sans prise en charge').fill('1');
+    await sud.getByLabel('Repas sans prise en charge').fill(String(meals - 1));
+    await sud.getByLabel('Nuitées sans prise en charge').fill(String(nights - 1));
+    await validate.getByLabel('Distance parcourue (km)').fill('0');
+    await validate.getByRole('button', { name: 'Valider et créer le décompte' }).click();
+    await expect(validate).toBeHidden();
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Validé');
+
+    await expect(page.getByText('Repas sans prise en charge (Nord)')).toBeVisible();
+    await expect(page.getByText('Nuitées sans prise en charge (Sud)')).toBeVisible();
   });
 
   test('create, open detail, edit, validate and archive', async ({ page }) => {
