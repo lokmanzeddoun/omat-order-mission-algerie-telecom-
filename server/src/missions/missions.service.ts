@@ -8,6 +8,7 @@ import {
   StreamableFile,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
+import { archiveStamp } from 'src/archive/archive-stamp';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import moment from 'moment';
 import { MissionStatus, Prisma, User } from '@prisma/client';
@@ -300,7 +301,7 @@ export class MissionsService {
     });
   }
 
-  async remove(id: number) {
+  async remove(id: number, user: User) {
     try {
       const mission = await this.databaseService.mission.findUnique({
         where: { n_mission: id },
@@ -308,6 +309,15 @@ export class MissionsService {
 
       if (!mission) {
         throw new BadRequestException(`Mission with ID ${id} not found`);
+      }
+
+      // Agents may only cancel their own ordres, and only before validation.
+      if (
+        user.role === 'USER' &&
+        (mission.userId !== user.matricule ||
+          mission.status === MissionStatus.COMPLETED)
+      ) {
+        throw new ForbiddenException('You cannot cancel this mission');
       }
 
       if (mission.soft_delete) {
@@ -320,12 +330,13 @@ export class MissionsService {
         where: {
           n_mission: id,
         },
-        data: {
-          soft_delete: true,
-        },
+        data: archiveStamp(user.matricule),
       });
     } catch (error) {
-      if (error instanceof BadRequestException) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       throw new BadRequestException(

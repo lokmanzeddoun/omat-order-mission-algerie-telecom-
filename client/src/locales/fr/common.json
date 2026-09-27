@@ -60,7 +60,20 @@
     "actions": "Actions",
     "loading": "Chargement…",
     "clearFilters": "Effacer les filtres",
-    "all": "Tous"
+    "all": "Tous",
+    "selectRow": "Sélectionner {{label}}",
+    "selectPage": "Sélectionner les lignes de cette page",
+    "selected_one": "{{count}} ligne sélectionnée",
+    "selected_many": "{{count}} lignes sélectionnées",
+    "selected_other": "{{count}} lignes sélectionnées",
+    "pageSelected": "Les {{count}} lignes de cette page sont sélectionnées.",
+    "selectAll": "Sélectionner les {{total}} lignes",
+    "selectAllMatching": "Sélectionner les {{total}} lignes correspondant aux filtres",
+    "allSelected": "Les {{total}} lignes sont sélectionnées.",
+    "allMatchingSelected": "Les {{total}} lignes correspondant aux filtres sont sélectionnées.",
+    "clearSelection": "Effacer la sélection",
+    "bulkActions": "Actions sur la sélection",
+    "exportSelection": "Exporter la sélection (CSV)"
   },
   "auth": {
     "signIn": "Se connecter",

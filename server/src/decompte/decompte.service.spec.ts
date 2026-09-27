@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import {
   Category,
   DecompteStatus,
@@ -31,6 +31,11 @@ const mission = (overrides = {}) => ({
   date_sortie: new Date('2026-03-10T12:00:00Z'),
   direction: Direction.NORD,
   transport: TransportType.SERVICE_CAR,
+  status: MissionStatus.INPROGRESS,
+  soft_delete: false,
+  // The agent on the mission: their category picks the barème.
+  user: { matricule: 1, category: Category.CADRE },
+  _count: { decompte: 0 },
   ...overrides,
 });
 
@@ -38,7 +43,11 @@ const N_MISSION = 7;
 // Expected NORD total for the default overnight trip: 3 meals + 1 night.
 const NORD_OVERNIGHT = 3 * 100 + 1 * 1000;
 
-const user = { matricule: 42, category: Category.CADRE } as unknown as User;
+// The admin validating or reviewing (their own category is irrelevant).
+const user = {
+  matricule: 42,
+  category: Category.EXECUTION_MAITRISE,
+} as unknown as User;
 
 // Leaves on the 10th at 08:00, returns on the 11th at 15:00:
 // lunch + dinner on the 10th, the night, lunch on the 11th => 3 meals, 1 night.
@@ -111,13 +120,12 @@ describe('DecompteService', () => {
           hebergement_sans_pec: 0,
         }),
         N_MISSION,
-        user,
       );
       expect(createdData().montant).toBe(200);
     });
 
     it('accepts an overnight trip as 3 meals and 1 night', async () => {
-      await service.create(overnightDto(), N_MISSION, user);
+      await service.create(overnightDto(), N_MISSION);
       expect(db.$transaction).toHaveBeenCalledTimes(1);
     });
 
@@ -142,32 +150,24 @@ describe('DecompteService', () => {
           repas_sans_pec: meals,
           hebergement_sans_pec: nights,
         });
-        await service.create(dto, N_MISSION, user);
+        await service.create(dto, N_MISSION);
         expect(db.$transaction).toHaveBeenCalledTimes(1);
         await expect(
-          service.create(
-            { ...dto, repas_sans_pec: meals + 1 },
-            N_MISSION,
-            user,
-          ),
+          service.create({ ...dto, repas_sans_pec: meals + 1 }, N_MISSION),
         ).rejects.toThrow(BadRequestException);
       },
     );
 
     it('rejects a declared meal count that does not match the trip', async () => {
       await expect(
-        service.create(overnightDto({ repas_sans_pec: 4 }), N_MISSION, user),
+        service.create(overnightDto({ repas_sans_pec: 4 }), N_MISSION),
       ).rejects.toThrow(BadRequestException);
       expect(db.$transaction).not.toHaveBeenCalled();
     });
 
     it('rejects a declared night count that does not match the trip', async () => {
       await expect(
-        service.create(
-          overnightDto({ hebergement_sans_pec: 2 }),
-          N_MISSION,
-          user,
-        ),
+        service.create(overnightDto({ hebergement_sans_pec: 2 }), N_MISSION),
       ).rejects.toThrow('Le nombre de repas et hebergement non valid');
     });
 
@@ -180,7 +180,6 @@ describe('DecompteService', () => {
           hebergement_sans_pec: 0,
         }),
         N_MISSION,
-        user,
       );
       expect(db.$transaction).toHaveBeenCalledTimes(1);
     });
@@ -191,17 +190,17 @@ describe('DecompteService', () => {
         repas_sans_pec: 0,
         hebergement_sans_pec: 0,
       });
-      await service.create(dto, N_MISSION, user);
+      await service.create(dto, N_MISSION);
       expect(db.$transaction).toHaveBeenCalledTimes(1);
       await expect(
-        service.create({ ...dto, repas_sans_pec: 1 }, N_MISSION, user),
+        service.create({ ...dto, repas_sans_pec: 1 }, N_MISSION),
       ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('create: montant', () => {
     it('NORD: pays every meal and night at the nord rates', async () => {
-      await service.create(overnightDto(), N_MISSION, user);
+      await service.create(overnightDto(), N_MISSION);
       expect(createdData().montant).toBe(NORD_OVERNIGHT);
     });
 
@@ -210,7 +209,7 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ direction: Direction.SUD }),
       );
-      await service.create(overnightDto(), N_MISSION, user);
+      await service.create(overnightDto(), N_MISSION);
       expect(createdData().montant).toBe(3 * 200 + 1 * 2000);
     });
 
@@ -218,12 +217,12 @@ describe('DecompteService', () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ transport: TransportType.PERSONAL_CAR }),
       );
-      await service.create(overnightDto({ parcours: 50 }), N_MISSION, user);
+      await service.create(overnightDto({ parcours: 50 }), N_MISSION);
       expect(createdData().montant).toBe(NORD_OVERNIGHT + 50 * 10);
     });
 
     it('ignores parcours when the mission does not use a personal car', async () => {
-      await service.create(overnightDto({ parcours: 50 }), N_MISSION, user);
+      await service.create(overnightDto({ parcours: 50 }), N_MISSION);
       expect(createdData().montant).toBe(NORD_OVERNIGHT);
     });
 
@@ -232,7 +231,6 @@ describe('DecompteService', () => {
       await service.create(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2, fees_transport: 30 }),
         N_MISSION,
-        user,
       );
       expect(createdData().montant).toBe(NORD_OVERNIGHT * 0.25 + 30);
     });
@@ -244,7 +242,6 @@ describe('DecompteService', () => {
       await service.create(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
         N_MISSION,
-        user,
       );
       expect(createdData().montant).toBe(NORD_OVERNIGHT * 0.25);
     });
@@ -259,21 +256,30 @@ describe('DecompteService', () => {
       await service.create(
         overnightDto({ repas_pec: 1, repas_sans_pec: 2 }),
         N_MISSION,
-        user,
       );
       expect(createdData().montant).toBe((2 * 200 + 2000) * 0.25);
     });
 
-    it('rejects a user without a category', async () => {
-      await expect(
-        service.create(overnightDto(), 7, { ...user, category: null } as User),
-      ).rejects.toThrow(BadRequestException);
+    it("uses the barème of the mission's agent, not the admin's", async () => {
+      await service.create(overnightDto(), N_MISSION);
+      expect(db.barem.findFirstOrThrow).toHaveBeenCalledWith({
+        where: { libell: Category.CADRE },
+      });
+    });
+
+    it('rejects an agent without a category', async () => {
+      db.mission.findUnique.mockResolvedValue(
+        mission({ user: { matricule: 1, category: null } }),
+      );
+      await expect(service.create(overnightDto(), N_MISSION)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
   describe('create: persistence', () => {
     it('sets the ordre to COMPLETED and creates the décompte in one transaction', async () => {
-      const result = await service.create(overnightDto(), N_MISSION, user);
+      const result = await service.create(overnightDto(), N_MISSION);
 
       expect(db.$transaction).toHaveBeenCalledTimes(1);
       expect((result as any[]).map((op) => op.op)).toEqual([
@@ -286,7 +292,7 @@ describe('DecompteService', () => {
     });
 
     it('links the decompte to the mission and the current exercice', async () => {
-      await service.create(overnightDto(), N_MISSION, user);
+      await service.create(overnightDto(), N_MISSION);
       expect(createdData().mission).toEqual({
         connect: { n_mission: N_MISSION },
       });
@@ -295,7 +301,7 @@ describe('DecompteService', () => {
 
     it('omits the exercice link when there is no current exercice', async () => {
       db.exercice.findFirst.mockResolvedValue(null);
-      await service.create(overnightDto(), N_MISSION, user);
+      await service.create(overnightDto(), N_MISSION);
       expect(createdData()).not.toHaveProperty('exercice');
     });
 
@@ -303,7 +309,6 @@ describe('DecompteService', () => {
       await service.create(
         overnightDto({ fees_transport: undefined }),
         N_MISSION,
-        user,
       );
       expect(createdData().parcours).toBeNull();
       expect(createdData().fees_transport).toBe(0);
@@ -340,7 +345,11 @@ describe('DecompteService', () => {
       givenDecompte(DecompteStatus.PENDING);
       await service.acceptDecompte(1, user, 'ok');
       expect(comments.create).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'ACCEPTED', decompteId: 1 }),
+        expect.objectContaining({
+          title: 'Decompte #1 accepted: ok',
+          status: 'ACCEPTED',
+          decompteId: 1,
+        }),
         42,
       );
     });
@@ -376,6 +385,137 @@ describe('DecompteService', () => {
         }),
         42,
       );
+    });
+  });
+
+  describe('create: which ordres can be validated', () => {
+    it('404s on an unknown ordre', async () => {
+      db.mission.findUnique.mockResolvedValue(null);
+      await expect(
+        service.create(overnightDto(), N_MISSION),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it.each([
+      ['already validated', { status: MissionStatus.COMPLETED }],
+      ['archived', { soft_delete: true }],
+      ['already has a décompte', { _count: { decompte: 1 } }],
+    ])('refuses an ordre that is %s', async (_label, over) => {
+      db.mission.findUnique.mockResolvedValue(mission(over));
+      await expect(
+        service.create(overnightDto(), N_MISSION),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update', () => {
+    beforeEach(() => {
+      db.decompte.findUniqueOrThrow = jest.fn();
+    });
+
+    it('refuses a décompte that is no longer pending', async () => {
+      db.decompte.findUniqueOrThrow.mockResolvedValue({
+        status: DecompteStatus.ACCEPTED,
+        mission: mission(),
+      });
+      await expect(service.update(1, overnightDto())).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("recomputes with the mission's agent barème", async () => {
+      db.decompte.findUniqueOrThrow.mockResolvedValue({
+        status: DecompteStatus.PENDING,
+        missionId: N_MISSION,
+        mission: mission(),
+      });
+      await service.update(1, overnightDto());
+      expect(db.barem.findFirstOrThrow).toHaveBeenCalledWith({
+        where: { libell: Category.CADRE },
+      });
+    });
+  });
+
+  describe('bulkSetStatus', () => {
+    let tx: any;
+    beforeEach(() => {
+      tx = {
+        decompte: {
+          findMany: jest.fn().mockResolvedValue([
+            {
+              n_decompte: 1,
+              status: DecompteStatus.PENDING,
+              soft_delete: false,
+            },
+            {
+              n_decompte: 2,
+              status: DecompteStatus.ACCEPTED,
+              soft_delete: false,
+            },
+            {
+              n_decompte: 3,
+              status: DecompteStatus.PENDING,
+              soft_delete: true,
+            },
+            {
+              n_decompte: 4,
+              status: DecompteStatus.PENDING,
+              soft_delete: false,
+            },
+          ]),
+          updateMany: jest.fn(),
+        },
+        commentaire: { createMany: jest.fn() },
+      };
+      db.$transaction.mockImplementation((fn: (t: unknown) => unknown) =>
+        fn(tx),
+      );
+    });
+
+    it('rejects pending rows, skips the others, comments each rejection', async () => {
+      const result = await service.bulkSetStatus(
+        [1, 2, 3, 4, 5],
+        'reject',
+        42,
+        'Justificatifs manquants',
+      );
+      expect(result).toEqual({
+        done: [1, 4],
+        skipped: [
+          { id: 2, reason: 'not_pending' },
+          { id: 3, reason: 'archived' },
+          { id: 5, reason: 'not_found' },
+        ],
+      });
+      expect(tx.decompte.updateMany).toHaveBeenCalledWith({
+        where: { n_decompte: { in: [1, 4] } },
+        data: { status: DecompteStatus.REGECTED },
+      });
+      expect(tx.commentaire.createMany.mock.calls[0][0].data).toEqual([
+        expect.objectContaining({
+          title: 'Decompte #1 rejected: Justificatifs manquants',
+          decompteId: 1,
+          userId: 42,
+          status: 'REJECTED',
+        }),
+        expect.objectContaining({ decompteId: 4 }),
+      ]);
+    });
+
+    it('accepts without writing comments when there is no message', async () => {
+      await service.bulkSetStatus([1, 4], 'accept', 42);
+      expect(tx.decompte.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { status: DecompteStatus.ACCEPTED } }),
+      );
+      expect(tx.commentaire.createMany).not.toHaveBeenCalled();
+    });
+
+    it('does not write anything when nothing is pending', async () => {
+      await service.bulkSetStatus([2, 3], 'accept', 42, 'ok');
+      expect(tx.decompte.updateMany).not.toHaveBeenCalled();
+      expect(tx.commentaire.createMany).not.toHaveBeenCalled();
     });
   });
 });

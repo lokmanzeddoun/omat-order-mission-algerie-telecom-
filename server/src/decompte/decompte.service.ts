@@ -7,8 +7,10 @@ import {
 } from '@nestjs/common';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { DatabaseService } from 'src/database/database.service';
+import { archiveStamp } from 'src/archive/archive-stamp';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import { CommentsService } from 'src/comments/comments.service';
+import { partitionIds } from 'src/common/bulk';
 import {
   DecompteStatus,
   Direction,
@@ -19,6 +21,14 @@ import {
 import { Response as ExpressResponse } from 'express';
 import { PdfService } from 'src/pdf/pdf.service';
 import { toDecomptePdfData } from 'src/pdf/mappers/decompte.mapper';
+
+/** Comment titles written when a décompte is accepted or rejected. */
+export const statusCommentTitle = {
+  accepted: (id: number, message: string) =>
+    `Decompte #${id} accepted: ${message}`,
+  rejected: (id: number, message: string) =>
+    `Decompte #${id} rejected: ${message}`,
+};
 
 @Injectable()
 export class DecompteService {
@@ -39,12 +49,25 @@ export class DecompteService {
     return ex?.id ?? null;
   }
 
-  async create(createDecompteDto: CreateDecompteDto, id: number, user: User) {
+  async create(createDecompteDto: CreateDecompteDto, id: number) {
     const mission = await this.databaseService.mission.findUnique({
       where: {
         n_mission: id,
       },
+      include: { user: true, _count: { select: { decompte: true } } },
     });
+    if (!mission) {
+      throw new NotFoundException(`Mission ${id} not found`);
+    }
+    if (
+      mission.soft_delete ||
+      mission.status !== MissionStatus.INPROGRESS ||
+      mission._count.decompte > 0
+    ) {
+      throw new BadRequestException(
+        'Seul un ordre de mission en cours, non archivé et sans décompte peut être validé',
+      );
+    }
     const date_sortie = mission.date_sortie.toISOString().split('T')[0];
     const date_retour = createDecompteDto.date_retour;
     const { meals, accommodations } = calculateMealsAndAccommodation(
@@ -76,8 +99,8 @@ export class DecompteService {
         ).toISOString(),
       },
     });
-    // calculate the montant
-    const userCategory = user.category;
+    // calculate the montant with the barème of the agent on the mission
+    const userCategory = mission.user.category;
     if (!userCategory) {
       throw new BadRequestException(
         "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
@@ -285,16 +308,21 @@ export class DecompteService {
     });
   }
 
-  async update(id: number, updateDecompteDto: CreateDecompteDto, user: User) {
+  async update(id: number, updateDecompteDto: CreateDecompteDto) {
     const decompte = await this.databaseService.decompte.findUniqueOrThrow({
       where: {
         n_decompte: id,
         soft_delete: false,
       },
       include: {
-        mission: true,
+        mission: { include: { user: true } },
       },
     });
+    if (decompte.status !== DecompteStatus.PENDING) {
+      throw new BadRequestException(
+        'Seul un décompte en attente peut être modifié',
+      );
+    }
     const date_sortie = decompte.mission.date_sortie
       .toISOString()
       .split('T')[0];
@@ -327,8 +355,8 @@ export class DecompteService {
         ).toISOString(),
       },
     });
-    // calculate the montant
-    const userCategory = user.category;
+    // calculate the montant with the barème of the agent on the mission
+    const userCategory = decompte.mission.user.category;
     if (!userCategory) {
       throw new BadRequestException(
         "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
@@ -388,14 +416,12 @@ export class DecompteService {
     return this.databaseService.$transaction([updateMission, updateDecompte]);
   }
 
-  remove(id: number) {
+  remove(id: number, actorId: number) {
     return this.databaseService.decompte.update({
       where: {
         n_decompte: id,
       },
-      data: {
-        soft_delete: true,
-      },
+      data: archiveStamp(actorId),
     });
   }
 
@@ -512,7 +538,7 @@ export class DecompteService {
     if (message && message.trim() !== '') {
       await this.commentsService.create(
         {
-          title: `Decompte #${id} accepted`,
+          title: statusCommentTitle.accepted(id, message.trim()),
           type: 'DECOMPTE_STATUS',
           status: 'ACCEPTED',
           decompteId: id,
@@ -554,7 +580,7 @@ export class DecompteService {
     // Create a comment with the rejection reason
     await this.commentsService.create(
       {
-        title: `Decompte #${id} rejected: ${message}`,
+        title: statusCommentTitle.rejected(id, message),
         type: 'DECOMPTE_STATUS',
         status: 'REJECTED',
         decompteId: id,
@@ -563,6 +589,62 @@ export class DecompteService {
     );
 
     return updatedDecompte;
+  }
+
+  /**
+   * Accept or reject several pending décomptes at once (Admin only).
+   * Rows that are archived or no longer pending are skipped. Comments are
+   * written as in acceptDecompte / rejectDecompte: always on reject, and on
+   * accept only when a message is given.
+   */
+  bulkSetStatus(
+    ids: number[],
+    decision: 'accept' | 'reject',
+    actorId: number,
+    message?: string,
+  ) {
+    const text = message?.trim();
+    return this.databaseService.$transaction(async (tx) => {
+      const rows = await tx.decompte.findMany({
+        where: { n_decompte: { in: ids } },
+        select: { n_decompte: true, status: true, soft_delete: true },
+      });
+      const result = partitionIds(
+        ids,
+        new Map(rows.map((r) => [r.n_decompte, r])),
+        (r) =>
+          r.soft_delete
+            ? 'archived'
+            : r.status !== DecompteStatus.PENDING
+              ? 'not_pending'
+              : null,
+      );
+      if (result.done.length === 0) return result;
+
+      await tx.decompte.updateMany({
+        where: { n_decompte: { in: result.done } },
+        data: {
+          status:
+            decision === 'accept'
+              ? DecompteStatus.ACCEPTED
+              : DecompteStatus.REGECTED,
+        },
+      });
+      if (decision === 'reject' || text) {
+        await tx.commentaire.createMany({
+          data: result.done.map((id) => ({
+            title: statusCommentTitle[
+              decision === 'accept' ? 'accepted' : 'rejected'
+            ](id, text),
+            type: 'DECOMPTE_STATUS' as const,
+            status: decision === 'accept' ? 'ACCEPTED' : 'REJECTED',
+            decompteId: id,
+            userId: actorId,
+          })),
+        });
+      }
+      return result;
+    });
   }
 }
 const calculateMealsAndAccommodation = (

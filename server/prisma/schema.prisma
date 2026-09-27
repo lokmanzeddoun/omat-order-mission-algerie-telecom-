@@ -23,14 +23,24 @@ model User {
   structure Structure? @relation(fields: [serviceId], references: [code])
   serviceId String?
   soft_delete Boolean? @default(false)
+  archivedAt DateTime?
+  archivedBy User? @relation("UserArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
+  archivedById Int?
   missions Mission[]
   messages Commentaire[]
+  archivedUsers User[] @relation("UserArchivedBy")
+  archivedStructures Structure[] @relation("StructureArchivedBy")
+  archivedMissions Mission[] @relation("MissionArchivedBy")
+  archivedDecomptes Decompte[] @relation("DecompteArchivedBy")
 }
 
 model Structure {
   code String  @id
   name String
   soft_delete Boolean? @default(false)
+  archivedAt DateTime?
+  archivedBy User? @relation("StructureArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
+  archivedById Int?
   users User[]
 }
 model Mission {
@@ -47,6 +57,9 @@ model Mission {
   updatedAt DateTime @updatedAt
   user User @relation(fields: [userId],references: [matricule])
   soft_delete Boolean @default(false)
+  archivedAt DateTime?
+  archivedBy User? @relation("MissionArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
+  archivedById Int?
   hors_wilaya Boolean @default(false)
   userId Int
   direction Direction @default(NORD)
@@ -69,6 +82,9 @@ model Decompte {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   soft_delete Boolean @default(false)
+  archivedAt DateTime?
+  archivedBy User? @relation("DecompteArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
+  archivedById Int?
   mission Mission @relation(fields: [missionId],references: [n_mission])
   missionId Int
   messages Commentaire[]

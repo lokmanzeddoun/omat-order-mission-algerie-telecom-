@@ -15,6 +15,7 @@ import {
 import type { IStructure } from 'components/structures/structure.reducer';
 import StructureFormDialog, { type StructureFormMode } from 'components/structures/StructureFormDialog';
 import FileImportButton from 'components/common/FileImportButton';
+import { useBulkArchive } from 'components/common/useBulkArchive';
 import { Button, ConfirmDialog, DataTable, IconButton, PageHeader, SummaryStrip, type DataColumn } from 'components/ui';
 import paths from 'routes/paths';
 
@@ -35,6 +36,14 @@ export default function StructuresPage() {
   }, [dispatch]);
 
   const refresh = () => dispatch(getAllStructures());
+  const bulk = useBulkArchive<IStructure>({
+    entity: 'structures',
+    mode: 'archive',
+    idOf: (s) => s.code,
+    labelOf: (s) => `${s.name} (${s.code})`,
+    noun: ['service', 'services'],
+    onDone: refresh,
+  });
 
   const submitForm = async (data: IStructure) => {
     if (form?.mode === 'edit') await dispatch(updateStructure(data));
@@ -94,7 +103,9 @@ export default function StructuresPage() {
           primary: [{ label: t('actions.edit'), icon: <Pencil />, onSelect: () => setForm({ mode: 'edit', item: s }) }],
           menu: [{ label: t('actions.archive'), icon: <Archive />, tone: 'danger', onSelect: () => setToArchive(s) }],
         })}
+        bulkActions={bulk.actions}
       />
+      {bulk.dialog}
 
       <StructureFormDialog
         open={form !== null}

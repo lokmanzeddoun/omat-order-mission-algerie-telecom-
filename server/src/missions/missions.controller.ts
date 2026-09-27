@@ -151,8 +151,8 @@ export class MissionsController {
 
   @Delete(':id')
   @Auth()
-  remove(@Param('id') id: string) {
-    return this.missionsService.remove(+id);
+  remove(@Param('id') id: string, @GetUser() user: User) {
+    return this.missionsService.remove(+id, user);
   }
 
   @Get(':id/download')

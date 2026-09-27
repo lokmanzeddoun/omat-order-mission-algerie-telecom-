@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Category, Prisma, Role } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
+import { archiveStamp } from 'src/archive/archive-stamp';
 import { createUserDto } from './dtos/create-user.dto';
 import * as xlsx from 'xlsx';
 import { WorkBook, WorkSheet } from 'xlsx';
@@ -178,14 +179,14 @@ export class UsersService {
     });
   }
 
-  archive(matricule: number) {
+  archive(matricule: number, actorId: number) {
+    if (matricule === actorId)
+      throw new BadRequestException('You cannot archive yourself');
     return this.databaseService.user.update({
       where: {
         matricule,
       },
-      data: {
-        soft_delete: true,
-      },
+      data: archiveStamp(actorId),
     });
   }
   async uploadUsers(file: ImportExcel) {
