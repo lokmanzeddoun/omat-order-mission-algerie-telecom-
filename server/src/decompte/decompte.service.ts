@@ -8,6 +8,7 @@ import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp } from 'src/archive/archive-stamp';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import { CommentsService } from 'src/comments/comments.service';
+import { partitionIds } from 'src/common/bulk';
 import {
   DecompteStatus,
   Direction,
@@ -748,6 +749,62 @@ export class DecompteService {
     );
 
     return updatedDecompte;
+  }
+
+  /**
+   * Accept or reject several pending décomptes at once (Admin only).
+   * Rows that are archived or no longer pending are skipped. Comments are
+   * written as in acceptDecompte / rejectDecompte: always on reject, and on
+   * accept only when a message is given.
+   */
+  bulkSetStatus(
+    ids: number[],
+    decision: 'accept' | 'reject',
+    actorId: number,
+    message?: string,
+  ) {
+    const text = message?.trim();
+    return this.databaseService.$transaction(async (tx) => {
+      const rows = await tx.decompte.findMany({
+        where: { n_decompte: { in: ids } },
+        select: { n_decompte: true, status: true, soft_delete: true },
+      });
+      const result = partitionIds(
+        ids,
+        new Map(rows.map((r) => [r.n_decompte, r])),
+        (r) =>
+          r.soft_delete
+            ? 'archived'
+            : r.status !== DecompteStatus.PENDING
+              ? 'not_pending'
+              : null,
+      );
+      if (result.done.length === 0) return result;
+
+      await tx.decompte.updateMany({
+        where: { n_decompte: { in: result.done } },
+        data: {
+          status:
+            decision === 'accept'
+              ? DecompteStatus.ACCEPTED
+              : DecompteStatus.REGECTED,
+        },
+      });
+      if (decision === 'reject' || text) {
+        await tx.commentaire.createMany({
+          data: result.done.map((id) => ({
+            title: statusCommentTitle[
+              decision === 'accept' ? 'accepted' : 'rejected'
+            ](id, text),
+            type: 'DECOMPTE_STATUS' as const,
+            status: decision === 'accept' ? 'ACCEPTED' : 'REJECTED',
+            decompteId: id,
+            userId: actorId,
+          })),
+        });
+      }
+      return result;
+    });
   }
 }
 const calculateMealsAndAccommodation = (

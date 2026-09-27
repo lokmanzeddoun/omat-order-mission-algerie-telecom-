@@ -148,4 +148,67 @@ describe('DecompteService', () => {
       expect(comments.create).not.toHaveBeenCalled();
     });
   });
+
+  describe('bulkSetStatus', () => {
+    const tx = {
+      decompte: { findMany: jest.fn(), updateMany: jest.fn() },
+      commentaire: { createMany: jest.fn() },
+    };
+    beforeEach(() => {
+      db.$transaction.mockImplementation((fn: (t: unknown) => unknown) =>
+        fn(tx),
+      );
+      tx.decompte.findMany.mockResolvedValue([
+        { n_decompte: 1, status: 'PENDING', soft_delete: false },
+        { n_decompte: 2, status: 'ACCEPTED', soft_delete: false },
+        { n_decompte: 3, status: 'PENDING', soft_delete: true },
+        { n_decompte: 4, status: 'PENDING', soft_delete: false },
+      ]);
+    });
+
+    it('rejects pending rows, skips the others, comments each rejection', async () => {
+      const result = await service.bulkSetStatus(
+        [1, 2, 3, 4, 5],
+        'reject',
+        9,
+        'Justificatifs manquants',
+      );
+      expect(result).toEqual({
+        done: [1, 4],
+        skipped: [
+          { id: 2, reason: 'not_pending' },
+          { id: 3, reason: 'archived' },
+          { id: 5, reason: 'not_found' },
+        ],
+      });
+      expect(tx.decompte.updateMany).toHaveBeenCalledWith({
+        where: { n_decompte: { in: [1, 4] } },
+        data: { status: 'REGECTED' },
+      });
+      const { data } = tx.commentaire.createMany.mock.calls[0][0];
+      expect(data).toEqual([
+        expect.objectContaining({
+          title: 'Decompte #1 rejected: Justificatifs manquants',
+          decompteId: 1,
+          userId: 9,
+          status: 'REJECTED',
+        }),
+        expect.objectContaining({ decompteId: 4 }),
+      ]);
+    });
+
+    it('accepts without writing comments when there is no message', async () => {
+      await service.bulkSetStatus([1, 4], 'accept', 9);
+      expect(tx.decompte.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { status: 'ACCEPTED' } }),
+      );
+      expect(tx.commentaire.createMany).not.toHaveBeenCalled();
+    });
+
+    it('does not write anything when nothing is pending', async () => {
+      await service.bulkSetStatus([2, 3], 'accept', 9, 'ok');
+      expect(tx.decompte.updateMany).not.toHaveBeenCalled();
+      expect(tx.commentaire.createMany).not.toHaveBeenCalled();
+    });
+  });
 });

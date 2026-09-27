@@ -1,24 +1,9 @@
-import { Test } from '@nestjs/testing';
-import {
-  CanActivate,
-  ExecutionContext,
-  INestApplication,
-  ValidationPipe,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { ArchiveController } from './archive.controller';
 import { ArchiveService } from './archive.service';
 import { BULK_MAX } from './dto/bulk-ids.dto';
-
-/** Stands in for the JWT guard: the role comes from a test header. */
-class FakeJwtGuard implements CanActivate {
-  canActivate(ctx: ExecutionContext) {
-    const req = ctx.switchToHttp().getRequest();
-    req.user = { matricule: 42, nom: 'Test', role: req.headers['x-role'] };
-    return true;
-  }
-}
+import { createHttpApp } from 'src/common/testing/http-app';
 
 describe('ArchiveController (HTTP)', () => {
   let app: INestApplication;
@@ -29,22 +14,9 @@ describe('ArchiveController (HTTP)', () => {
   };
 
   beforeAll(async () => {
-    const module = await Test.createTestingModule({
-      controllers: [ArchiveController],
-      providers: [{ provide: ArchiveService, useValue: archive }],
-    })
-      .overrideGuard(AuthGuard('jwt'))
-      .useClass(FakeJwtGuard)
-      .compile();
-    app = module.createNestApplication();
-    app.useGlobalPipes(
-      new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
-    );
-    await app.init();
+    app = await createHttpApp(ArchiveController, [
+      { provide: ArchiveService, useValue: archive },
+    ]);
   });
 
   afterAll(() => app.close());

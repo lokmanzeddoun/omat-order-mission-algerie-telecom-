@@ -18,11 +18,41 @@ import { RejectDecompteDto } from './dto/reject-decompte.dto';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
 import { User } from '@prisma/client';
+import { BulkAcceptDto, BulkRejectDto } from './dto/bulk-status.dto';
 import { Response } from 'express';
 
 @Controller('decompte')
 export class DecompteController {
   constructor(private readonly decompteService: DecompteService) {}
+
+  // Bulk routes come first so 'bulk' is never read as an :id.
+  @Patch('bulk/accept')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  acceptMany(
+    @Body() body: BulkAcceptDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.decompteService.bulkSetStatus(
+      body.ids,
+      'accept',
+      actorId,
+      body.message,
+    );
+  }
+
+  @Patch('bulk/reject')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  rejectMany(
+    @Body() body: BulkRejectDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.decompteService.bulkSetStatus(
+      body.ids,
+      'reject',
+      actorId,
+      body.message,
+    );
+  }
 
   @Auth('ADMIN', 'SUPER_ADMIN')
   @Post(':id')
