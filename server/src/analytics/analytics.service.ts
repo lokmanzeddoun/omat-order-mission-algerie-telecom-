@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import { AccessPolicy, Actor } from '../common/policy/access-policy';
+import { exportWorkbook } from '../utils/export-workbook';
+import { MonthlyRecapDto, MonthlyRecapRowDto } from './dto/monthly-recap.dto';
 import {
   AnalyticsResponseDto,
   AnalyticsKPIDto,
@@ -13,7 +16,158 @@ import {
 
 @Injectable()
 export class AnalyticsService {
-  constructor(private readonly prisma: DatabaseService) {}
+  constructor(
+    private readonly prisma: DatabaseService,
+    private readonly accessPolicy: AccessPolicy,
+  ) {}
+
+  /**
+   * Décomptes cumulated per month of `createdAt`, within the caller's scope.
+   * For one exercice every month of its year is listed (zeros included); for
+   * all exercices only the months that have décomptes.
+   */
+  async getMonthlyRecap(
+    actor: Actor,
+    exerciceId?: number,
+  ): Promise<MonthlyRecapDto> {
+    const decomptes = await this.prisma.decompte.findMany({
+      where: {
+        soft_delete: false,
+        ...(exerciceId ? { exerciceId } : {}),
+        ...this.accessPolicy.scopeDecomptes(actor),
+      },
+      select: {
+        createdAt: true,
+        status: true,
+        montant: true,
+        fees_transport: true,
+        parcours: true,
+        mission: { select: { userId: true } },
+      },
+    });
+
+    const buckets = new Map<
+      string,
+      { row: MonthlyRecapRowDto; agents: Set<number> }
+    >();
+    const bucket = (month: string) => {
+      let b = buckets.get(month);
+      if (!b) {
+        b = { row: this.emptyRecapRow(month), agents: new Set() };
+        buckets.set(month, b);
+      }
+      return b;
+    };
+
+    if (exerciceId) {
+      const exercice = await this.prisma.exercice.findUnique({
+        where: { id: exerciceId },
+        select: { year: true },
+      });
+      if (exercice) {
+        for (let m = 1; m <= 12; m++) {
+          bucket(`${exercice.year}-${String(m).padStart(2, '0')}`);
+        }
+      }
+    }
+
+    const total = {
+      row: this.emptyRecapRow('total'),
+      agents: new Set<number>(),
+    };
+    for (const d of decomptes) {
+      for (const b of [bucket(this.getMonthKey(d.createdAt)), total]) {
+        this.addToRecapRow(b.row, d);
+        if (d.mission?.userId != null) b.agents.add(d.mission.userId);
+      }
+    }
+
+    const finish = (b: { row: MonthlyRecapRowDto; agents: Set<number> }) => {
+      const row = { ...b.row, agents: b.agents.size };
+      for (const key of [
+        'pendingAmount',
+        'acceptedAmount',
+        'rejectedAmount',
+        'totalAmount',
+        'feesTransport',
+        'distance',
+      ] as const) {
+        row[key] = Math.round(row[key] * 100) / 100;
+      }
+      return row;
+    };
+
+    return {
+      rows: [...buckets.keys()].sort().map((k) => finish(buckets.get(k)!)),
+      total: finish(total),
+    };
+  }
+
+  /** The monthly recap as an .xlsx (French headers, like the PDFs). */
+  async exportMonthlyRecap(actor: Actor, exerciceId?: number): Promise<Buffer> {
+    const { rows, total } = await this.getMonthlyRecap(actor, exerciceId);
+    const toSheetRow = (r: MonthlyRecapRowDto) => ({
+      Mois: r.month === 'total' ? 'Total' : r.month,
+      'Nb décomptes': r.totalCount,
+      'En attente (nb)': r.pendingCount,
+      'En attente (DA)': r.pendingAmount,
+      'Acceptés (nb)': r.acceptedCount,
+      'Acceptés (DA)': r.acceptedAmount,
+      'Rejetés (nb)': r.rejectedCount,
+      'Rejetés (DA)': r.rejectedAmount,
+      'Montant total (DA)': r.totalAmount,
+      'Frais transport (DA)': r.feesTransport,
+      'Km parcourus': r.distance,
+      'Employés concernés': r.agents,
+    });
+    return exportWorkbook('Récapitulatif', [
+      ...rows.map(toSheetRow),
+      toSheetRow(total),
+    ]);
+  }
+
+  private emptyRecapRow(month: string): MonthlyRecapRowDto {
+    return {
+      month,
+      totalCount: 0,
+      pendingCount: 0,
+      pendingAmount: 0,
+      acceptedCount: 0,
+      acceptedAmount: 0,
+      rejectedCount: 0,
+      rejectedAmount: 0,
+      totalAmount: 0,
+      feesTransport: 0,
+      distance: 0,
+      agents: 0,
+    };
+  }
+
+  private addToRecapRow(
+    row: MonthlyRecapRowDto,
+    d: {
+      status: string;
+      montant: number;
+      fees_transport: number | null;
+      parcours: number | null;
+    },
+  ) {
+    const montant = d.montant ?? 0;
+    row.totalCount++;
+    row.totalAmount += montant;
+    row.feesTransport += d.fees_transport ?? 0;
+    row.distance += d.parcours ?? 0;
+    if (d.status === 'PENDING') {
+      row.pendingCount++;
+      row.pendingAmount += montant;
+    } else if (d.status === 'ACCEPTED') {
+      row.acceptedCount++;
+      row.acceptedAmount += montant;
+    } else if (d.status === 'REGECTED') {
+      row.rejectedCount++;
+      row.rejectedAmount += montant;
+    }
+  }
 
   async getAnalytics(exerciceId?: number): Promise<AnalyticsResponseDto> {
     // Build filter for exercice if provided
