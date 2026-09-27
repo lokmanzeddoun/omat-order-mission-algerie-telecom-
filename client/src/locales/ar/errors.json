@@ -21,5 +21,6 @@
   "invalidMealsCount": "عدد الوجبات والمبيت غير صالح.",
   "decompteNotPending": "تمت معالجة كشف المصاريف هذا مسبقًا.",
   "unsupportedFile": "نوع الملف غير مدعوم.",
+  "emptyFile": "الملف فارغ.",
   "pdfFailed": "تعذّر توليد ملف PDF."
 }

@@ -21,5 +21,6 @@
   "invalidMealsCount": "Le nombre de repas et d'hébergements n'est pas valide.",
   "decompteNotPending": "Ce décompte a déjà été traité.",
   "unsupportedFile": "Type de fichier non pris en charge.",
+  "emptyFile": "Le fichier est vide.",
   "pdfFailed": "Impossible de générer le PDF."
 }

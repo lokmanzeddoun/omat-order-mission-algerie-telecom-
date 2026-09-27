@@ -22,6 +22,7 @@ const KNOWN_SERVER_MESSAGES: [RegExp, string][] = [
   [/nombre de repas/i, 'errors:invalidMealsCount'],
   [/not in PENDING status/i, 'errors:decompteNotPending'],
   [/unsupported file type|correct file name/i, 'errors:unsupportedFile'],
+  [/empty file|fichier.*vide/i, 'errors:emptyFile'],
   [/pdf/i, 'errors:pdfFailed'],
 ];
 
