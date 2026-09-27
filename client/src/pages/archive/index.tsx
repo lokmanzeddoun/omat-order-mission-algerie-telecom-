@@ -21,7 +21,23 @@ import {
   type RowActions,
 } from 'components/ui';
 import paths from 'routes/paths';
-import { useBulkArchive } from 'components/common/useBulkArchive';
+import { useBulkArchive, type BulkRowOptions } from 'components/common/useBulkArchive';
+import { useBulkDelete } from 'components/common/useBulkDelete';
+
+/** Bulk actions of one Archive tab: restore, plus permanent delete for SUPER_ADMIN. */
+function useArchiveTabBulk<Row>(options: BulkRowOptions<Row>, canDelete: boolean) {
+  const restore = useBulkArchive<Row>({ ...options, mode: 'restore' });
+  const remove = useBulkDelete<Row>(options);
+  return {
+    actions: (rows: Row[]) => [...restore.actions(rows), ...(canDelete ? remove.actions(rows) : [])],
+    dialog: (
+      <>
+        {restore.dialog}
+        {remove.dialog}
+      </>
+    ),
+  };
+}
 
 /** Audit fields set by the server on archive (older rows only have updatedAt). */
 type Audit = {
@@ -168,6 +184,7 @@ export default function ArchivePage() {
   const { t } = useTranslation();
   const dispatch = useDispatch<AppDispatch>();
   const token = useSelector((s: RootState) => s.auth.token);
+  const isSuperAdmin = useSelector((s: RootState) => s.auth.user?.role) === 'SUPER_ADMIN';
   const selectedYear = useSelector((s: RootState) => s.exercice.selectedYear);
   const [tab, setTab] = useState<Kind>('missions');
   const [data, setData] = useState<Record<Kind, Item[]>>({ missions: [], decomptes: [], users: [], structures: [] });
@@ -215,12 +232,11 @@ export default function ArchivePage() {
   };
 
   // One per tab: hooks can't be called conditionally.
-  const bulkOptions = { mode: 'restore' as const, onDone: load };
   const bulk = {
-    missions: useBulkArchive<Mission>({ ...bulkOptions, entity: 'missions', idOf: (m) => m.n_mission, labelOf: (m) => `N° ${m.n_mission} · ${m.destination ?? '—'}`, noun: ['ordre de mission', 'ordres de mission'] }),
-    decomptes: useBulkArchive<Decompte>({ ...bulkOptions, entity: 'decomptes', idOf: (d) => d.n_decompte, labelOf: (d) => `N° ${d.n_decompte}`, noun: ['décompte', 'décomptes'] }),
-    users: useBulkArchive<User>({ ...bulkOptions, entity: 'users', idOf: (u) => u.matricule, labelOf: (u) => `${u.prenom} ${u.nom} (${u.matricule})`, noun: ['utilisateur', 'utilisateurs'] }),
-    structures: useBulkArchive<Structure>({ ...bulkOptions, entity: 'structures', idOf: (s) => s.code, labelOf: (s) => `${s.name} (${s.code})`, noun: ['service', 'services'] }),
+    missions: useArchiveTabBulk<Mission>({ onDone: load, entity: 'missions', idOf: (m) => m.n_mission, labelOf: (m) => `N° ${m.n_mission} · ${m.destination ?? '—'}`, noun: ['ordre de mission', 'ordres de mission'] }, isSuperAdmin),
+    decomptes: useArchiveTabBulk<Decompte>({ onDone: load, entity: 'decomptes', idOf: (d) => d.n_decompte, labelOf: (d) => `N° ${d.n_decompte}`, noun: ['décompte', 'décomptes'] }, isSuperAdmin),
+    users: useArchiveTabBulk<User>({ onDone: load, entity: 'users', idOf: (u) => u.matricule, labelOf: (u) => `${u.prenom} ${u.nom} (${u.matricule})`, noun: ['utilisateur', 'utilisateurs'] }, isSuperAdmin),
+    structures: useArchiveTabBulk<Structure>({ onDone: load, entity: 'structures', idOf: (s) => s.code, labelOf: (s) => `${s.name} (${s.code})`, noun: ['service', 'services'] }, isSuperAdmin),
   };
 
   const rowActions = (item: Item): RowActions => ({

@@ -10,6 +10,7 @@ import { useDecompteActions, type DecompteRow } from 'components/decomptes/useDe
 import { decompteColumns } from 'components/decomptes/columns';
 import { agentName } from 'components/orders/format';
 import { useBulkArchive } from 'components/common/useBulkArchive';
+import { useBulkDecompteStatus } from 'components/common/useBulkDecompteStatus';
 import { DataTable, IconButton, PageHeader, SummaryStrip, Tabs } from 'components/ui';
 import paths from 'routes/paths';
 
@@ -35,6 +36,12 @@ export default function DecomptesPage() {
 
   const detailPath = (d: DecompteRow) => `${paths.admins}/decomptes/${d.n_decompte}`;
   const { actionsFor, dialogs } = useDecompteActions({ admin: isAdmin, onChanged: refresh, detailPath });
+  const bulkStatus = useBulkDecompteStatus<DecompteRow>({
+    idOf: (d) => d.n_decompte,
+    labelOf: (d) => `N° ${d.n_decompte} · ${agentName(d.mission?.user)}`,
+    isPending: (d) => d.status === 'PENDING',
+    onDone: refresh,
+  });
   const bulk = useBulkArchive<DecompteRow>({
     entity: 'decomptes',
     mode: 'archive',
@@ -95,10 +102,11 @@ export default function DecomptesPage() {
         }
         onRowDoubleClick={(d) => navigate(detailPath(d))}
         rowActions={actionsFor}
-        bulkActions={isAdmin ? bulk.actions : undefined}
+        bulkActions={isAdmin ? (rows) => [...bulkStatus.actions(rows), ...bulk.actions(rows)] : undefined}
       />
       {dialogs}
       {bulk.dialog}
+      {bulkStatus.dialog}
     </>
   );
 }

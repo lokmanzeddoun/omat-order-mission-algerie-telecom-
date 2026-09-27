@@ -5,35 +5,24 @@ import http from 'helpers/http';
 import { extractErrorMessage } from 'helpers/errorHandler';
 import { ConfirmDialog, type MenuAction } from 'components/ui';
 import { toast } from 'components/ui/toaster';
+import { countOf, idsOf, reportBulkResult, type BulkResult, type Id } from './bulk';
+import { BulkPreview } from './BulkPreview';
 
 export type ArchiveEntity = 'missions' | 'decomptes' | 'users' | 'structures';
-type Id = number | string;
-type SkipReason = 'not_found' | 'already_archived' | 'not_archived' | 'self';
-export interface BulkResult {
-  done: Id[];
-  skipped: { id: Id; reason: SkipReason }[];
-}
+export type { BulkResult };
 
-const skipLabels: Record<SkipReason, string> = {
+const skipLabels: Record<string, string> = {
   not_found: 'introuvable',
   already_archived: 'déjà archivé',
   not_archived: 'déjà actif',
   self: 'votre propre compte',
 };
 
-/** How many names the confirmation lists before "et N autres". */
-const PREVIEW = 5;
-
 export const bulkArchiveRequest = (entity: ArchiveEntity, ids: Id[], restore: boolean) =>
   http.patch<BulkResult>(`/archive/${entity}/bulk${restore ? '/restore' : ''}`, { ids }).then((r) => r.data);
 
-/** "1 ordre", "3 ordres" (French: 0 and 1 are singular). */
-const count = (n: number, [one, many]: [string, string]) => `${n} ${n > 1 ? many : one}`;
-
-interface Options<Row> {
+export interface BulkRowOptions<Row> {
   entity: ArchiveEntity;
-  /** Archive from a list page, or restore from the Archive page. */
-  mode: 'archive' | 'restore';
   idOf: (row: Row) => Id | null | undefined;
   /** Name shown in the confirmation, e.g. "Karim Benali" or "N° 42". */
   labelOf: (row: Row) => string;
@@ -41,6 +30,11 @@ interface Options<Row> {
   noun: [string, string];
   /** Refetch the list; rows that changed then leave the table and its selection. */
   onDone: () => unknown;
+}
+
+interface Options<Row> extends BulkRowOptions<Row> {
+  /** Archive from a list page, or restore from the Archive page. */
+  mode: 'archive' | 'restore';
 }
 
 /**
@@ -54,7 +48,6 @@ export function useBulkArchive<Row>({ entity, mode, idOf, labelOf, noun, onDone 
   const [busy, setBusy] = useState(false);
   const restore = mode === 'restore';
   const verb = restore ? t('actions.unarchive') : t('actions.archive');
-  const participle: [string, string] = restore ? ['désarchivé', 'désarchivés'] : ['archivé', 'archivés'];
 
   const undo = async (ids: Id[]) => {
     try {
@@ -67,23 +60,17 @@ export function useBulkArchive<Row>({ entity, mode, idOf, labelOf, noun, onDone 
   };
 
   const run = async (rows: Row[]) => {
-    const ids = rows.map(idOf).filter((id): id is Id => id != null && id !== '');
+    const ids = idsOf(rows, idOf);
     if (ids.length === 0) return;
     setBusy(true);
     try {
-      const { done, skipped } = await bulkArchiveRequest(entity, ids, restore);
-      if (done.length) {
-        toast.success(`${count(done.length, noun)} ${done.length > 1 ? participle[1] : participle[0]}`, {
-          action: { label: t('actions.cancel'), onClick: () => void undo(done) },
-        });
-      }
-      if (skipped.length) {
-        const byReason = new Map<SkipReason, number>();
-        for (const s of skipped) byReason.set(s.reason, (byReason.get(s.reason) ?? 0) + 1);
-        toast.warning(`${count(skipped.length, noun)} ${skipped.length > 1 ? 'ignorés' : 'ignoré'}`, {
-          description: [...byReason].map(([reason, n]) => `${n} : ${skipLabels[reason]}`).join(' · '),
-        });
-      }
+      reportBulkResult({
+        result: await bulkArchiveRequest(entity, ids, restore),
+        noun,
+        participle: restore ? ['désarchivé', 'désarchivés'] : ['archivé', 'archivés'],
+        skipLabels,
+        undo: { label: t('actions.cancel'), run: (done) => void undo(done) },
+      });
     } catch (error) {
       toast.error(extractErrorMessage(error));
     } finally {
@@ -103,12 +90,11 @@ export function useBulkArchive<Row>({ entity, mode, idOf, labelOf, noun, onDone 
   ];
 
   const rows = pending ?? [];
-  const names = rows.slice(0, PREVIEW).map(labelOf);
   const dialog: ReactNode = (
     <ConfirmDialog
       open={pending !== null}
       onOpenChange={(o) => !o && !busy && setPending(null)}
-      title={`${verb} ${count(rows.length, noun)} ?`}
+      title={`${verb} ${countOf(rows.length, noun)} ?`}
       tone={restore ? 'primary' : 'danger'}
       confirmLabel={verb}
       confirmDisabled={busy}
@@ -119,12 +105,7 @@ export function useBulkArchive<Row>({ entity, mode, idOf, labelOf, noun, onDone 
           : 'Ils disparaîtront des listes et resteront consultables depuis la page Archive, d’où ils pourront être restaurés.'
       }
     >
-      <ul className="list-inside list-disc text-sm">
-        {names.map((name, i) => (
-          <li key={i}>{name}</li>
-        ))}
-        {rows.length > PREVIEW && <li className="list-none text-fg-muted">… et {rows.length - PREVIEW} autres</li>}
-      </ul>
+      <BulkPreview names={rows.map(labelOf)} total={rows.length} />
     </ConfirmDialog>
   );
 
