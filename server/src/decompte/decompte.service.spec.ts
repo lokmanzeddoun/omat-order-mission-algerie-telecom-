@@ -194,10 +194,7 @@ describe('DecompteService', () => {
 
     it('rejects a declared night count that does not match the trip', async () => {
       await expect(
-        runCreate(
-          overnightDto({ hebergement_sans_pec_nord: 2 }),
-          N_MISSION,
-        ),
+        runCreate(overnightDto({ hebergement_sans_pec_nord: 2 }), N_MISSION),
       ).rejects.toThrow('Le nombre de repas et hebergement non valid');
     });
 
@@ -223,7 +220,7 @@ describe('DecompteService', () => {
       await runCreate(dto, N_MISSION);
       expect(db.$transaction).toHaveBeenCalledTimes(1);
       await expect(
-          runCreate({ ...dto, repas_sans_pec_nord: 1 }, N_MISSION),
+        runCreate({ ...dto, repas_sans_pec_nord: 1 }, N_MISSION),
       ).rejects.toThrow(BadRequestException);
     });
   });

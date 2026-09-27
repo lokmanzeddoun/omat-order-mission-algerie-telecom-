@@ -63,7 +63,8 @@ export class CreateMissionDto {
     example: Direction.NORD,
   })
   @IsEnum(Direction, {
-    message: 'direction doit être une valeur valide de Direction (NORD, SUD ou MIXTE)',
+    message:
+      'direction doit être une valeur valide de Direction (NORD, SUD ou MIXTE)',
   })
   direction: Direction;
 
