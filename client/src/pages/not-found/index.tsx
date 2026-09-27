@@ -1,54 +1,19 @@
-import { Box, Button, Container, Link, Typography } from '@mui/material';
-import NotFoundSVG from 'assets/not-found.svg';
-import Image from 'components/base/Image';
-const NotFoundPage = () => {
-  return (
-    <Container>
-      <Box
-        sx={{
-          py: 12,
-          maxWidth: 480,
-          mx: 'auto',
-          display: 'flex',
-          minHeight: '100vh',
-          textAlign: 'center',
-          alignItems: 'center',
-          flexDirection: 'column',
-          justifyContent: 'center',
-        }}
-      >
-        <Typography variant="h3" sx={{ mb: 3 }}>
-          Oops! Page Non Trouve
-        </Typography>
+import { Link } from 'react-router-dom';
+import { buttonVariants } from 'components/ui';
+import paths from 'routes/paths';
 
-        <Typography sx={{ color: 'text.secondary' }}>
-          Nous n’avons pas pu localiser la page que vous essayez d’atteindre. Nous nous excusons
-          pour tout inconvénient que cela a pu causer. Merci de votre compréhension !
-        </Typography>
-
-        <Image
-          alt="Not Found Image"
-          src={NotFoundSVG}
-          sx={{
-            mx: 'auto',
-            height: 260,
-            my: { xs: 1, sm: 2 },
-            width: { xs: 1, sm: 340 },
-          }}
-        />
-
-        <Button
-          href="/"
-          size="large"
-          variant="contained"
-          component={Link}
-          sx={{ '&:hover': { color: 'common.white' } }}
-        >
-          Retourner à l'accueil
-        </Button>
-      </Box>
-    </Container>
-  );
-};
+const NotFoundPage = () => (
+  <main className="omat-ui flex min-h-screen flex-col items-center justify-center gap-4 bg-page px-4 text-center text-fg">
+    <p className="text-sm font-semibold tracking-wide text-fg-muted uppercase">Erreur 404</p>
+    <h1 className="text-2xl font-semibold">Page introuvable</h1>
+    <p className="max-w-md text-sm text-fg-muted">
+      La page demandée n’existe pas ou a été déplacée. Vérifiez l’adresse ou revenez à l’accueil.
+    </p>
+    {/* Router link so the /omat base path is kept (the previous href="/" left the app). */}
+    <Link to={paths.signin} className={buttonVariants({ variant: 'primary' })}>
+      Retour à l’accueil
+    </Link>
+  </main>
+);
 
 export default NotFoundPage;

@@ -1,34 +1,47 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, type ReactNode } from 'react';
 import { Navigate, Outlet, createBrowserRouter } from 'react-router-dom';
 import AuthLayout from 'layouts/auth-layout';
-import Splash from 'components/loader/Splash';
-import PageLoader from 'components/loader/PageLoader';
-import MainLayout from 'layouts/main-layout';
+import AppShell from 'layouts/app-shell';
+import { Loader } from 'components/ui';
 import paths, { rootPaths } from './paths';
 
-const App = lazy(() => import('App'));
 import HomeOrSignin from './HomeOrSignin';
-import ForgotPassword from 'pages/authentication/ForgotPassword';
-import Users from 'pages/users';
 import ProtectedRoute from 'ProtectedRoute';
-import Structures from 'pages/structures';
-import NotFoundPage from 'pages/not-found';
-import UserLayout from 'layouts/user-layout';
-import UserDashboard from 'pages/UserDashboard';
 import RedirectBasedOnRole from 'RedirectBasedRole';
-import MyProfile from 'pages/userProfile';
-import OrderDashboard from 'pages/ordres';
-import DataGridWithJson from 'pages/barem';
-import Archive from 'pages/archive';
-import DecomptesPage from 'pages/decomptes';
-import AdminComments from 'pages/admin/Comments';
-import AnalyticsDashboard from 'pages/admin/AnalyticsDashboard';
+import ScanRedirect from './ScanRedirect';
+
+const App = lazy(() => import('App'));
+const ForgotPassword = lazy(() => import('pages/authentication/ForgotPassword'));
+const Users = lazy(() => import('pages/users'));
+const Structures = lazy(() => import('pages/structures'));
+const NotFoundPage = lazy(() => import('pages/not-found'));
+const UserDashboard = lazy(() => import('pages/UserDashboard'));
+const MyProfile = lazy(() => import('pages/userProfile'));
+const OrderDashboard = lazy(() => import('pages/ordres'));
+const OrdreDetail = lazy(() => import('pages/ordres/detail'));
+const DataGridWithJson = lazy(() => import('pages/barem'));
+const Archive = lazy(() => import('pages/archive'));
+const DecomptesPage = lazy(() => import('pages/decomptes'));
+const DecompteDetail = lazy(() => import('pages/decomptes/detail'));
+const AdminComments = lazy(() => import('pages/admin/Comments'));
+const AnalyticsDashboard = lazy(() => import('pages/admin/AnalyticsDashboard'));
+
+/** Authenticated page area: role guard + shell + lazy page boundary. */
+const shell = (allowedRoles?: string[]): ReactNode => (
+  <ProtectedRoute allowedRoles={allowedRoles}>
+    <AppShell>
+      <Suspense fallback={<Loader />}>
+        <Outlet />
+      </Suspense>
+    </AppShell>
+  </ProtectedRoute>
+);
 
 const router = createBrowserRouter(
   [
     {
       element: (
-        <Suspense fallback={<Splash />}>
+        <Suspense fallback={<Loader />}>
           <App />
         </Suspense>
       ),
@@ -37,20 +50,14 @@ const router = createBrowserRouter(
           path: '/',
           element: (
             <AuthLayout>
-              <Suspense fallback={<PageLoader />}>
+              <Suspense fallback={<Loader />}>
                 <Outlet />
               </Suspense>
             </AuthLayout>
           ),
-            children: [
-            {
-              index: true,
-              element: <HomeOrSignin />,
-            },
-            {
-              path: 'authentication/forgot-password',
-              element: <ForgotPassword />,
-            },
+          children: [
+            { index: true, element: <HomeOrSignin /> },
+            { path: 'authentication/forgot-password', element: <ForgotPassword /> },
           ],
         },
         {
@@ -62,85 +69,52 @@ const router = createBrowserRouter(
           ),
         },
         {
-          path: `${rootPaths.dashboard}/admins`, // This is the parent route for admins
+          // Target of the QR codes printed on the ordre / décompte PDFs.
+          path: 'scan/:kind/:id',
           element: (
-            <ProtectedRoute allowedRoles={['ADMIN', 'SUPER_ADMIN']}>
-              <MainLayout>
-                <Suspense fallback={<PageLoader />}>
-                  <Outlet />
-                </Suspense>
-              </MainLayout>
+            <ProtectedRoute>
+              <ScanRedirect />
             </ProtectedRoute>
           ),
+        },
+        {
+          path: paths.admins,
+          element: shell(['ADMIN', 'SUPER_ADMIN']),
           children: [
-            {
-              path: 'users', // Relative path, starting with the parent's path
-              element: <Users />,
-            },
-            {
-              path: 'structures', // Relative path, starting with the parent's path
-              element: <Structures />,
-            },
-            {
-              path: '', // Relative path, starting with the parent's path
-              element: <OrderDashboard />,
-            },
-            {
-              path: "barem",
-              element: <DataGridWithJson />,
-            },
-            {
-              path: 'decomptes',
-              element: <DecomptesPage />,
-            },
-            {
-              path: 'support',
-              element: <AdminComments />,
-            },
-            {
-              path: 'archive',
-              element: <Archive />,
-            },
-            {
-              path: 'analytics',
-              element: <AnalyticsDashboard />,
-            },
+            { index: true, element: <OrderDashboard /> },
+            { path: 'ordres/:id', element: <OrdreDetail /> },
+            { path: 'users', element: <Users /> },
+            { path: 'structures', element: <Structures /> },
+            { path: 'barem', element: <DataGridWithJson /> },
+            { path: 'decomptes', element: <DecomptesPage /> },
+            { path: 'decomptes/:id', element: <DecompteDetail /> },
+            { path: 'support', element: <AdminComments /> },
+            { path: 'archive', element: <Archive /> },
+            { path: 'analytics', element: <AnalyticsDashboard /> },
           ],
         },
         {
-          path: `${rootPaths.dashboard}/users`, // This is the parent route for regular users
-          element: (
-            <ProtectedRoute allowedRoles={['USER']}>
-              <UserLayout>
-                <Suspense fallback={<PageLoader />}>
-                  <Outlet />
-                </Suspense>
-              </UserLayout>
-            </ProtectedRoute>
-          ),
+          path: paths.users,
+          element: shell(['USER']),
           children: [
-            {
-              path: '', // Represents the home route under users
-              element: <UserDashboard />, // Main dashboard for users
-            },
+            { index: true, element: <UserDashboard /> },
+            { path: 'ordres/:id', element: <OrdreDetail /> },
           ],
         },
         {
           path: paths.me,
-          element: (
-            <ProtectedRoute>
-              <MyProfile />
-            </ProtectedRoute>
-          ),
+          element: shell(),
+          children: [{ index: true, element: <MyProfile /> }],
         },
         {
           path: paths.notFound,
-          element: <NotFoundPage />,
+          element: (
+            <Suspense fallback={<Loader />}>
+              <NotFoundPage />
+            </Suspense>
+          ),
         },
-        {
-          path: '*',
-          element: <Navigate to={paths.notFound} replace />,
-        },
+        { path: '*', element: <Navigate to={paths.notFound} replace /> },
       ],
     },
   ],

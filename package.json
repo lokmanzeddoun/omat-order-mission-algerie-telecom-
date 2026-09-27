@@ -26,6 +26,7 @@
     "clean": "rm -rf node_modules client/node_modules server/node_modules client/dist server/dist",
     "setup:db": "npm run setup:db --workspace=server",
     "seed:db": "npm run db:seed --workspace=server",
+    "seed:demo": "npm run db:seed:demo --workspace=server",
     "validate": "./validate-workspace.sh"
   },
   "devDependencies": {

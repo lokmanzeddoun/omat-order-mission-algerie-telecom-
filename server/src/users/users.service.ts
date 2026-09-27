@@ -34,9 +34,8 @@ export class UsersService {
     // Check Role
     if (createUserDto.category && !Category[createUserDto.category])
       throw new BadRequestException('Invalid category');
-    // hash the password
+    // Initial password derived from the name (users change it from their profile)
     const password = `${createUserDto.nom.toLowerCase()}_${createUserDto.prenom.toLowerCase()}13`;
-    console.log(password);
     //Hash the password
     const hashedPassword = await bcrypt.hash(password, 10);
     try {

@@ -1,0 +1,168 @@
+/* OMAT design system — institutional style (Tailwind v4 with the full preflight reset). */
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- Tokens (light) ---------- */
+:root {
+  /* Algérie Télécom institutional blue; green used only as a thin accent */
+  --omat-primary: #0b3c73;
+  --omat-primary-hover: #082d57;
+  --omat-primary-soft: #e7eef7;
+  --omat-on-primary: #ffffff;
+  --omat-accent: #3aaa35;
+  /* Official header band stays deep blue in both themes */
+  --omat-band: #0b3c73;
+  --omat-band-strong: #082d57;
+
+  --omat-page: #f2f4f7;
+  --omat-surface: #ffffff;
+  --omat-surface-muted: #f8f9fb;
+  --omat-surface-header: #eef1f5;
+  --omat-border: #d0d5dd;
+  --omat-border-strong: #98a2b3;
+
+  --omat-text: #1d2939;
+  --omat-text-muted: #475467;
+  --omat-text-subtle: #667085;
+
+  --omat-success: #1e7b34;
+  --omat-success-soft: #e8f5ec;
+  --omat-warning: #8a5a00;
+  --omat-warning-soft: #fff4d6;
+  --omat-danger: #b42318;
+  --omat-danger-soft: #fdecea;
+  --omat-info: #175cd3;
+  --omat-info-soft: #eaf2fd;
+
+  --omat-focus: #f5b700;
+}
+
+/* ---------- Tokens (dark) ---------- */
+.dark {
+  --omat-primary: #6c9fd8;
+  --omat-primary-hover: #8cb5e3;
+  --omat-primary-soft: #16263a;
+  --omat-on-primary: #0b1523;
+  --omat-accent: #5cc257;
+  --omat-band: #0d2a4d;
+  --omat-band-strong: #0a2140;
+
+  --omat-page: #0f141b;
+  --omat-surface: #161c24;
+  --omat-surface-muted: #1b222c;
+  --omat-surface-header: #1f2731;
+  --omat-border: #2e3845;
+  --omat-border-strong: #4a5667;
+
+  --omat-text: #e6eaf0;
+  --omat-text-muted: #b3bcc8;
+  --omat-text-subtle: #8a95a5;
+
+  --omat-success: #5cc27a;
+  --omat-success-soft: #13291b;
+  --omat-warning: #e3b341;
+  --omat-warning-soft: #2e2511;
+  --omat-danger: #f07167;
+  --omat-danger-soft: #2f1615;
+  --omat-info: #6aa6f5;
+  --omat-info-soft: #13233a;
+}
+
+@theme inline {
+  --font-sans: 'IBM Plex Sans', 'Segoe UI', Arial, sans-serif;
+
+  --color-primary: var(--omat-primary);
+  --color-primary-hover: var(--omat-primary-hover);
+  --color-primary-soft: var(--omat-primary-soft);
+  --color-on-primary: var(--omat-on-primary);
+  --color-accent: var(--omat-accent);
+  --color-band: var(--omat-band);
+  --color-band-strong: var(--omat-band-strong);
+
+  --color-page: var(--omat-page);
+  --color-surface: var(--omat-surface);
+  --color-surface-muted: var(--omat-surface-muted);
+  --color-surface-header: var(--omat-surface-header);
+  --color-border: var(--omat-border);
+  --color-border-strong: var(--omat-border-strong);
+
+  --color-fg: var(--omat-text);
+  --color-fg-muted: var(--omat-text-muted);
+  --color-fg-subtle: var(--omat-text-subtle);
+
+  --color-success: var(--omat-success);
+  --color-success-soft: var(--omat-success-soft);
+  --color-warning: var(--omat-warning);
+  --color-warning-soft: var(--omat-warning-soft);
+  --color-danger: var(--omat-danger);
+  --color-danger-soft: var(--omat-danger-soft);
+  --color-info: var(--omat-info);
+  --color-info-soft: var(--omat-info-soft);
+  --color-focus: var(--omat-focus);
+
+  /* Classic, near-square corners */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 4px;
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    background-color: var(--omat-page);
+    color: var(--omat-text);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  :where(.omat-ui) :where(*, *::before, *::after) {
+    box-sizing: border-box;
+    border-width: 0;
+    border-style: solid;
+    border-color: var(--omat-border);
+  }
+
+  :where(.omat-ui) :where(button, input, select, textarea) {
+    font: inherit;
+    color: inherit;
+    margin: 0;
+  }
+
+  /* Neutralise native button chrome (normally done by Tailwind's preflight) */
+  :where(.omat-ui) :where(button, [type='button'], [type='submit'], [type='reset']) {
+    background-color: transparent;
+    background-image: none;
+    padding: 0;
+    appearance: button;
+  }
+
+  :where(.omat-ui) :where(table) {
+    border-collapse: collapse;
+    text-indent: 0;
+  }
+
+  :where(.omat-ui) :where(h1, h2, h3, h4, p, ul, ol, dl, dd, table) {
+    margin: 0;
+  }
+
+  :where(.omat-ui) :where(ul, ol) {
+    list-style: none;
+    padding: 0;
+  }
+
+  :where(.omat-ui) :where(a) {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  /* High-visibility focus ring (GOV.UK / DSFR convention) */
+  :where(.omat-ui) :focus-visible {
+    outline: 3px solid var(--omat-focus);
+    outline-offset: 0;
+  }
+}

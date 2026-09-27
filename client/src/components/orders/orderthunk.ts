@@ -40,6 +40,17 @@ export const addOrder =
         responseType: 'blob', // Ensure Axios treats the response as a Blob (file)
       });
 
+      if (res && res.data && res.data.size === 0) {
+        // Saved, but the server could not render the PDF: don't invite a retry
+        // that would create a duplicate.
+        dispatch(setAlert({
+          msg: "Ordre de mission créé, mais le PDF n'a pas pu être généré. Téléchargez-le depuis la liste des ordres.",
+          type: AlertTypes.WARNING,
+        }));
+        await dispatch(fetchUserOrders(token));
+        return true;
+      }
+
       if (res && res.data) {
         const contentDisposition = res.headers['content-disposition'];
         const fileName = contentDisposition
@@ -94,7 +105,12 @@ export const addOrder =
     }
   };
 
+// Responses can arrive out of order when the exercice changes quickly;
+// only the latest request may update the list.
+let ordersRequestId = 0;
+
 export const fetchUserOrders = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {
+  const requestId = ++ordersRequestId;
   try {
     dispatch(fetchOrdersStart()); // Start loading
     const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
@@ -113,6 +129,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
         // Don't pass status to get all user missions with any status (only filter by soft_delete = false)
       },
     });
+    if (requestId !== ordersRequestId) return;
 
     if (res && res.data) {
       dispatch(fetchUserOrderSuccess(res.data)); // Dispatch success and pass the data
@@ -121,6 +138,7 @@ export const fetchUserOrders = (token: string | null) => async (dispatch: AppDis
 
     dispatch(fetchUserOrderFailure('Problem in getting orders'));
   } catch (error) {
+    if (requestId !== ordersRequestId) return;
     let errorMessage = 'An error occurred';
 
     if (axios.isAxiosError(error)) {
@@ -189,6 +207,7 @@ export const updateMission = (order: IMission) => async (dispatch: AppDispatch, 
   }
 };
 export const fetchAllOrders = (token: string | null) => async (dispatch: AppDispatch, getState: any) => {
+  const requestId = ++ordersRequestId;
   try {
     dispatch(fetchOrdersStart()); // Start loading
     const selectedYear: number | null = getState()?.exercice?.selectedYear ?? null;
@@ -207,6 +226,7 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
         // Don't pass status to get all missions with any status (only filter by soft_delete = false)
       },
     });
+    if (requestId !== ordersRequestId) return;
 
     if (res && res.data) {
       dispatch(fetchUserOrderSuccess(res.data)); // Dispatch success and pass the data
@@ -215,6 +235,7 @@ export const fetchAllOrders = (token: string | null) => async (dispatch: AppDisp
 
     dispatch(fetchUserOrderFailure('Problem in getting orders'));
   } catch (error) {
+    if (requestId !== ordersRequestId) return;
     let errorMessage = 'An error occurred';
 
     if (axios.isAxiosError(error)) {

@@ -1,0 +1,75 @@
+{
+  "app": {
+    "institution": "Algérie Télécom",
+    "title": "Gestion des Ordres de Mission",
+    "skipToContent": "Aller au contenu principal",
+    "footer": "OMAT — Algérie Télécom. Usage interne."
+  },
+  "nav": {
+    "analytics": "Tableau de bord",
+    "decomptes": "Décomptes",
+    "ordres": "Ordres de mission",
+    "users": "Utilisateurs",
+    "structures": "Services",
+    "barem": "Barème",
+    "archive": "Archive",
+    "comments": "Commentaires",
+    "myOrdres": "Mes ordres de mission",
+    "profile": "Mon profil",
+    "home": "Accueil"
+  },
+  "user": {
+    "menu": "Menu utilisateur",
+    "profile": "Mon profil",
+    "logout": "Se déconnecter"
+  },
+  "exercice": {
+    "label": "Exercice",
+    "current": "en cours"
+  },
+  "actions": {
+    "addMission": "Nouvel ordre de mission",
+    "refresh": "Actualiser",
+    "add": "Ajouter",
+    "import": "Importer",
+    "export": "Exporter",
+    "edit": "Modifier",
+    "delete": "Supprimer",
+    "archive": "Archiver",
+    "unarchive": "Désarchiver",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "close": "Fermer",
+    "details": "Voir le détail",
+    "download": "Télécharger",
+    "more": "Plus d'actions",
+    "toggleTheme": "Changer le thème",
+    "toggleNav": "Afficher ou masquer le menu"
+  },
+  "table": {
+    "empty": "Aucun résultat",
+    "emptyHint": "Aucune donnée ne correspond aux critères.",
+    "filter": "Filtrer {{column}}",
+    "columns": "Colonnes",
+    "rowsPerPage": "Lignes par page",
+    "range": "{{from}}–{{to}} sur {{total}}",
+    "rangeEmpty": "0 résultat",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "actions": "Actions",
+    "loading": "Chargement…",
+    "clearFilters": "Effacer les filtres",
+    "all": "Tous"
+  },
+  "auth": {
+    "signIn": "Se connecter",
+    "signInTitle": "Connexion",
+    "signInSubtitle": "Accédez à l'application de gestion des ordres de mission.",
+    "email": "Adresse e-mail",
+    "password": "Mot de passe",
+    "forgot": "Mot de passe oublié ?",
+    "invalid": "Adresse e-mail ou mot de passe incorrect.",
+    "error": "Connexion impossible. Veuillez réessayer."
+  }
+}

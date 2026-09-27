@@ -64,7 +64,12 @@ export const addDecompte =
       }
     };
 
+// Responses can arrive out of order when the exercice changes quickly;
+// only the latest request may update the list.
+let decomptesRequestId = 0;
+
 export const fetchAllDecompte = (token: string | null, status?: string) => async (dispatch: AppDispatch, getState: any) => {
+  const requestId = ++decomptesRequestId;
   try {
     dispatch(fetchDecompteStart()); // Start loading
 
@@ -81,6 +86,7 @@ export const fetchAllDecompte = (token: string | null, status?: string) => async
         ...(status ? { status } : {}),
       },
     });
+    if (requestId !== decomptesRequestId) return;
 
     if (res && res.data) {
       dispatch(fetchDecompteSuccess(res.data)); // Dispatch success and pass the data
@@ -89,6 +95,7 @@ export const fetchAllDecompte = (token: string | null, status?: string) => async
 
     dispatch(fetchDecompteFailure('Problem in getting decomptes'));
   } catch (error) {
+    if (requestId !== decomptesRequestId) return;
     let errorMessage = 'An error occurred';
 
     if (axios.isAxiosError(error)) {
@@ -103,6 +110,7 @@ export const fetchAllDecompte = (token: string | null, status?: string) => async
 };
 
 export const fetchUserDecompte = (token: string | null, status?: string) => async (dispatch: AppDispatch, getState: any) => {
+  const requestId = ++decomptesRequestId;
   try {
     dispatch(fetchDecompteStart()); // Start loading
 
@@ -118,6 +126,7 @@ export const fetchUserDecompte = (token: string | null, status?: string) => asyn
         ...(status ? { status } : {}),
       },
     });
+    if (requestId !== decomptesRequestId) return;
 
     if (res && res.data) {
       dispatch(fetchDecompteSuccess(res.data)); // Dispatch success and pass the data
@@ -126,6 +135,7 @@ export const fetchUserDecompte = (token: string | null, status?: string) => asyn
 
     dispatch(fetchDecompteFailure('Problem in getting decomptes'));
   } catch (error) {
+    if (requestId !== decomptesRequestId) return;
     let errorMessage = 'An error occurred';
 
     if (axios.isAxiosError(error)) {

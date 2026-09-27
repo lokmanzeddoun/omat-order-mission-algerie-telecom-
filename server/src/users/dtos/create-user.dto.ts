@@ -1,4 +1,5 @@
 import {
+  IsEmail,
   IsEnum,
   IsInt,
   IsNotEmpty,
@@ -36,6 +37,9 @@ export class createUserDto {
     example: 'mohammed',
   })
   prenom: string;
+  // Without a validator decorator the global whitelist pipe rejected the email field.
+  @IsNotEmpty()
+  @IsEmail()
   @ApiProperty({
     description: 'User email',
     default: 'mohammed',

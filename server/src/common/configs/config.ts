@@ -2,7 +2,7 @@ import type { Config } from './config.interface';
 
 const config: Config = {
   nest: {
-    port: 8000,
+    port: parseInt(process.env.PORT ?? '8000', 10),
   },
   cors: {
     enabled: true,

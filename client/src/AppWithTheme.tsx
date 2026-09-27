@@ -1,23 +1,19 @@
-import { useMemo } from "react";
+import { useEffect } from "react";
 import { useSelector } from "react-redux";
-import { getTheme } from "theme/theme";
 import { RouterProvider } from "react-router-dom";
-import { ThemeProvider } from "@emotion/react";
-import { CssBaseline } from "@mui/material";
 import { RootState } from "store/rootReducer";
 import router from "routes/router";
 
-// Theme wrapper component that uses Redux state
+// Applies the light/dark theme (design tokens in styles/app.css switch on the `.dark` class).
 const AppWithTheme = () => {
 	const themeMode = useSelector((state: RootState) => state.theme.mode);
-	const theme = useMemo(() => getTheme(themeMode), [themeMode]);
 
-	return (
-		<ThemeProvider theme={theme}>
-			<CssBaseline />
-			<RouterProvider router={router} />
-		</ThemeProvider>
-	);
+	useEffect(() => {
+		document.documentElement.classList.toggle("dark", themeMode === "dark");
+		document.documentElement.style.colorScheme = themeMode;
+	}, [themeMode]);
+
+	return <RouterProvider router={router} />;
 };
 
 export default AppWithTheme;

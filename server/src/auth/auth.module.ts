@@ -20,7 +20,7 @@ import { PrismaModule } from 'nestjs-prisma';
         return {
           secret: configService.get('JWT_SECRET'),
           signOptions: {
-            expiresIn: configService.get('JWT_EXP'),
+            expiresIn: configService.get('JWT_EXPIRES_IN'),
           },
         };
       },

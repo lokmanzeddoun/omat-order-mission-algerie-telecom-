@@ -1,12 +1,6 @@
-import Box from "@mui/material/Box";
-import LinearProgress from "@mui/material/LinearProgress";
+import { Loader } from 'components/ui';
 
-const PageLoader = () => {
-	return (
-		<Box width={1} height="100vh">
-			<LinearProgress />
-		</Box>
-	);
-};
+// Fills its container only (the previous 100vh version overflowed under the header).
+const PageLoader = () => <Loader />;
 
 export default PageLoader;
