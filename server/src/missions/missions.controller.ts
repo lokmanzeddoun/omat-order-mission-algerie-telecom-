@@ -84,7 +84,6 @@ export class MissionsController {
     @Body() updateMissionDto: UpdateMissionDto,
   ) {
     // Optional cross-field checks only for provided fields
-    console.log('Update DTO received:', updateMissionDto);
 
     // Only validate dates if we're updating date/time fields
     // We need to fetch the existing mission to get complete data for validation
@@ -120,13 +119,6 @@ export class MissionsController {
       ) {
         const dRetour = new Date(dateRetourStr);
         const dSortie = new Date(dateSortieStr);
-
-        console.log('Validating dates:', {
-          dateSortieStr,
-          dateRetourStr,
-          dSortie,
-          dRetour,
-        });
 
         if (isNaN(dRetour.getTime()) || isNaN(dSortie.getTime())) {
           throw new BadRequestException('Invalid date/time format');

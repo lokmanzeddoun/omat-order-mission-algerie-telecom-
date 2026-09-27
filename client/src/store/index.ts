@@ -14,7 +14,8 @@ const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
   reducer: persistedReducer,
-  devTools: true,
+  // DevTools expose the whole store (including the session) to anyone at the keyboard.
+  devTools: import.meta.env.DEV,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {

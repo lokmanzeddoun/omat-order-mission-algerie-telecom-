@@ -162,7 +162,6 @@ export class DecompteService {
   }
 
   async findAll(status: string, archive: string, exercice?: string) {
-    console.log(status);
     // convert status to DcompteStatus
     let sat: DecompteStatus | undefined;
     if (status === 'accepted') {

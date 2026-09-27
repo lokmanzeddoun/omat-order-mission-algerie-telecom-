@@ -5,6 +5,8 @@ import { UsersModule } from './users/users.module';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule, loggingMiddleware } from 'nestjs-prisma';
 import config from './common/configs/config';
+import { validateEnv } from './common/configs/env.validation';
+import { pinoParams } from './common/configs/logger';
 import { Logger, Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { StructuresModule } from './structures/structures.module';
@@ -21,18 +23,13 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './roles/roles.guard';
 @Module({
   imports: [
-    PinoLoggerModule.forRoot({
-      pinoHttp: {
-        level: process.env.LOG_LEVEL ?? 'info',
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            singleLine: true,
-          },
-        },
-      },
+    // First: it loads .env, which pinoParams() below reads.
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [config],
+      validate: validateEnv,
     }),
-    ConfigModule.forRoot({ isGlobal: true, load: [config] }),
+    PinoLoggerModule.forRoot(pinoParams()),
     PrismaModule.forRoot({
       isGlobal: true,
       prismaServiceOptions: {

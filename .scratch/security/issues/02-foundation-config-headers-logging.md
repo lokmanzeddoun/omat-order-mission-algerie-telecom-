@@ -1,6 +1,6 @@
 # 02 — Foundation: config validation, headers, log redaction, tooling
 
-Status: ready-for-agent
+Status: resolved
 Type: task
 Blocked by: 01
 
@@ -37,3 +37,18 @@ A smoke e2e test that checks:
 - `/docs` returns 404 when `NODE_ENV=production`,
 - boot rejects a missing or short secret,
 - `authorization` never appears in a captured log line.
+
+## Comments
+
+**Resolved (security/02-foundation):**
+
+- **Env validation:** `ConfigModule` validates the environment at boot (`env.validation.ts`); the error message explains how to generate secrets. `config.ts` is now a factory, so the environment is read at boot.
+- **Headers:** helmet with a deny-all API CSP (off only while Swagger is on, in development). `TRUST_PROXY`. 100 kb JSON/urlencoded limits.
+- **Filter order:** fixed. Nest applies global filters in reverse, so the catch-all used to swallow Prisma and HTTP errors. Body-parser 413 and 400 errors now keep their status. P2002 no longer names the column.
+- **Logging:** pino redaction (`logger.ts`); `pino-pretty` in development only. The `console.*` calls in missions, décomptes, jwt, exercices and destination-validator are gone.
+- **Server lint:** moved to ESLint 9 with a flat config.
+- **Not yet clean:** lint still fails in files that later issues rewrite: auth (04), missions (03), users/structures (06, also being edited by the import-validation session), and the pdf formatting. Issue 08 makes lint a CI gate.
+- **Node:** `.nvmrc` 20, `engines` >= 20.
+- **Client:** DevTools and production `console.info` are gated to development. `client/.env` is untracked.
+- **Tests:** `configure-app.spec.ts` (headers, Swagger, body limits, trust proxy, filter mapping, no internal-message leak), `env.validation.spec.ts`, `logger.spec.ts`.
+- **Global prefix:** none. The Vite proxy and nginx both strip `/api`, and the refresh cookie `Path` is set from the browser's point of view (issue 04).

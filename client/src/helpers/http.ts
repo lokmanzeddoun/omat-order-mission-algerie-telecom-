@@ -14,7 +14,7 @@ const http = axios.create({
     timeout: DEFAULT_TIMEOUT_MS,
 });
 
-if (typeof window !== 'undefined') {
+if (import.meta.env.DEV && typeof window !== 'undefined') {
     // Lightweight runtime hint to verify which baseURL is used
     console.info('[http] baseURL =', baseURL);
 }

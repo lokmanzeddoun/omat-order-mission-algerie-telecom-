@@ -1,8 +1,16 @@
 import type { Config } from './config.interface';
 
-const config: Config = {
+/** Parses Express `trust proxy`: "1" → 1, "false" → false, else the string. */
+function trustProxy(raw: string | undefined): boolean | number | string {
+  if (!raw || raw === 'false') return false;
+  return /^\d+$/.test(raw) ? Number(raw) : raw;
+}
+
+// A factory, so the environment is read at boot (after validation), not at import.
+export default (): Config => ({
   nest: {
     port: parseInt(process.env.PORT ?? '8000', 10),
+    trustProxy: trustProxy(process.env.TRUST_PROXY),
   },
   cors: {
     enabled: true,
@@ -23,6 +31,4 @@ const config: Config = {
     refreshIn: '7d',
     bcryptSaltOrRound: 10,
   },
-};
-
-export default (): Config => config;
+});

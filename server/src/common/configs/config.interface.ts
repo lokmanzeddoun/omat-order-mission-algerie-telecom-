@@ -7,6 +7,7 @@ export interface Config {
 
 export interface NestConfig {
   port: number;
+  trustProxy: boolean | number | string;
 }
 
 export interface CorsConfig {

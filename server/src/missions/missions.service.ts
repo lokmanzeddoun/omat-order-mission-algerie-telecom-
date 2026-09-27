@@ -32,7 +32,6 @@ export class MissionsService {
     return ex?.id ?? null;
   }
   async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
-    console.log(createMissionDto);
     const exerciceId = await this.getCurrentExerciceId();
     // Drop any legacy heure_* fields if present in request body (backward compatibility)
     const {
@@ -172,7 +171,6 @@ export class MissionsService {
     status: string,
     exercice?: string,
   ) {
-    // console.log()
     let missionStatus: MissionStatus | undefined;
     if (status === 'completed') {
       missionStatus = MissionStatus.COMPLETED;
@@ -227,7 +225,6 @@ export class MissionsService {
 
   update(id: number, updateMissionDto: Prisma.MissionUpdateInput) {
     // Normalize possible Prisma update inputs for date fields.
-    console.log(updateMissionDto);
     const normalizeDateInput = (input: any): Date | null | undefined => {
       if (input === undefined) return undefined; // do not touch field
       if (input === null) return null; // explicit null
@@ -333,15 +330,9 @@ export class MissionsService {
         data: archiveStamp(user.matricule),
       });
     } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
-      throw new BadRequestException(
-        `Failed to delete mission: ${error.message}`,
-      );
+      // HTTP exceptions pass through; anything else goes to the global
+      // filters, which never echo the internal message to the client.
+      throw error;
     }
   }
   async downloadOrdre(id: number, res: ExpressResponse) {
