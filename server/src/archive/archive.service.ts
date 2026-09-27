@@ -1,10 +1,51 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp, restoreStamp } from './archive-stamp';
 
 const ARCHIVED_BY = {
   select: { matricule: true, nom: true, prenom: true },
 } as const;
+
+export type BulkSkipReason =
+  | 'not_found'
+  | 'already_archived'
+  | 'not_archived'
+  | 'self';
+
+export interface BulkResult<K> {
+  done: K[];
+  skipped: { id: K; reason: BulkSkipReason }[];
+}
+
+/**
+ * Splits requested ids into the ones to update and the ones to skip.
+ * `archived` maps each existing id to its current soft_delete state.
+ */
+export function partitionBulk<K>(
+  ids: K[],
+  archived: Map<K, boolean>,
+  archive: boolean,
+  extraRule?: (id: K) => BulkSkipReason | null,
+): BulkResult<K> {
+  const result: BulkResult<K> = { done: [], skipped: [] };
+  for (const id of new Set(ids)) {
+    const state = archived.get(id);
+    const reason: BulkSkipReason | null =
+      state === undefined
+        ? 'not_found'
+        : state === archive
+          ? archive
+            ? 'already_archived'
+            : 'not_archived'
+          : (extraRule?.(id) ?? null);
+    if (reason) result.skipped.push({ id, reason });
+    else result.done.push(id);
+  }
+  return result;
+}
+
+type Tx = Prisma.TransactionClient;
 
 @Injectable()
 export class ArchiveService {
@@ -157,5 +198,104 @@ export class ArchiveService {
       where: { code },
       data: restoreStamp(),
     });
+  }
+
+  // ---- Bulk archive / restore ------------------------------------------
+  // Each call runs in one transaction: read current states, skip what can't
+  // change, update the rest with a single updateMany.
+
+  private bulk<K>(
+    ids: K[],
+    archive: boolean,
+    find: (tx: Tx) => Promise<[K, boolean][]>,
+    update: (tx: Tx, done: K[], data: object) => Promise<unknown>,
+    actorId: number,
+    extraRule?: (id: K) => BulkSkipReason | null,
+  ): Promise<BulkResult<K>> {
+    return this.db.$transaction(async (tx) => {
+      const result = partitionBulk(
+        ids,
+        new Map(await find(tx)),
+        archive,
+        extraRule,
+      );
+      if (result.done.length) {
+        await update(
+          tx,
+          result.done,
+          archive ? archiveStamp(actorId) : restoreStamp(),
+        );
+      }
+      return result;
+    });
+  }
+
+  bulkMissions(ids: number[], archive: boolean, actorId: number) {
+    return this.bulk(
+      ids,
+      archive,
+      async (tx) =>
+        (
+          await tx.mission.findMany({
+            where: { n_mission: { in: ids } },
+            select: { n_mission: true, soft_delete: true },
+          })
+        ).map((r) => [r.n_mission, !!r.soft_delete]),
+      (tx, done, data) =>
+        tx.mission.updateMany({ where: { n_mission: { in: done } }, data }),
+      actorId,
+    );
+  }
+
+  bulkDecomptes(ids: number[], archive: boolean, actorId: number) {
+    return this.bulk(
+      ids,
+      archive,
+      async (tx) =>
+        (
+          await tx.decompte.findMany({
+            where: { n_decompte: { in: ids } },
+            select: { n_decompte: true, soft_delete: true },
+          })
+        ).map((r) => [r.n_decompte, !!r.soft_delete]),
+      (tx, done, data) =>
+        tx.decompte.updateMany({ where: { n_decompte: { in: done } }, data }),
+      actorId,
+    );
+  }
+
+  bulkUsers(ids: number[], archive: boolean, actorId: number) {
+    return this.bulk(
+      ids,
+      archive,
+      async (tx) =>
+        (
+          await tx.user.findMany({
+            where: { matricule: { in: ids } },
+            select: { matricule: true, soft_delete: true },
+          })
+        ).map((r) => [r.matricule, !!r.soft_delete]),
+      (tx, done, data) =>
+        tx.user.updateMany({ where: { matricule: { in: done } }, data }),
+      actorId,
+      (id) => (archive && id === actorId ? 'self' : null),
+    );
+  }
+
+  bulkStructures(codes: string[], archive: boolean, actorId: number) {
+    return this.bulk(
+      codes,
+      archive,
+      async (tx) =>
+        (
+          await tx.structure.findMany({
+            where: { code: { in: codes } },
+            select: { code: true, soft_delete: true },
+          })
+        ).map((r) => [r.code, !!r.soft_delete]),
+      (tx, done, data) =>
+        tx.structure.updateMany({ where: { code: { in: done } }, data }),
+      actorId,
+    );
   }
 }

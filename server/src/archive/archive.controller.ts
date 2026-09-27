@@ -1,11 +1,86 @@
-import { Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
 import { ArchiveService } from './archive.service';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
+import { BulkCodesDto, BulkIdsDto } from './dto/bulk-ids.dto';
 
 @Controller('archive')
 export class ArchiveController {
   constructor(private readonly archive: ArchiveService) {}
+
+  // Bulk routes are declared first so 'bulk' is never read as an :id.
+
+  @Patch('missions/bulk')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  archiveMissionsBulk(
+    @Body() body: BulkIdsDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkMissions(body.ids, true, actorId);
+  }
+
+  @Patch('missions/bulk/restore')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  restoreMissionsBulk(
+    @Body() body: BulkIdsDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkMissions(body.ids, false, actorId);
+  }
+
+  @Patch('decomptes/bulk')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  archiveDecomptesBulk(
+    @Body() body: BulkIdsDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkDecomptes(body.ids, true, actorId);
+  }
+
+  @Patch('decomptes/bulk/restore')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  restoreDecomptesBulk(
+    @Body() body: BulkIdsDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkDecomptes(body.ids, false, actorId);
+  }
+
+  @Patch('users/bulk')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  archiveUsersBulk(
+    @Body() body: BulkIdsDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkUsers(body.ids, true, actorId);
+  }
+
+  @Patch('users/bulk/restore')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  restoreUsersBulk(
+    @Body() body: BulkIdsDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkUsers(body.ids, false, actorId);
+  }
+
+  @Patch('structures/bulk')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  archiveStructuresBulk(
+    @Body() body: BulkCodesDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkStructures(body.ids, true, actorId);
+  }
+
+  @Patch('structures/bulk/restore')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  restoreStructuresBulk(
+    @Body() body: BulkCodesDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.archive.bulkStructures(body.ids, false, actorId);
+  }
 
   @Get('missions')
   @Auth('ADMIN', 'SUPER_ADMIN')
