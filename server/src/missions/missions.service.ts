@@ -2,29 +2,26 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
   StreamableFile,
 } from '@nestjs/common';
 import { DatabaseService } from 'src/database/database.service';
 import { ExercicesService } from 'src/exercices/exercices.service';
-import PizZip from 'pizzip';
-import Docxtemplater from 'docxtemplater';
-// import { load } from '@ /nodejs';
 import moment from 'moment';
-import * as fs from 'fs';
 import { MissionStatus, Prisma, User } from '@prisma/client';
-import { Readable } from 'stream';
-const inputFilePath = 'src/missions/TemplateOrdreDeMission.docx';
-import libre from 'libreoffice-convert';
-import { promisify } from 'util';
-import { Response as ExpressResponse } from 'express'; // Import Express response type
-
-// Promisify the libre.convert function
-const convertAsync = promisify(libre.convert);
+import { Response as ExpressResponse } from 'express';
+import { PdfService } from 'src/pdf/pdf.service';
+import { toOrdrePdfData } from 'src/pdf/mappers/ordre.mapper';
 @Injectable()
 export class MissionsService {
+  private readonly logger = new Logger(MissionsService.name);
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly exercicesService: ExercicesService,
+    private readonly pdfService: PdfService,
   ) {}
   private async getCurrentExerciceId(): Promise<number | null> {
     await this.exercicesService.ensureCurrentForNow();
@@ -89,70 +86,23 @@ export class MissionsService {
         ...(exerciceId ? { exercice: { connect: { id: exerciceId } } } : {}),
       },
     });
-    // Use the target user's information for document generation
-    const pdfUser =
-      targetMatricule === user.matricule
-        ? user
-        : await this.databaseService.user.findUnique({
-            where: { matricule: targetMatricule },
-          });
-    const service = await this.databaseService.structure.findUnique({
-      where: {
-        code: pdfUser?.serviceId,
-      },
-      select: {
-        name: true,
-      },
-    });
-    const content = fs.readFileSync(inputFilePath, 'binary');
-    const zip = new PizZip(content);
-    const doc = new Docxtemplater(zip);
-    const replacements = {
-      id: res.n_mission,
-      date: moment().format('DD/MM/YYYY'), // e.g., "25-Jul-2024"
-      fullname: `${pdfUser?.nom ?? ''} ${pdfUser?.prenom ?? ''}`,
-      ref: pdfUser?.grade,
-      service: service?.name,
-      matricule: pdfUser?.matricule,
-      destination: res.destination || '',
-      date_depart: res.date_sortie
-        ? moment(res.date_sortie).format('DD/MM/YYYY')
-        : '',
-      date_retour: res.date_retour
-        ? moment(res.date_retour).format('DD/MM/YYYY')
-        : '',
-      h_r: res.date_retour ? moment(res.date_retour).format('HH') : '',
-      h_d: res.date_sortie ? moment(res.date_sortie).format('HH') : '',
-      m_r: res.date_retour ? moment(res.date_retour).format('mm') : '',
-      m_d: res.date_sortie ? moment(res.date_sortie).format('mm') : '',
-    };
-    // Set the template variables
-    doc.setData(replacements);
-
+    // The mission is already saved: a render failure must not turn into an
+    // error, or the client retries and creates a duplicate ordre. The PDF can
+    // still be downloaded later from the mission's page.
+    let pdf: Buffer;
     try {
-      // Render the document
-      doc.render();
-
-      // Generate the output file
-      const docxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
-      const pdfBuffer = await convertAsync(docxBuffer, 'pdf', undefined);
-
-      // Create a readable stream from the PDF buffer
-      if (pdfBuffer) {
-        const stream = new Readable();
-        stream.push(pdfBuffer);
-        stream.push(null); // End the stream
-        // Return the PDF as a downloadable streamable file
-        return new StreamableFile(stream, {
-          disposition: `attachment; filename=mission-${res.n_mission}.pdf`,
-          type: 'application/pdf', // Correct MIME type for PDF
-        });
-      } else {
-        throw new BadRequestException('something bad Happend');
-      }
+      pdf = await this.buildOrdrePdf(res.n_mission);
     } catch (error) {
-      console.error('An error occurred:', error);
+      this.logger.error(
+        `Ordre ${res.n_mission} created but its PDF failed to render`,
+        (error as Error).stack,
+      );
+      return;
     }
+    return new StreamableFile(pdf, {
+      disposition: `attachment; filename=mission-${res.n_mission}.pdf`,
+      type: 'application/pdf',
+    });
   }
 
   async findAll(delete_status: string, status: string, exercice?: string) {
@@ -383,71 +333,34 @@ export class MissionsService {
       );
     }
   }
-  async downloadOrdre(id: number, user: User, res: ExpressResponse) {
+  async downloadOrdre(id: number, res: ExpressResponse) {
+    const pdf = await this.buildOrdrePdf(id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=mission-${id}.pdf`,
+    });
+    return res.send(pdf);
+  }
+
+  /** Renders the ordre for the mission's owner, whoever requests it. */
+  private async buildOrdrePdf(n_mission: number): Promise<Buffer> {
     const mission = await this.databaseService.mission.findUnique({
-      where: {
-        n_mission: id,
-      },
+      where: { n_mission },
+      include: { user: { include: { structure: true } } },
     });
-    // Handle case where the mission is not found
     if (!mission) {
-      throw new BadRequestException(`Mission with ID ${id} not found.`);
+      throw new NotFoundException(`Ordre de mission ${n_mission} introuvable.`);
     }
-    const service = await this.databaseService.structure.findUnique({
-      where: {
-        code: user.serviceId,
-      },
-      select: {
-        name: true,
-      },
-    });
-    const content = fs.readFileSync(inputFilePath, 'binary');
-    const zip = new PizZip(content);
-    const doc = new Docxtemplater(zip);
-    const replacements = {
-      id: mission.n_mission,
-      date: moment().format('DD/MM/YYYY'), // e.g., "25-Jul-2024"
-      fullname: `${user.nom} ${user.prenom}`, // Assuming male employee for the dummy data
-      ref: user.grade,
-      service: service.name,
-      matricule: user.matricule,
-      destination: mission.destination,
-      date_depart: mission.date_sortie
-        ? moment(mission.date_sortie).format('DD/MM/YYYY')
-        : '',
-      date_retour: mission.date_retour
-        ? moment(mission.date_retour).format('DD/MM/YYYY')
-        : '',
-      h_r: mission.date_retour ? moment(mission.date_retour).format('HH') : '',
-      h_d: mission.date_sortie ? moment(mission.date_sortie).format('HH') : '',
-      m_r: mission.date_retour ? moment(mission.date_retour).format('mm') : '',
-      m_d: mission.date_sortie ? moment(mission.date_sortie).format('mm') : '',
-      wilaya: 'Tlemcen',
-    };
-    // Set the template variables
-    doc.setData(replacements);
-
     try {
-      // Render the document
-      doc.render();
-
-      // Generate the output file
-      const docxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
-      const pdfBuffer = await convertAsync(docxBuffer, 'pdf', undefined);
-
-      // Create a readable stream from the PDF buffer
-      if (pdfBuffer) {
-        // Set the headers to force a download
-        res.set({
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename=mission-${id}.pdf`,
-        });
-        return res.send(pdfBuffer);
-      } else {
-        throw new BadRequestException('something bad Happend');
-      }
+      return await this.pdfService.renderOrdre(toOrdrePdfData(mission));
     } catch (error) {
-      console.error('An error occurred:', error);
+      this.logger.error(
+        `Failed to render ordre ${n_mission}`,
+        (error as Error).stack,
+      );
+      throw new InternalServerErrorException(
+        "Impossible de générer le PDF de l'ordre de mission.",
+      );
     }
   }
 }

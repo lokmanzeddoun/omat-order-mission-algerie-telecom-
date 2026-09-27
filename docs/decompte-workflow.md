@@ -172,44 +172,31 @@ stateDiagram-v2
 
 **Actions:**
 - Fetches decompte with mission and user data
-- Fills Word template with data (see Template Fields below)
-- Converts to PDF using libreoffice-convert
+- Maps it to printable fields (`src/pdf/mappers/decompte.mapper.ts`, see Document Fields below)
+- Renders the PDF natively with `@react-pdf/renderer` (`src/pdf/documents/decompte-document.tsx`)
 - Returns PDF file as download
 
-## Template Fields
+## Document Fields
 
-The decompte PDF is generated from `Template Decompte.docx` with the following placeholders:
+The décompte PDF is built from `DecomptePdfData` (`src/pdf/mappers/decompte.mapper.ts`):
 
-| Placeholder | Description | Source |
+| Field | Description | Source |
 |------------|-------------|--------|
-| `{matricule}` | User matricule | `user.matricule` |
-| `{fullanme}` | User full name | `user.nom + user.prenom` |
-| `{post}` | User post/grade | `user.grade` |
-| `{structure}` | User structure | `structure.name` |
-| `{id}` | Decompte ID | `decompte.n_decompte` |
-| `{date}` | Decompte creation date | `decompte.createdAt` |
-| `{reference}` | Mission reference | `mission.n_mission` |
-| `{destination}` | Mission destination | `mission.destination` |
-| `{motif}` | Mission motif | `mission.motif` |
-| `{date_depart}` | Departure date | `mission.date_sortie` |
-| `{date_retour}` | Return date | `mission.date_retour` |
-| `{h_d}` | Departure hour | Extracted from `date_sortie` |
-| `{h_r}` | Return hour | Extracted from `date_retour` |
-| `{m_d}` | Departure minute | Extracted from `date_sortie` |
-| `{m_r}` | Return minute | Extracted from `date_retour` |
-| `{nbr_jour}` | Number of days | Calculated from dates |
-| `{d_parcours}` | Distance in KM | `decompte.parcours` |
-| `{m_indrmnite}` | Indemnity per KM | From barem (unit price) |
-| `{n_1}` | Nord - meals with coverage | `decompte.repas_pec` |
-| `{n_2}` | Nord - accommodation with coverage | `decompte.hebergement_pec` |
-| `{n_3}` | Nord - meals without coverage | `decompte.repas_sans_pec` |
-| `{n_4}` | Nord - accommodation without coverage | `decompte.hebergement_sans_pec` |
-| `{s_1}` | Sud - meals with coverage | `decompte.repas_pec` |
-| `{s_2}` | Sud - accommodation with coverage | `decompte.hebergement_pec` |
-| `{s_3}` | Sud - meals without coverage | `decompte.repas_sans_pec` |
-| `{s_4}` | Sud - accommodation without coverage | `decompte.hebergement_sans_pec` |
-| `{f_transport}` | Transport fees | Not currently stored |
-| `{m_total}` | Total amount | `decompte.montant` |
+| `numero` / `date` | Décompte N° … du … | `decompte.n_decompte`, `decompte.createdAt` |
+| `matricule`, `fullname`, `grade`, `structure` | Identity of the mission owner | `user.*`, `user.structure.name` |
+| `reference` | Référence Ordre Mission | `mission.n_mission` |
+| `destination`, `motif` | Mission destination and motif | `mission.*` |
+| `depart`, `retour` | Date + hour + minute | `mission.date_sortie`, `mission.date_retour` |
+| `nbrJours` | Nombre de jours de missions | Calculated from dates |
+| `transport` | Avion / Véhicule de service / Véhicule Personnel / Autres | `mission.transport` (no plane value yet) |
+| `distance` | Distance parcours (KM) | `decompte.parcours` |
+| `indemnite` | Montant Indemnité Kilométrique | `parcours × barem.montant_km` for `PERSONAL_CAR`, else 0 |
+| `pec.oui` | Prise en charge — Oui: repas / nuitées | `repas_pec`, `hebergement_pec` |
+| `pec.non` | Prise en charge — Non: repas / nuitées | `repas_sans_pec`, `hebergement_sans_pec` |
+| `fraisTransport` | Frais de transports Engagés | `decompte.fees_transport` |
+| `montantTotal` | Montant Total | `decompte.montant` |
+
+Nord/Sud: only the column matching `mission.direction` is filled; the other stays blank.
 
 ## Calculation Logic
 
@@ -313,8 +300,7 @@ server/src/
 │   │   └── update-decompte.dto.ts      # DTO for updates
 │   ├── decompte.controller.ts          # REST endpoints
 │   ├── decompte.service.ts             # Business logic
-│   ├── decompte.module.ts              # Module with CommentsModule import
-│   └── Template Decompte.docx          # Word template for PDF generation
+│   └── decompte.module.ts              # Module with CommentsModule + PdfModule imports
 ├── comments/
 │   ├── dto/
 │   │   └── create-comment.dto.ts
@@ -401,9 +387,9 @@ The system validates:
    - Rejection requires a message
 
 3. **PDF Generation:**
-   - Template file must exist
-   - All required data fields must be available
-   - LibreOffice conversion must succeed
+   - Decompte must exist (mission, owner and structure are loaded with it)
+   - Missing values print as blank boxes, never "null"/"undefined"
+   - Render errors return 500 (InternalServerErrorException)
 
 ## Benefits of This Implementation
 

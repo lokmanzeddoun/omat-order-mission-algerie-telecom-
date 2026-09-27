@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateDecompteDto } from './dto/create-decompte.dto';
 import { DatabaseService } from 'src/database/database.service';
 import { ExercicesService } from 'src/exercices/exercices.service';
@@ -10,23 +16,19 @@ import {
   TransportType,
   User,
 } from '@prisma/client';
-import moment from 'moment';
-import * as fs from 'fs';
-import PizZip from 'pizzip';
-import Docxtemplater from 'docxtemplater';
-import libre from 'libreoffice-convert';
-import { promisify } from 'util';
 import { Response as ExpressResponse } from 'express';
-
-const convertAsync = promisify(libre.convert);
-const templatePath = 'src/decompte/Template Decompte.docx';
+import { PdfService } from 'src/pdf/pdf.service';
+import { toDecomptePdfData } from 'src/pdf/mappers/decompte.mapper';
 
 @Injectable()
 export class DecompteService {
+  private readonly logger = new Logger(DecompteService.name);
+
   constructor(
     private readonly databaseService: DatabaseService,
     private readonly exercicesService: ExercicesService,
     private readonly commentsService: CommentsService,
+    private readonly pdfService: PdfService,
   ) {}
 
   private async getCurrentExerciceId(): Promise<number | null> {
@@ -441,200 +443,42 @@ export class DecompteService {
     });
   }
 
-  private fmtDate(val: any): string {
-    if (!val) return '';
-    const d = val instanceof Date ? val : new Date(val);
-    if (isNaN(d.getTime())) return '';
-    return moment(d).format('DD/MM/YYYY');
-  }
-
-  private getHour(val: any): string {
-    if (!val) return '';
-    const d = val instanceof Date ? val : new Date(val);
-    if (isNaN(d.getTime())) return '';
-    return String(d.getHours()).padStart(2, '0');
-  }
-
-  private getMinute(val: any): string {
-    if (!val) return '';
-    const d = val instanceof Date ? val : new Date(val);
-    if (isNaN(d.getTime())) return '';
-    return String(d.getMinutes()).padStart(2, '0');
-  }
-
-  private sanitizeTemplateData(
-    data: Record<string, unknown>,
-  ): Record<string, string | number> {
-    const sanitized: Record<string, string | number> = {};
-
-    Object.entries(data).forEach(([key, value]) => {
-      if (value === null || value === undefined) {
-        sanitized[key] = '';
-        return;
-      }
-
-      if (value instanceof Date) {
-        sanitized[key] = this.fmtDate(value);
-        return;
-      }
-
-      if (typeof value === 'number') {
-        sanitized[key] = Number.isFinite(value) ? value : '';
-        return;
-      }
-
-      const textual = String(value);
-      if (
-        textual.trim().toLowerCase() === 'undefined' ||
-        textual.trim().toLowerCase() === 'null'
-      ) {
-        sanitized[key] = '';
-        return;
-      }
-
-      sanitized[key] = textual;
-    });
-
-    return sanitized;
-  }
-
   async downloadDecompte(id: number, res: ExpressResponse) {
-    // Fetch decompte with mission and user and structure
     const decompte = await this.databaseService.decompte.findUnique({
       where: { n_decompte: id },
       include: {
-        mission: {
-          include: {
-            user: {
-              include: {
-                structure: true,
-              },
-            },
-          },
-        },
+        mission: { include: { user: { include: { structure: true } } } },
       },
     });
-
     if (!decompte) {
-      throw new BadRequestException(`Decompte with ID ${id} not found.`);
+      throw new NotFoundException(`Décompte ${id} introuvable.`);
     }
 
-    const mission = decompte?.mission ?? null;
-    const user = mission?.user ?? null;
-    const structure = user?.structure ?? null;
-    console.log(user, mission, structure);
-    // Precompute values
-    const fullanmeVal = user
-      ? `${user.nom ?? ''} ${user.prenom ?? ''}`.trim()
-      : '';
-    const h_d_val = this.getHour(mission?.date_sortie) ?? '';
-    const h_r_val = this.getHour(mission?.date_retour) ?? '';
-    const m_d_val = this.getMinute(mission?.date_sortie) ?? '';
-    const m_r_val = this.getMinute(mission?.date_retour) ?? '';
-    const nbr_jour_val =
-      mission?.date_sortie && mission?.date_retour
-        ? Math.max(
-            0,
-            Math.ceil(
-              (new Date(mission.date_retour).getTime() -
-                new Date(mission.date_sortie).getTime()) /
-                (24 * 3600 * 1000),
-            ),
-          )
-        : 0;
-    console.log('ALL VALUES', {
-      fullanmeVal,
-      h_d_val,
-      h_r_val,
-      m_d_val,
-      m_r_val,
-      nbr_jour_val,
-      user,
-      mission,
-      structure,
-    });
-    console.log('undefined values', {
-      fullanmeVal,
-      nbr_jour_val,
-    });
-    // Map placeholders - use empty string for missing text fields, 0 for missing numbers
-    const replacements: Record<string, any> = {
-      matricule: user?.matricule ?? ' ',
-      fullname: fullanmeVal, // note: placeholder spelled fullanme
-      post: user?.grade ?? ' ',
-      structure: structure?.name ?? ' ',
-      structure_code: structure?.code ?? ' ',
-      id: decompte?.n_decompte ?? ' ',
-      date: this.fmtDate(decompte?.createdAt ?? new Date()),
-      reference: mission?.n_mission ?? ' ',
-      destination: mission?.destination ?? ' ',
-      motif: mission?.motif ?? ' ',
-      date_depart: this.fmtDate(mission?.date_sortie),
-      date_retour: this.fmtDate(mission?.date_retour),
-      h_d: h_d_val,
-      h_r: h_r_val,
-      m_d: m_d_val,
-      m_r: m_r_val,
-      nbr_jours: nbr_jour_val,
-      d_parcours: decompte?.parcours ?? 0,
-      m_indrmnite: 0, // not stored; leave empty
-      // North: only show values if direction is NORD, otherwise empty string
-      n_1: mission?.direction === 'NORD' ? (decompte?.repas_pec ?? 0) : ' ',
-      n_2:
-        mission?.direction === 'NORD' ? (decompte?.hebergement_pec ?? 0) : ' ',
-      n_3:
-        mission?.direction === 'NORD' ? (decompte?.repas_sans_pec ?? 0) : '  ',
-      n_4:
-        mission?.direction === 'NORD'
-          ? (decompte?.hebergement_sans_pec ?? 0)
-          : '',
-      // South: only show values if direction is SUD, otherwise empty string
-      s_1: mission?.direction === 'SUD' ? (decompte?.repas_pec ?? 0) : ' ',
-      s_2:
-        mission?.direction === 'SUD' ? (decompte?.hebergement_pec ?? 0) : ' ',
-      s_3: mission?.direction === 'SUD' ? (decompte?.repas_sans_pec ?? 0) : ' ',
-      s_4:
-        mission?.direction === 'SUD'
-          ? (decompte?.hebergement_sans_pec ?? 0)
-          : '',
-      f_transport: decompte?.fees_transport ?? 0,
-      m_total: decompte?.montant ?? 0,
-      direction: mission?.direction ?? ' ',
-      transport: mission?.transport ?? ' ',
-      // Transport checkboxes (b, c, d) - a is just a hyphen without checkbox
-      a: '☐', // Just a hyphen, no checkbox
-      b: mission?.transport === 'SERVICE_CAR' ? '☒' : '☐',
-      c: mission?.transport === 'PERSONAL_CAR' ? '☒' : '☐',
-      d:
-        mission?.transport === 'TRANSPORT_ENTREPRISE' ||
-        mission?.transport === 'TRANSPORT_EMPLOYEE'
-          ? '☒'
-          : '☐',
-    };
+    // Km rate of the mission owner's category, for the "Indemnité Kilométrique" line.
+    const category = decompte.mission?.user?.category;
+    const barem = category
+      ? await this.databaseService.barem.findFirst({
+          where: { libell: category },
+          select: { montant_km: true },
+        })
+      : null;
 
-    const content = fs.readFileSync(templatePath, 'binary');
-    const zip = new PizZip(content);
-    const doc = new Docxtemplater(zip);
-    doc.setData(this.sanitizeTemplateData(replacements));
-
+    let pdf: Buffer;
     try {
-      doc.render();
-      const docxBuffer = doc.getZip().generate({ type: 'nodebuffer' });
-      const pdfBuffer = await convertAsync(docxBuffer, 'pdf', undefined);
-      if (pdfBuffer) {
-        res.set({
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `attachment; filename=decompte-${id}.pdf`,
-        });
-        return res.send(pdfBuffer);
-      } else {
-        throw new BadRequestException('something bad Happend');
-      }
+      pdf = await this.pdfService.renderDecompte(
+        toDecomptePdfData(decompte, barem),
+      );
     } catch (e) {
-      throw new BadRequestException(
-        `Failed to render Template Decompte.docx: ${(e as Error).message}`,
+      this.logger.error(`Failed to render décompte ${id}`, (e as Error).stack);
+      throw new InternalServerErrorException(
+        'Impossible de générer le PDF du décompte.',
       );
     }
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=decompte-${id}.pdf`,
+    });
+    return res.send(pdf);
   }
 
   /**

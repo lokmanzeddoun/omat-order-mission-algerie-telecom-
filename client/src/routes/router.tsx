@@ -8,6 +8,7 @@ import paths, { rootPaths } from './paths';
 import HomeOrSignin from './HomeOrSignin';
 import ProtectedRoute from 'ProtectedRoute';
 import RedirectBasedOnRole from 'RedirectBasedRole';
+import ScanRedirect from './ScanRedirect';
 
 const App = lazy(() => import('App'));
 const ForgotPassword = lazy(() => import('pages/authentication/ForgotPassword'));
@@ -64,6 +65,15 @@ const router = createBrowserRouter(
           element: (
             <ProtectedRoute>
               <RedirectBasedOnRole />
+            </ProtectedRoute>
+          ),
+        },
+        {
+          // Target of the QR codes printed on the ordre / décompte PDFs.
+          path: 'scan/:kind/:id',
+          element: (
+            <ProtectedRoute>
+              <ScanRedirect />
             </ProtectedRoute>
           ),
         },

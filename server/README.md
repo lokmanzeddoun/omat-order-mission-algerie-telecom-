@@ -24,7 +24,7 @@ OMAT is a modern web application designed to streamline the mission order proces
   "@nestjs/jwt": "^10.2.0",
   "@nestjs/passport": "^10.0.3",
   "@prisma/client": "5.19.1",
-  "docxtemplater": "^3.50.0",
+  "@react-pdf/renderer": "^4.9.0",
   "moment": "^2.30.1",
   "bcryptjs": "^2.4.3"
 }
@@ -161,10 +161,12 @@ Employee Category → Barem Lookup → Direction (N/S) → Transport Type → Fi
 ```
 
 ### Document Generation
-- **Template**: DOCX template with placeholders
-- **Processing**: docxtemplater for variable replacement
-- **Output**: Automatic PDF conversion
-- **Content**: Mission details, employee info, approval sections
+- **Engine**: `@react-pdf/renderer`, rendered natively in Node (no Word, no LibreOffice)
+- **Layout**: React components in `src/pdf/documents/` (ordre: 2 pages, décompte: 1 page)
+- **Data**: pure mappers in `src/pdf/mappers/` turn Prisma records into printable strings
+- **Assets**: Inter fonts in `src/pdf/fonts/` (copied to `dist` by `nest build`), vector logo
+- **QR code**: both documents carry a QR code linking to `<APP_PUBLIC_URL>/scan/<ordre|decompte>/<id>`. The client forwards it to the right detail page after sign-in (login required). Set `APP_PUBLIC_URL` to the LAN address phones can reach; when it is empty, no QR is printed
+- **Preview**: `npx ts-node -r tsconfig-paths/register scripts/render-sample-pdfs.ts <outDir>`
 
 ### Validation Rules
 - **Mission Dates**: Logical date validation
@@ -233,8 +235,7 @@ Employee Category → Barem Lookup → Direction (N/S) → Transport Type → Fi
 
 ### ✅ Document Generation
 - Automatic mission order PDF creation
-- Template-based document generation
-- LibreOffice conversion pipeline
+- Native PDF rendering with @react-pdf/renderer (~100 ms per document)
 - Downloadable mission orders
 
 ### ✅ API Documentation
