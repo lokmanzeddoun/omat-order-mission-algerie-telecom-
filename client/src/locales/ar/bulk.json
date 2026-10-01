@@ -41,6 +41,7 @@
     "has_missions": "مرتبط بأوامر بمهمة",
     "has_comments": "مرتبط بتعليقات",
     "has_decomptes": "مرتبط بكشوف مصاريف",
+    "has_children": "يحتوي على هياكل فرعية",
     "not_pending": "ليس قيد الانتظار",
     "archived": "مؤرشف"
   },

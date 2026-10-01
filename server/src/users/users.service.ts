@@ -29,6 +29,7 @@ import {
 } from 'src/common/validators/password';
 import { exportWorkbook } from 'src/utils/export-workbook';
 import { AccessPolicy } from 'src/common/policy/access-policy';
+import { PATH_SEPARATOR } from 'src/structures/structure-path';
 
 /** Expected columns of the users spreadsheet, matched by header name (see src/utils/AABook1.xlsx). */
 const USER_IMPORT_COLUMNS: ImportColumn[] = [
@@ -56,7 +57,7 @@ const SAFE_USER_SELECT = {
   grade: true,
   status: true,
   serviceId: true,
-  structure: { select: { code: true, name: true } },
+  structure: { select: { code: true, name: true, parentCode: true } },
 } as const;
 
 @Injectable()
@@ -66,15 +67,19 @@ export class UsersService {
     private readonly accessPolicy: AccessPolicy,
   ) {}
   async create(createUserDto: createUserDto, actor: User) {
+    // An ADMIN creates regular users anywhere in their subtree (ADR 0004);
+    // without a structure given, in their own.
+    const targetServiceId =
+      actor.role === Role.ADMIN
+        ? (createUserDto.serviceId ?? actor.serviceId)
+        : createUserDto.serviceId;
     if (
       actor.role === Role.ADMIN &&
-      (!actor.serviceId ||
-        (createUserDto.serviceId &&
-          createUserDto.serviceId !== actor.serviceId) ||
+      (!this.accessPolicy.canActInStructure(actor, targetServiceId ?? null) ||
         createUserDto.role !== Role.USER)
     ) {
       throw new ForbiddenException(
-        'Administrators may create only regular users in their own structure.',
+        'Administrators may create only regular users in their own structure or its sub-structures.',
       );
     }
     let userSince: Date;
@@ -102,10 +107,7 @@ export class UsersService {
         data: {
           ...createUserDto,
           role: actor.role === Role.ADMIN ? Role.USER : createUserDto.role,
-          serviceId:
-            actor.role === Role.ADMIN
-              ? actor.serviceId
-              : createUserDto.serviceId,
+          serviceId: targetServiceId,
           password: hashedPassword,
           mustChangePassword: true,
           userSince: userSince ?? undefined, // Will be set only if userSince is defined
@@ -150,7 +152,9 @@ export class UsersService {
         serviceId: true,
         structure: {
           select: {
+            code: true,
             name: true,
+            parentCode: true,
           },
         },
       },
@@ -186,10 +190,22 @@ export class UsersService {
         "cette Utilisateur n'est pas attache a un service",
       );
     }
+    // The user's structure and its sub-structures, within what the caller may see.
     return this.databaseService.user.findMany({
       where: {
-        serviceId: user.serviceId,
-        role: Role.USER,
+        AND: [
+          {
+            structure: {
+              OR: [
+                { code: user.serviceId },
+                { code: { startsWith: user.serviceId + PATH_SEPARATOR } },
+              ],
+            },
+            role: Role.USER,
+            soft_delete: false,
+          },
+          this.accessPolicy.scopeUsers(actor),
+        ],
       },
       select: {
         matricule: true,
@@ -204,7 +220,9 @@ export class UsersService {
         serviceId: true,
         structure: {
           select: {
+            code: true,
             name: true,
+            parentCode: true,
           },
         },
       },
@@ -240,10 +258,14 @@ export class UsersService {
     if (
       actor.role === Role.ADMIN &&
       updateUserDto.serviceId !== undefined &&
-      updateUserDto.serviceId !== actor.serviceId
+      updateUserDto.serviceId !== existing.serviceId &&
+      !this.accessPolicy.canActInStructure(
+        actor,
+        updateUserDto.serviceId ?? null,
+      )
     ) {
       throw new ForbiddenException(
-        'Administrators cannot move users to another structure.',
+        'Administrators cannot move users to another structure outside their own sub-structures.',
       );
     }
 
@@ -259,6 +281,22 @@ export class UsersService {
       if (!structureExists) {
         throw new BadRequestException(
           `Structure with code '${updateUserDto.serviceId}' does not exist`,
+        );
+      }
+    }
+
+    // A responsible must belong to the structure they are responsible for.
+    if (
+      updateUserDto.serviceId !== undefined &&
+      updateUserDto.serviceId !== existing.serviceId
+    ) {
+      const responsibleFor = await this.databaseService.structure.findFirst({
+        where: { responsibleUserId: matricule },
+        select: { code: true },
+      });
+      if (responsibleFor) {
+        throw new BadRequestException(
+          `User is the responsible of structure '${responsibleFor.code}'; replace the responsible before moving them`,
         );
       }
     }
@@ -305,13 +343,21 @@ export class UsersService {
         'You cannot archive a user in another structure.',
       );
     }
-    return this.databaseService.user.update({
-      where: {
-        matricule,
-      },
-      data: archiveStamp(actor.matricule),
-      select: SAFE_USER_SELECT,
-    });
+    // An archived user can no longer be a structure's responsible.
+    const [, archived] = await this.databaseService.$transaction([
+      this.databaseService.structure.updateMany({
+        where: { responsibleUserId: matricule },
+        data: { responsibleUserId: null },
+      }),
+      this.databaseService.user.update({
+        where: {
+          matricule,
+        },
+        data: archiveStamp(actor.matricule),
+        select: SAFE_USER_SELECT,
+      }),
+    ]);
+    return archived;
   }
 
   /**
@@ -369,12 +415,13 @@ export class UsersService {
         });
       }
       const targetService =
-        actor.role === Role.ADMIN ? actor.serviceId : (u.serviceId ?? null);
+        actor.role === Role.ADMIN
+          ? (u.serviceId ?? current?.serviceId ?? actor.serviceId)
+          : (u.serviceId ?? null);
       if (
         actor.role === Role.ADMIN &&
-        (!actor.serviceId ||
-          (current && current.serviceId !== actor.serviceId) ||
-          (u.serviceId && u.serviceId !== actor.serviceId))
+        (!this.accessPolicy.canActInStructure(actor, targetService ?? null) ||
+          (current && !this.accessPolicy.canAccessUser(actor, current)))
       ) {
         errors.push({
           row,
@@ -420,7 +467,11 @@ export class UsersService {
     );
     const writes = items.map(({ value: u }) => {
       const serviceId =
-        actor.role === Role.ADMIN ? actor.serviceId : (u.serviceId ?? null);
+        actor.role === Role.ADMIN
+          ? (u.serviceId ??
+            existingById.get(u.matricule)?.serviceId ??
+            actor.serviceId)
+          : (u.serviceId ?? null);
       const data = {
         nom: u.nom,
         prenom: u.prenom,

@@ -104,9 +104,17 @@ export class ArchiveService {
       where: { code },
     });
     if (!structure) throw new BadRequestException('Structure not found');
+    const children = await this.db.structure.count({
+      where: { parentCode: code, soft_delete: false },
+    });
+    if (children > 0) {
+      throw new BadRequestException(
+        'Archive or move the sub-structures first',
+      );
+    }
     return this.db.structure.update({
       where: { code },
-      data: archiveStamp(actorId),
+      data: { ...archiveStamp(actorId), responsibleUserId: null },
     });
   }
 
@@ -135,6 +143,7 @@ export class ArchiveService {
           select: {
             code: true,
             name: true,
+            parentCode: true,
           },
         },
       },
@@ -405,13 +414,23 @@ export class ArchiveService {
     return this.db.$transaction(async (tx) => {
       const rows = await tx.structure.findMany({
         where: { code: { in: codes } },
-        select: { code: true, soft_delete: true },
+        select: {
+          code: true,
+          soft_delete: true,
+          _count: { select: { children: true } },
+        },
       });
-      // Users of a deleted service simply lose their service (SET NULL).
+      // Users of a deleted service simply lose their service (SET NULL);
+      // a structure that still has sub-structures stays (the parent FK is RESTRICT).
       const result = partitionIds(
         codes,
         new Map(rows.map((r) => [r.code, r])),
-        (r) => (!r.soft_delete ? 'not_archived' : null),
+        (r) =>
+          !r.soft_delete
+            ? 'not_archived'
+            : r._count.children > 0
+              ? 'has_children'
+              : null,
       );
       if (result.done.length)
         await tx.structure.deleteMany({

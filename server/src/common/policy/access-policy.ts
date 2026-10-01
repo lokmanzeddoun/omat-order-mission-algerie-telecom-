@@ -6,18 +6,31 @@ import {
   Role,
   User,
 } from '@prisma/client';
+import {
+  PATH_SEPARATOR,
+  isDescendantCode,
+} from 'src/structures/structure-path';
 
 /**
- * A serviceId no real structure can have. An ADMIN with no assigned structure
- * matches nothing, rather than accidentally matching rows whose serviceId is null.
+ * A structure code no real structure can have. An ADMIN with no assigned
+ * structure matches nothing, rather than accidentally matching rows whose
+ * serviceId is null.
  */
 const NO_STRUCTURE = '__NO_ASSIGNED_STRUCTURE__';
 
 /** The fields of the authenticated user the policy needs. */
-export type Actor = Pick<User, 'matricule' | 'role' | 'serviceId'>;
+export type Actor = Pick<User, 'matricule' | 'role' | 'serviceId'> & {
+  /**
+   * Whether the actor's own structure has a responsible (set by the JWT
+   * strategy). A structure without one is visible only to its ancestors'
+   * admins and super admins (ADR 0004). Absent means no.
+   */
+  serviceHasResponsible?: boolean;
+};
 
 /**
- * The single source of truth for "who may see and change what" (ADR 0001).
+ * The single source of truth for "who may see and change what" (ADR 0001,
+ * ADR 0004).
  *
  * The `scope*` methods return Prisma `where` fragments that every service
  * merges into its query — `findFirst({ where: { id, ...scope } })` — so a read
@@ -26,8 +39,13 @@ export type Actor = Pick<User, 'matricule' | 'role' | 'serviceId'>;
  * (self-approval, a locked record) throw 403 via the `assert*` helpers.
  *
  *   USER        → only their own ordres de mission, décomptes and commentaires.
- *   ADMIN       → everything within their own structure (`serviceId`).
+ *   ADMIN       → everything in their structure's subtree (their structure and
+ *                 all its descendants, never upwards or sideways). Their own
+ *                 structure counts only if it has a responsible.
  *   SUPER_ADMIN → everything.
+ *
+ * A descendant's code always starts with its ancestor's code + " / "
+ * (structures/structure-path.ts), so "in my subtree" needs no recursive query.
  */
 @Injectable()
 export class AccessPolicy {
@@ -37,50 +55,76 @@ export class AccessPolicy {
   private isAdmin(a: Actor): boolean {
     return a.role === Role.ADMIN;
   }
-  private adminStructure(a: Actor): string {
-    return a.serviceId ?? NO_STRUCTURE;
+
+  /**
+   * The structures an ADMIN administers, as a Structure `where`: the strict
+   * descendants of their structure, plus the structure itself when it has a
+   * responsible.
+   */
+  private adminStructures(a: Actor): Prisma.StructureWhereInput {
+    const own = a.serviceId ?? NO_STRUCTURE;
+    return {
+      OR: [
+        { code: { startsWith: own + PATH_SEPARATOR } },
+        { code: own, responsibleUserId: { not: null } },
+      ],
+    };
   }
 
   scopeMissions(actor: Actor): Prisma.MissionWhereInput {
     if (this.isSuper(actor)) return {};
     if (this.isAdmin(actor))
-      return { user: { serviceId: this.adminStructure(actor) } };
+      return { user: { structure: this.adminStructures(actor) } };
     return { userId: actor.matricule };
   }
 
   scopeUsers(actor: Actor): Prisma.UserWhereInput {
     if (this.isSuper(actor)) return {};
     if (this.isAdmin(actor)) {
-      return { serviceId: this.adminStructure(actor) };
+      return {
+        OR: [
+          { structure: this.adminStructures(actor) },
+          { matricule: actor.matricule },
+        ],
+      };
     }
     return { matricule: actor.matricule };
   }
 
   scopeStructures(actor: Actor): Prisma.StructureWhereInput {
     if (this.isSuper(actor)) return {};
+    if (this.isAdmin(actor)) return this.adminStructures(actor);
     return { code: actor.serviceId ?? NO_STRUCTURE };
   }
 
   scopeDecomptes(actor: Actor): Prisma.DecompteWhereInput {
     if (this.isSuper(actor)) return {};
     if (this.isAdmin(actor))
-      return { mission: { user: { serviceId: this.adminStructure(actor) } } };
+      return {
+        mission: { user: { structure: this.adminStructures(actor) } },
+      };
     return { mission: { userId: actor.matricule } };
   }
 
   scopeComments(actor: Actor): Prisma.CommentaireWhereInput {
     if (this.isSuper(actor)) return {};
     if (this.isAdmin(actor))
-      return { user: { serviceId: this.adminStructure(actor) } };
+      return { user: { structure: this.adminStructures(actor) } };
     return { userId: actor.matricule };
   }
 
-  /** Whether an ADMIN may create/administer a resource owned by `targetServiceId`. */
+  /**
+   * Whether an ADMIN may create/administer a resource owned by the structure
+   * `targetServiceId`: it must be a descendant of theirs, or their own when it
+   * has a responsible.
+   */
   canActInStructure(actor: Actor, targetServiceId: string | null): boolean {
     if (this.isSuper(actor)) return true;
-    if (this.isAdmin(actor))
-      return Boolean(actor.serviceId && actor.serviceId === targetServiceId);
-    return false;
+    if (!this.isAdmin(actor) || !actor.serviceId || !targetServiceId)
+      return false;
+    if (targetServiceId === actor.serviceId)
+      return Boolean(actor.serviceHasResponsible);
+    return isDescendantCode(actor.serviceId, targetServiceId);
   }
 
   canAccessUser(
@@ -88,10 +132,11 @@ export class AccessPolicy {
     target: Pick<User, 'matricule' | 'serviceId'>,
   ): boolean {
     if (this.isSuper(actor)) return true;
+    if (actor.matricule === target.matricule) return true;
     if (this.isAdmin(actor)) {
-      return Boolean(actor.serviceId && actor.serviceId === target.serviceId);
+      return this.canActInStructure(actor, target.serviceId);
     }
-    return actor.matricule === target.matricule;
+    return false;
   }
 
   /**

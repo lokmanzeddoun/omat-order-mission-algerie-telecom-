@@ -30,6 +30,7 @@ model User {
   messages Commentaire[]
   archivedUsers User[] @relation("UserArchivedBy")
   archivedStructures Structure[] @relation("StructureArchivedBy")
+  responsibleFor Structure? @relation("StructureResponsible")
   archivedMissions Mission[] @relation("MissionArchivedBy")
   gradeAssignments GradeAssignment[] @relation("GradeAssignmentUser")
   gradeAssignmentsCreated GradeAssignment[] @relation("GradeAssignmentCreatedBy")
@@ -81,6 +82,17 @@ model Structure {
   archivedBy User? @relation("StructureArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
   archivedById Int?
   users User[]
+  // Hierarchy (ADR 0004). A root's code is its abbreviation; a child's code is its
+  // full path ("SDC / ERSTC / Section ..."), so a descendant's code always starts
+  // with its ancestor's code + " / ". `name` is the structure's own segment.
+  parentCode String?
+  parent Structure? @relation("StructureTree", fields: [parentCode], references: [code], onUpdate: Cascade, onDelete: Restrict)
+  children Structure[] @relation("StructureTree")
+  // The structure's responsible (must belong to it); a user is responsible for at most one structure.
+  responsibleUserId Int? @unique @map("responsible_user_id")
+  responsible User? @relation("StructureResponsible", fields: [responsibleUserId], references: [matricule], onDelete: SetNull)
+
+  @@index([parentCode])
 }
 model Mission {
   n_mission Int @default(autoincrement()) @id

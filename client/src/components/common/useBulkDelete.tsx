@@ -9,7 +9,7 @@ import { countOf, idsOf, reportBulkResult, type BulkResult } from './bulk';
 import { BulkPreview } from './BulkPreview';
 import type { BulkRowOptions } from './useBulkArchive';
 
-const skipReasons = ['not_found', 'not_archived', 'self', 'has_missions', 'has_comments', 'has_decomptes'];
+const skipReasons = ['not_found', 'not_archived', 'self', 'has_missions', 'has_comments', 'has_decomptes', 'has_children'];
 
 /**
  * Permanent bulk delete from the Archive page (SUPER_ADMIN). The user must

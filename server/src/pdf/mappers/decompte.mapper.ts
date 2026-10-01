@@ -1,3 +1,4 @@
+import { structureLabel } from 'src/structures/structure-path';
 import { Decompte, Direction, TransportType } from '@prisma/client';
 import { fmtAmount, fmtCount, fmtDate, missionDays, text } from '../format';
 import { gradeLabel, MissionWithOwner, Moment, momentOf } from './ordre.mapper';
@@ -80,7 +81,7 @@ export function toDecomptePdfData(
     matricule: text(user?.matricule),
     fullname: text(`${text(user?.nom)} ${text(user?.prenom)}`),
     grade: mission ? gradeLabel(mission) : '',
-    structure: text(user?.structure?.name),
+    structure: text(user?.structure ? structureLabel(user.structure) : ''),
     reference: text(mission?.n_mission),
     destination: text(mission?.destination),
     motif: text(mission?.motif),

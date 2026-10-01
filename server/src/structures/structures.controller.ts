@@ -9,10 +9,13 @@ import {
   UploadedFile,
   HttpException,
   Res,
+  Query,
 } from '@nestjs/common';
 import { StructuresService } from './structures.service';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
+import { MoveStructureDto } from './dto/move-structure.dto';
+import { User } from '@prisma/client';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Structure } from './entities/structure.entity';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -34,13 +37,16 @@ export class StructuresController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   @Post()
   @Auth('SUPER_ADMIN')
-  create(@Body() createStructureDto: CreateStructureDto) {
-    return this.structuresService.create(createStructureDto);
+  create(
+    @Body() createStructureDto: CreateStructureDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.structuresService.create(createStructureDto, actorId);
   }
 
   @Get()
-  findAll() {
-    return this.structuresService.findAll();
+  findAll(@GetUser() actor: User) {
+    return this.structuresService.findAll(actor);
   }
 
   @Get('export')
@@ -58,8 +64,8 @@ export class StructuresController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.structuresService.findOne(id);
+  findOne(@Param('id') id: string, @GetUser() actor: User) {
+    return this.structuresService.findOne(id, actor);
   }
 
   @Patch(':id')
@@ -67,8 +73,25 @@ export class StructuresController {
   update(
     @Param('id') id: string,
     @Body() updateStructureDto: UpdateStructureDto,
+    @GetUser('matricule') actorId: number,
   ) {
-    return this.structuresService.update(id, updateStructureDto);
+    return this.structuresService.update(id, updateStructureDto, actorId);
+  }
+
+  @Patch(':id/move')
+  @Auth('SUPER_ADMIN')
+  @ApiOperation({
+    summary: 'MOVE STRUCTURE',
+    description:
+      'Moves a structure and its subtree under another parent (or to the root). Rejects cycles and depths above 3; re-keys the codes of the subtree.',
+  })
+  @ApiResponse({ status: 400, description: 'Cycle or depth above 3' })
+  move(
+    @Param('id') id: string,
+    @Body() moveStructureDto: MoveStructureDto,
+    @GetUser('matricule') actorId: number,
+  ) {
+    return this.structuresService.move(id, moveStructureDto, actorId);
   }
 
   @Patch(':id/archive')
@@ -86,7 +109,11 @@ export class StructuresController {
   @Post('upload')
   @Auth('SUPER_ADMIN')
   @UseInterceptors(FileInterceptor('file', multerOptions))
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(
+    @UploadedFile() file: Express.Multer.File,
+    @GetUser('matricule') actorId: number,
+    @Query('dryRun') dryRun?: string,
+  ) {
     if (!file) {
       throw new HttpException(
         `Please provide correct file name with extension ${JSON.stringify(SUPPORTED_FILES)}`,
@@ -98,6 +125,9 @@ export class StructuresController {
       buffer: file.buffer, // Store the file buffer to process the Excel file
     };
     // file is the uploaded file
-    return this.structuresService.uploadStructure(importStructure);
+    return this.structuresService.uploadStructure(importStructure, {
+      dryRun: dryRun === 'true' || dryRun === '1',
+      actorId,
+    });
   }
 }

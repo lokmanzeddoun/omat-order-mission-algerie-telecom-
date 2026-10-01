@@ -35,6 +35,7 @@
     "has_missions": "a des ordres de mission",
     "has_comments": "a des commentaires",
     "has_decomptes": "a des décomptes",
+    "has_children": "a des sous-structures",
     "not_pending": "pas en attente",
     "archived": "archivé"
   },

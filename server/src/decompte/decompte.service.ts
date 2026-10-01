@@ -380,6 +380,7 @@ export class DecompteService {
                   select: {
                     code: true,
                     name: true,
+                    parentCode: true,
                   },
                 },
               },

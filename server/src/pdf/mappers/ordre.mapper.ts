@@ -1,3 +1,4 @@
+import { structureLabel } from 'src/structures/structure-path';
 import {
   GradeAssignmentKind,
   Mission,
@@ -64,7 +65,7 @@ export function toOrdrePdfData(mission: MissionWithOwner): OrdrePdfData {
     matricule: text(owner?.matricule),
     fullname: text(`${text(owner?.nom)} ${text(owner?.prenom)}`),
     grade: gradeLabel(mission),
-    service: text(owner?.structure?.name),
+    service: text(owner?.structure ? structureLabel(owner.structure) : ''),
     destination: text(mission.destination),
     motif: text(mission.motif),
     depart: momentOf(mission.date_sortie),

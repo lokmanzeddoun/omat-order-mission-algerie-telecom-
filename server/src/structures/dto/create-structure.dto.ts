@@ -1,21 +1,40 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateIf,
+} from 'class-validator';
 
 export class CreateStructureDto {
+  @ValidateIf((o: CreateStructureDto) => !o.parentCode)
   @IsNotEmpty()
-  @ApiProperty({
-    description: 'Structure Code',
-    default: '1234',
+  @IsString()
+  @ApiPropertyOptional({
+    description:
+      'Abbreviation of a root structure. Ignored for a child, whose code is its full path.',
     type: 'string',
-    example: '1234',
+    example: 'SDC',
   })
-  code: string;
+  code?: string;
+
   @IsNotEmpty()
   @IsString()
   @ApiProperty({
-    description: 'Service name',
+    description:
+      "Structure name: the full name of a root, the structure's own path segment for a child",
     type: 'string',
-    example: 'AB/DOT',
+    example: 'ACTEL TLEMCEN',
   })
   name: string;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional({
+    description:
+      'Code of the parent structure; omit to create a root. Depth is limited to 3 levels.',
+    type: 'string',
+    example: 'SDC',
+  })
+  parentCode?: string;
 }

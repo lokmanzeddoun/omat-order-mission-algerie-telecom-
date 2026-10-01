@@ -106,7 +106,7 @@ export class MissionsService {
       }
       if (!this.accessPolicy.canActInStructure(user, exists.serviceId)) {
         throw new ForbiddenException(
-          'Administrators may create missions only for users in their own structure.',
+          'Administrators may create missions only for users in their own structure or its sub-structures.',
         );
       }
       targetMatricule = candidateMatricule;

@@ -1,14 +1,25 @@
-import { ApiProperty, PartialType } from '@nestjs/swagger';
-import { CreateStructureDto } from './create-structure.dto';
-import { IsNotEmpty, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { IsInt, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class UpdateStructureDto extends PartialType(CreateStructureDto) {
+export class UpdateStructureDto {
+  /** Only checked to reject an attempt to change the primary key. */
+  @IsOptional()
+  @IsString()
+  code?: string;
+
+  @IsOptional()
   @IsNotEmpty()
   @IsString()
-  @ApiProperty({
-    description: 'Service name',
-    type: 'string',
-    example: 'AB/DOT',
+  @ApiPropertyOptional({ description: 'Structure name', type: 'string' })
+  name?: string;
+
+  @IsOptional()
+  @IsInt()
+  @ApiPropertyOptional({
+    description:
+      'Matricule of the responsible (must belong to the structure); null clears it',
+    type: 'number',
+    nullable: true,
   })
-  name: string;
+  responsibleUserId?: number | null;
 }
