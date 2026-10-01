@@ -1,5 +1,5 @@
 {
-  "description": "Comptes des agents et des administrateurs, rôles et rattachement aux services.",
+  "description": "Comptes des employés et des administrateurs, rôles et rattachement aux structures.",
   "add": "Ajouter un utilisateur",
   "caption": "Liste des utilisateurs",
   "empty": "Aucun utilisateur",
@@ -11,12 +11,12 @@
   "summary": {
     "active": "Actifs",
     "admins": "Administrateurs",
-    "agents": "Agents"
+    "agents": "Employés"
   },
   "field": {
     "nom": "Nom",
     "prenom": "Prénom",
-    "service": "Service",
+    "service": "Structure",
     "grade": "Grade",
     "gradeFunction": "Grade (fonction)",
     "category": "Catégorie",
@@ -29,7 +29,7 @@
       "edit": "Modifier l’utilisateur",
       "view": "Détails de l’utilisateur"
     },
-    "chooseService": "— Choisir un service —"
+    "chooseService": "— Choisir une structure —"
   },
   "errors": {
     "matriculeRequired": "Le matricule est obligatoire.",
@@ -39,7 +39,7 @@
     "emailRequired": "L’adresse e-mail est obligatoire.",
     "emailInvalid": "Adresse e-mail invalide.",
     "gradeRequired": "Le grade est obligatoire.",
-    "serviceRequired": "Le service est obligatoire."
+    "serviceRequired": "La structure est obligatoire."
   },
   "password": {
     "new": "Nouveau mot de passe",

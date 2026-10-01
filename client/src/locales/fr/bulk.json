@@ -9,9 +9,9 @@
     "user_one": "{{count}} utilisateur",
     "user_many": "{{count}} utilisateurs",
     "user_other": "{{count}} utilisateurs",
-    "structure_one": "{{count}} service",
-    "structure_many": "{{count}} services",
-    "structure_other": "{{count}} services"
+    "structure_one": "{{count}} structure",
+    "structure_many": "{{count}} structures",
+    "structure_other": "{{count}} structures"
   },
   "result": {
     "archived_one": "{{what}} archivé",
@@ -47,7 +47,7 @@
   "deleteForever": "Supprimer définitivement",
   "deleteHint": "Cette action est irréversible : les éléments seront effacés de la base de données. Ceux qui sont encore liés à d’autres données seront ignorés.",
   "typeToConfirm": "Saisissez {{expected}} pour confirmer",
-  "rejectHint": "Le même motif de rejet est transmis à chaque agent.",
-  "acceptHint": "Les agents seront informés de l’acceptation.",
-  "messageToAgents": "Message aux agents (facultatif)"
+  "rejectHint": "Le même motif de rejet est transmis à chaque employé.",
+  "acceptHint": "Les employés seront informés de l’acceptation.",
+  "messageToAgents": "Message aux employés (facultatif)"
 }

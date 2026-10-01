@@ -1,6 +1,6 @@
 {
   "role": {
-    "USER": "Agent",
+    "USER": "Employé",
     "ADMIN": "Administrateur",
     "SUPER_ADMIN": "Super administrateur"
   },

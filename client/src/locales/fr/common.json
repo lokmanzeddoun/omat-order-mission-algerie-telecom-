@@ -12,7 +12,7 @@
     "decomptes": "Décomptes",
     "ordres": "Ordres de mission",
     "users": "Utilisateurs",
-    "structures": "Services",
+    "structures": "Structures",
     "barem": "Barème",
     "archive": "Archive",
     "comments": "Commentaires",
@@ -157,7 +157,7 @@
   },
   "field": {
     "number": "N°",
-    "agent": "Agent",
+    "agent": "Employé",
     "missionOrder": "Ordre de mission",
     "date": "Date",
     "days": "Jours",
@@ -196,7 +196,7 @@
   },
   "scan": {
     "adminOnly": "Accès réservé aux administrateurs",
-    "adminOnlyHint": "Le détail d’un décompte n’est consultable que par le service gestionnaire. Vous pouvez suivre vos missions depuis votre tableau de bord.",
+    "adminOnlyHint": "Le détail d’un décompte n’est consultable que par la structure gestionnaire. Vous pouvez suivre vos missions depuis votre tableau de bord.",
     "myDashboard": "Mon tableau de bord"
   },
   "picker": {

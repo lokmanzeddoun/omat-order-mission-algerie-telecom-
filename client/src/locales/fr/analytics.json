@@ -8,7 +8,7 @@
   "kpis": "Indicateurs clés",
   "validatedShare": "{{pct}} validés",
   "acceptedShare": "{{pct}} acceptés",
-  "activeAgents": "Agents actifs",
+  "activeAgents": "Employés actifs",
   "average": "Moyenne : {{amount}}",
   "acceptedAmount": "Montant accepté",
   "pendingDecomptes": "Décomptes en attente",

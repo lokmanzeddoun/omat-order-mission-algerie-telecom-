@@ -6,10 +6,10 @@ test('archive a service, view it in the archive and restore it', async ({ page }
   const code = `ARC${Date.now().toString().slice(-6)}`;
 
   await page.goto('dashboard/admins/structures');
-  await page.getByRole('button', { name: 'Ajouter un service' }).click();
-  const create = page.getByRole('dialog', { name: 'Ajouter un service' });
+  await page.getByRole('button', { name: 'Ajouter une structure' }).click();
+  const create = page.getByRole('dialog', { name: 'Ajouter une structure' });
   await create.getByLabel('Code').fill(code);
-  await create.getByLabel('Nom du service').fill('Service archivé E2E');
+  await create.getByLabel('Nom de la structure').fill('Service archivé E2E');
   await create.getByRole('button', { name: 'Ajouter' }).click();
   await page.getByRole('searchbox', { name: 'Filtrer Code' }).fill(code);
   const row = page.locator('tbody tr').filter({ hasText: code });
@@ -19,9 +19,9 @@ test('archive a service, view it in the archive and restore it', async ({ page }
   await expect(row).toHaveCount(0);
 
   await page.goto('dashboard/admins/archive');
-  await page.getByRole('radio', { name: /Services/ }).click();
+  await page.getByRole('radio', { name: /Structures/ }).click();
   await page.getByRole('searchbox', { name: 'Filtrer Code' }).fill(code);
-  const archived = page.getByRole('table', { name: 'Services archivés' }).locator('tbody tr').filter({ hasText: code });
+  const archived = page.getByRole('table', { name: 'Structures archivées' }).locator('tbody tr').filter({ hasText: code });
   await expect(archived).toHaveCount(1);
 
   await archived.getByRole('button', { name: 'Voir le détail' }).click();
@@ -44,7 +44,7 @@ test('archive tabs list each kind', async ({ page }) => {
     ['Ordres de mission', 'Ordres de mission archivés'],
     ['Décomptes', 'Décomptes archivés'],
     ['Utilisateurs', 'Utilisateurs archivés'],
-    ['Services', 'Services archivés'],
+    ['Services', 'Structures archivées'],
   ]) {
     await page.getByRole('radio', { name: new RegExp(tab) }).click();
     await expect(page.getByRole('table', { name: caption })).toBeVisible();
