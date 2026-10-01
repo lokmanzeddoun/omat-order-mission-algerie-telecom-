@@ -42,6 +42,22 @@ _Avoid_: confusing it with text direction (LTR/RTL)
 The fiscal year that scopes ordres de mission and décomptes; one exercice is always selected, defaulting to the current one.
 _Avoid_: Year, Année (as a free-standing filter)
 
+**Structure** (also Service):
+A unit of the organisation an agent belongs to. Structures form a tree of at most 3 levels: a root is shown by its full name (code = its abbreviation, e.g. `SDC`), a sub-structure by its path (code = the path, e.g. `SDC / ERSTC / Section Réseau Intranet AT`).
+_Avoid_: Direction (that is the Nord/Sud zone), Département
+
+**Sous-structure**:
+A structure with a parent. Its code is its full path, so renaming or moving it changes the code of everything below it.
+_Avoid_: Child service in UI text
+
+**Responsable**:
+The user a structure designates as its head; they must belong to the structure and lead only one. A structure without a responsable is visible only to the admins of its parent structures and to super admins.
+_Avoid_: Chef, Manager
+
+**Périmètre** (subtree):
+A structure and all its descendants. An admin acts on the périmètre of their structure, downward only: never on a parent or sibling structure.
+_Avoid_: Scope (in UI text)
+
 **Barème**:
 The per-category rates (meals, lodging, per-km) applied to a décompte, differing by Direction; each repas and nuitée is paid at the rate of the zone where it was spent.
 _Avoid_: Barem, grille, tarif
@@ -99,4 +115,7 @@ The UI is available in French (default) and Arabic (right-to-left), switched fro
 | Intérim | إنابة |
 | Remplaçant | استخلاف |
 | Catégorie effective | الفئة المعتمدة |
+| Sous-structure | مصلحة فرعية |
+| Responsable | المسؤول |
+| Périmètre | النطاق |
 | Agent | عون |

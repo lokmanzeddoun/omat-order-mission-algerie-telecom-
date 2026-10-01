@@ -1,6 +1,6 @@
 # 0001 — Access control is a central, query-level policy
 
-Status: accepted (2026-09-27)
+Status: accepted (2026-09-27). "Own structure" is amended to "own structure's subtree" by [ADR 0004](0004-hierarchical-structures-and-subtree-access.md).
 
 ## Context
 
