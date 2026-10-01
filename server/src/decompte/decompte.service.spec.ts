@@ -248,6 +248,15 @@ describe('DecompteService', () => {
       expect(createdData().montant).toBe(NORD_OVERNIGHT + 50 * 10);
     });
 
+    it('PERSONAL_CAR: rejects a parcours under 50 km', async () => {
+      db.mission.findUnique.mockResolvedValue(
+        mission({ transport: TransportType.PERSONAL_CAR }),
+      );
+      await expect(
+        runCreate(overnightDto({ parcours: 49 }), N_MISSION),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('ignores parcours when the mission does not use a personal car', async () => {
       await runCreate(overnightDto({ parcours: 50 }), N_MISSION);
       expect(createdData().montant).toBe(NORD_OVERNIGHT);

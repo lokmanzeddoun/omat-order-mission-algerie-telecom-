@@ -74,6 +74,7 @@
       "returnTimeRequired": "L’heure de retour est obligatoire.",
       "distanceRequired": "La distance parcourue est obligatoire.",
       "distanceInvalid": "Distance invalide.",
+      "distanceMin": "La distance parcourue doit être d'au moins {{count}} km.",
       "amountInvalid": "Montant invalide.",
       "returnBeforeDeparture": "Le retour ne peut pas précéder le départ.",
       "maxDuration": "Un ordre de mission ne peut pas dépasser {{count}} jours.",
