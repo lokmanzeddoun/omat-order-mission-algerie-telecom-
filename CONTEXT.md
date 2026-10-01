@@ -46,6 +46,23 @@ _Avoid_: Year, Année (as a free-standing filter)
 The per-category rates (meals, lodging, per-km) applied to a décompte, differing by Direction; each repas and nuitée is paid at the rate of the zone where it was spent.
 _Avoid_: Barem, grille, tarif
 
+### Périodes de grade
+
+**Période**:
+A bounded stretch of days during which an agent holds a higher category than their own (CADRE or CADRE_SUPERIEUR). Created and ended by a super admin, never deleted. Ending it early stops it that day; the agent's own category is never edited.
+_Avoid_: Grade assignment (code name only), promotion
+
+**Intérim**:
+A période granted for a vacant post; 12 months at most. Printed "(Intérim)" after the grade on the PDFs.
+_Avoid_: Interim (without accent) in UI text
+
+**Remplaçant**:
+A période granted to stand in for an absent agent; 4 months at most. Printed "(Remplaçant)" after the grade on the PDFs.
+_Avoid_: Replacement, suppléant
+
+**Catégorie effective**:
+The category an ordre de mission is priced at: the target category of the période that covers its date de sortie, otherwise the agent's own. It is frozen on the ordre when created, and the barème rates are frozen on the décompte when settled, so later changes never move an existing amount. A renewal is a new période, never an extension, and touching périodes of one kind count together against the cap.
+
 ## Status labels
 
 | Code | Shown as |
@@ -78,4 +95,8 @@ The UI is available in French (default) and Arabic (right-to-left), switched fro
 | Exercice | السنة المالية |
 | Barème | سلّم التعويضات |
 | Service | المصلحة |
+| Période | فترة |
+| Intérim | إنابة |
+| Remplaçant | استخلاف |
+| Catégorie effective | الفئة المعتمدة |
 | Agent | عون |
