@@ -14,6 +14,10 @@ _Avoid_: Mission, Order (code aliases only — never in UI text)
 An admin's approval of an ordre de mission; a validated ordre is shown as "Validé" and gives rise to a décompte.
 _Avoid_: Completed, Terminé
 
+**Lot d'ordres**:
+Ordres de mission created together by an admin for several agents with the same destination, dates, motif, transport and direction; they are independent ordres (own validation and décompte) sharing a `batch_id`, created all-or-nothing and printed in one PDF.
+_Avoid_: Mission groupée, bulk order (in UI text)
+
 **En cours**:
 The state of an ordre de mission that has not yet been validated.
 _Avoid_: In progress (in UI text)
@@ -118,4 +122,5 @@ The UI is available in French (default) and Arabic (right-to-left), switched fro
 | Sous-structure | مصلحة فرعية |
 | Responsable | المسؤول |
 | Périmètre | النطاق |
+| Lot d'ordres | مجموعة أوامر بمهمة |
 | Agent | عون |

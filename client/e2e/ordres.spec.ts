@@ -123,4 +123,41 @@ test.describe('ordres de mission', () => {
     await page.getByRole('alertdialog').getByRole('button', { name: 'Annuler l’ordre' }).click();
     await expect(row).toHaveCount(0);
   });
+
+  test('create one ordre for several users at once', async ({ page }) => {
+    const destination = 'Tlemcen';
+    const rows = () => page.locator('tbody tr').filter({ hasText: destination });
+    await page.goto('dashboard/admins');
+    await page.getByRole('searchbox', { name: 'Filtrer Destination' }).fill(destination);
+    await page.waitForTimeout(500);
+    const before = await rows().count();
+
+    await page.getByRole('banner').getByRole('button', { name: 'Nouvel ordre de mission' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Nouvel ordre de mission' });
+
+    // Pick two agents (the signed-in user is selected by default: deselect them).
+    const search = dialog.getByRole('textbox', { name: /Rechercher par nom/ });
+    await dialog.getByRole('checkbox', { name: /Vous-même/ }).uncheck();
+    await search.fill('mansouri');
+    await dialog.getByRole('checkbox', { name: /Mansouri/ }).first().check();
+    await search.fill('benali');
+    await dialog.getByRole('checkbox', { name: /Benali/ }).first().check();
+    await expect(dialog.getByText('Agents sélectionnés : 2')).toBeVisible();
+
+    await dialog.getByLabel('Motif de la mission').fill('Mission en lot E2E');
+    await dialog.getByLabel('Date de départ').fill(`01/10/${year}`);
+    await dialog.getByLabel('Date de retour').fill(`03/10/${year}`);
+    await dialog.getByLabel('Destination').fill('Tlem');
+    await page.getByRole('option', { name: destination, exact: true }).click();
+    await dialog.getByLabel('Moyen de transport').selectOption('SERVICE_CAR');
+    const pdf = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Créer l’ordre de mission' }).click();
+    await pdf; // one PDF holding every ordre
+    await expect(dialog).toBeHidden();
+
+    await page.goto('dashboard/admins');
+    await page.getByRole('button', { name: 'Actualiser' }).click();
+    await page.getByRole('searchbox', { name: 'Filtrer Destination' }).fill(destination);
+    await expect(rows()).toHaveCount(before + 2);
+  });
 });

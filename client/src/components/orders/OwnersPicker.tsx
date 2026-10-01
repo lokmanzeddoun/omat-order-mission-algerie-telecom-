@@ -117,7 +117,13 @@ export default function OwnersPicker({ me, value, onChange, errors = {} }: Props
             return (
               <li key={u.matricule} className={cn('px-3 py-1.5', error && 'bg-danger-soft')}>
                 <label className="flex cursor-pointer items-center gap-3">
-                  <Checkbox checked={selected.has(u.matricule)} onChange={() => toggle(u.matricule)} aria-invalid={error ? true : undefined} />
+                  <Checkbox
+                    checked={selected.has(u.matricule)}
+                    onChange={() => toggle(u.matricule)}
+                    // Name without the structure: a structure called "Direction …" must not match the form's Direction field.
+                    aria-label={self ? `${t('ordres:form.yourselfTitle')} ${fullName(u)}` : fullName(u)}
+                    aria-invalid={error ? true : undefined}
+                  />
                   <span className="flex min-w-0 flex-1 flex-col">
                     <span className="truncate text-sm font-medium text-fg">{self ? t('ordres:form.yourselfTitle') : fullName(u)}</span>
                     <span className="truncate text-xs text-fg-muted">
