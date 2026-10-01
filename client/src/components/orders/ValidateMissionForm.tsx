@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
+import { MAX_MISSION_DAYS } from 'constants/mission';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -95,6 +96,13 @@ const schemaFor = (departureDate: string, firstZone: Zone, transport: string | u
       }
       if (v.date_retour && departureDate && dayjs(v.date_retour).isBefore(dayjs(departureDate), 'day')) {
         ctx.addIssue({ code: 'custom', path: ['date_retour'], message: t('ordres:validate.errors.returnBeforeDeparture') });
+      }
+      if (v.date_retour && v.heure_retour && departureDate && v.heure_sortie) {
+        const start = dayjs(`${departureDate}T${v.heure_sortie}`);
+        const end = dayjs(`${v.date_retour}T${v.heure_retour}`);
+        if (end.diff(start, 'minute') > MAX_MISSION_DAYS * 24 * 60) {
+          ctx.addIssue({ code: 'custom', path: ['date_retour'], message: t('ordres:validate.errors.maxDuration', { count: MAX_MISSION_DAYS }) });
+        }
       }
       const { meals, accommodations } = entitlements(departureDate, v);
       // Both zones together must match the entitlements.

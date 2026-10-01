@@ -18,6 +18,7 @@ import { toOrdrePdfData } from 'src/pdf/mappers/ordre.mapper';
 import { AccessPolicy } from 'src/common/policy/access-policy';
 import { AuditService } from 'src/audit/audit.service';
 import { UpdateMissionDto } from './dto/update-mission.dto';
+import { assertMissionDuration } from './mission-duration';
 @Injectable()
 export class MissionsService {
   private readonly logger = new Logger(MissionsService.name);
@@ -108,6 +109,14 @@ export class MissionsService {
       }
       targetMatricule = candidateMatricule;
     }
+    assertMissionDuration(
+      (cleanDto as any).date_sortie
+        ? new Date((cleanDto as any).date_sortie)
+        : null,
+      (cleanDto as any).date_retour
+        ? new Date((cleanDto as any).date_retour)
+        : null,
+    );
     const res = await this.databaseService.mission.create({
       data: {
         ...cleanDto,
@@ -284,7 +293,12 @@ export class MissionsService {
     // validated ordre is locked (ADR 0001). A USER may not change `direction`.
     const existing = await this.databaseService.mission.findFirst({
       where: { n_mission: id, ...this.accessPolicy.scopeMissions(actor) },
-      select: { n_mission: true, status: true },
+      select: {
+        n_mission: true,
+        status: true,
+        date_sortie: true,
+        date_retour: true,
+      },
     });
     if (!existing) {
       throw new NotFoundException(`Ordre de mission ${id} introuvable.`);
@@ -321,6 +335,10 @@ export class MissionsService {
     );
     const dateRetour = normalizeDateInput(
       (updateMissionDto as any).date_retour,
+    );
+    assertMissionDuration(
+      dateSortie !== undefined ? dateSortie : existing.date_sortie,
+      dateRetour !== undefined ? dateRetour : existing.date_retour,
     );
     const labelToEnum: Record<string, string> = {
       'véhicule de service': 'SERVICE_CAR',

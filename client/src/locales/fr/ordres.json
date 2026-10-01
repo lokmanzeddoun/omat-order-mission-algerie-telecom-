@@ -49,6 +49,7 @@
       "motifRequired": "Le motif est obligatoire.",
       "transportRequired": "Choisissez un moyen de transport.",
       "returnAfterDeparture": "Le retour doit être postérieur au départ.",
+      "maxDuration": "Un ordre de mission ne peut pas dépasser {{count}} jours.",
       "destinationRequired": "Choisissez au moins une destination dans la liste."
     },
     "destinationPlaceholder": "Tapez pour rechercher (ex. Tlemcen)…",
@@ -75,6 +76,7 @@
       "distanceInvalid": "Distance invalide.",
       "amountInvalid": "Montant invalide.",
       "returnBeforeDeparture": "Le retour ne peut pas précéder le départ.",
+      "maxDuration": "Un ordre de mission ne peut pas dépasser {{count}} jours.",
       "nightsTotal_one": "La répartition doit totaliser {{count}} nuitée(s).",
       "nightsTotal_many": "La répartition doit totaliser {{count}} nuitée(s).",
       "nightsTotal_other": "La répartition doit totaliser {{count}} nuitée(s).",
