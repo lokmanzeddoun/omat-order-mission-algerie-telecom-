@@ -385,20 +385,7 @@ function CompteRenduPage({ data }: { data: OrdrePdfData }) {
         <T style={{ fontWeight: 700, color: color.ink }}>
           Nature et description de la mission effectuée
         </T>
-        <RP.View
-          style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}
-        >
-          <RP.Text
-            style={{
-              fontSize: size.value,
-              fontWeight: 700,
-              color: color.ink,
-              textAlign: 'center',
-            }}
-          >
-            {data.motif}
-          </RP.Text>
-        </RP.View>
+        <RP.View style={{ flex: 1 }} />
         <T
           style={{
             textAlign: 'right',
