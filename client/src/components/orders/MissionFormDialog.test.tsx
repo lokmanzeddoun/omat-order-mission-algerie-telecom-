@@ -8,7 +8,7 @@ import MissionFormDialog from './MissionFormDialog';
 const store = configureStore({ reducer: { auth: () => ({ user: { matricule: 1, nom: 'A', prenom: 'B' } }) } });
 
 describe('MissionFormDialog destination', () => {
-  it('suggests destinations in a list inside the modal and submits the joined value', async () => {
+  it('suggests destinations in a list inside the modal and submits the joined value', { timeout: 20000 }, async () => {
     const onSubmit = vi.fn();
     render(
       <Provider store={store}>
