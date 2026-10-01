@@ -10,5 +10,9 @@
   "meal": "Repas",
   "lodging": "Hébergement",
   "perKmValue": "{{amount}} / km",
-  "note": "Montants exprimés en dinars algériens (DA)."
+  "note": "Montants exprimés en dinars algériens (DA).",
+  "edit": "Modifier {{field}}",
+  "editHint": "Cliquez sur un montant pour le modifier.",
+  "invalid": "Montant invalide (nombre positif ou nul).",
+  "saved": "Barème mis à jour."
 }

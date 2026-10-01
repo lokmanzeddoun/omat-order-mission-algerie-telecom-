@@ -72,7 +72,7 @@ async function main() {
             hebergement_nord: 1200.0,
             repas_sud: 1000.0,
             hebergement_sud: 1500.0,
-            montant_km: 15.0,
+            montant_km: 8.0,
         },
         {
             libell: 'CADRE' as Category,
@@ -80,7 +80,7 @@ async function main() {
             hebergement_nord: 1800.0,
             repas_sud: 1500.0,
             hebergement_sud: 2200.0,
-            montant_km: 20.0,
+            montant_km: 8.0,
         },
         {
             libell: 'CADRE_SUPERIEUR' as Category,
@@ -88,7 +88,7 @@ async function main() {
             hebergement_nord: 2500.0,
             repas_sud: 2200.0,
             hebergement_sud: 3000.0,
-            montant_km: 25.0,
+            montant_km: 8.0,
         },
     ];
 
