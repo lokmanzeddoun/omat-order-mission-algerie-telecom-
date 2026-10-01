@@ -80,7 +80,8 @@
       "nightsTotal_other": "La répartition doit totaliser {{count}} nuitée(s).",
       "mealsTotal_one": "La répartition doit totaliser {{count}} repas.",
       "mealsTotal_many": "La répartition doit totaliser {{count}} repas.",
-      "mealsTotal_other": "La répartition doit totaliser {{count}} repas."
+      "mealsTotal_other": "La répartition doit totaliser {{count}} repas.",
+      "costRequired": "Les frais de transport engagés sont obligatoires."
     }
   }
 }

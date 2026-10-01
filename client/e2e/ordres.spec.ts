@@ -3,7 +3,7 @@ import { login } from './fixtures';
 
 const year = new Date().getFullYear();
 
-async function createOrdre(page: Page, destination: string, direction = 'Nord') {
+async function createOrdre(page: Page, destination: string, direction = 'Nord', transport = 'SERVICE_CAR') {
   await page.getByRole('banner').getByRole('button', { name: 'Nouvel ordre de mission' }).click();
   const dialog = page.getByRole('dialog', { name: 'Nouvel ordre de mission' });
   await dialog.getByRole('button', { name: 'Créer l’ordre de mission' }).click();
@@ -14,7 +14,7 @@ async function createOrdre(page: Page, destination: string, direction = 'Nord') 
   await dialog.getByLabel('Date de retour').fill(`03/10/${year}`);
   await dialog.getByLabel('Heure de retour').fill('17:00');
   await dialog.getByLabel('Destination').fill(destination);
-  await dialog.getByLabel('Moyen de transport').selectOption('SERVICE_CAR');
+  await dialog.getByLabel('Moyen de transport').selectOption(transport);
   await dialog.getByLabel('Direction').selectOption({ label: direction });
   const pdf = page.waitForEvent('download');
   await dialog.getByRole('button', { name: 'Créer l’ordre de mission' }).click();
@@ -49,7 +49,6 @@ test.describe('ordres de mission', () => {
     await nord.getByLabel('Nuitées sans prise en charge').fill('1');
     await sud.getByLabel('Repas sans prise en charge').fill(String(meals - 1));
     await sud.getByLabel('Nuitées sans prise en charge').fill(String(nights - 1));
-    await validate.getByLabel('Distance parcourue (km)').fill('0');
     await validate.getByRole('button', { name: 'Valider et créer le décompte' }).click();
     await expect(validate).toBeHidden();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Validé');
@@ -60,7 +59,8 @@ test.describe('ordres de mission', () => {
 
   test('create, open detail, edit, validate and archive', async ({ page }) => {
     const destination = `Tlemcen-E2E${Date.now() % 100000}`;
-    await createOrdre(page, destination);
+    // A personal car makes the distance mandatory when validating.
+    await createOrdre(page, destination, 'Nord', 'PERSONAL_CAR');
 
     await page.goto('dashboard/admins');
     await page.getByRole('button', { name: 'Actualiser' }).click();

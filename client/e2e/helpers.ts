@@ -32,7 +32,6 @@ export async function validateOrdre(page: Page, destination: string) {
   const [meals, nights] = (rights.match(/\d+/g) ?? ['0', '0']).map(Number);
   await dialog.getByLabel('Repas avec prise en charge').fill(String(meals));
   await dialog.getByLabel('Nuitées avec prise en charge').fill(String(nights));
-  await dialog.getByLabel('Distance parcourue (km)').fill('80');
   await dialog.getByRole('button', { name: 'Valider et créer le décompte' }).click();
   await expect(dialog).toBeHidden();
 }

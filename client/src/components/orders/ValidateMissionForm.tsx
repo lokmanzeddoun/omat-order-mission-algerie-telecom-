@@ -51,8 +51,16 @@ const entitlements = (departureDate: string, v: { heure_sortie: string; date_ret
     ? calculateMealsAndAccommodation(departureDate, v.heure_sortie, v.date_retour, v.heure_retour)
     : { meals: 0, accommodations: 0 };
 
-// Same rules as the previous dialog: schedule required, splits must add up to the entitlements.
-const schemaFor = (departureDate: string, firstZone: Zone, t: TFunction) =>
+/** Which transport figure the means of transport requires: nothing, the distance, or the fees paid. */
+const transportInputs = (transport?: string) => ({
+  distance: transport === 'PERSONAL_CAR',
+  cost: transport === 'TRANSPORT_EMPLOYEE',
+});
+
+const amount = (v: string) => !Number.isNaN(Number(v)) && Number(v) >= 0;
+
+// Schedule required, splits must add up to the entitlements, transport figures follow the means of transport.
+const schemaFor = (departureDate: string, firstZone: Zone, transport: string | undefined, t: TFunction) =>
   z
     .object({
       date_retour: z.string().min(1, t('ordres:validate.errors.returnDateRequired')),
@@ -66,13 +74,25 @@ const schemaFor = (departureDate: string, firstZone: Zone, t: TFunction) =>
           ]),
         ),
       ) as Record<CountField, ReturnType<typeof count>>),
-      distance_km: z
-        .string()
-        .min(1, t('ordres:validate.errors.distanceRequired'))
-        .refine((v) => !Number.isNaN(Number(v)) && Number(v) >= 0, t('ordres:validate.errors.distanceInvalid')),
-      transport_cost: z.string().refine((v) => v === '' || (!Number.isNaN(Number(v)) && Number(v) >= 0), t('ordres:validate.errors.amountInvalid')),
+      distance_km: z.string(),
+      transport_cost: z.string(),
     })
     .superRefine((v, ctx) => {
+      const needs = transportInputs(transport);
+      if (needs.distance) {
+        if (v.distance_km === '') {
+          ctx.addIssue({ code: 'custom', path: ['distance_km'], message: t('ordres:validate.errors.distanceRequired') });
+        } else if (!amount(v.distance_km)) {
+          ctx.addIssue({ code: 'custom', path: ['distance_km'], message: t('ordres:validate.errors.distanceInvalid') });
+        }
+      }
+      if (needs.cost) {
+        if (v.transport_cost === '') {
+          ctx.addIssue({ code: 'custom', path: ['transport_cost'], message: t('ordres:validate.errors.costRequired') });
+        } else if (!amount(v.transport_cost)) {
+          ctx.addIssue({ code: 'custom', path: ['transport_cost'], message: t('ordres:validate.errors.amountInvalid') });
+        }
+      }
       if (v.date_retour && departureDate && dayjs(v.date_retour).isBefore(dayjs(departureDate), 'day')) {
         ctx.addIssue({ code: 'custom', path: ['date_retour'], message: t('ordres:validate.errors.returnBeforeDeparture') });
       }
@@ -118,7 +138,9 @@ export default function ValidateMissionForm({ open, mission, onClose, onSubmit }
   const { t } = useTranslation();
   const zones = zonesOf(mission?.direction);
   const firstZone = zones[0];
-  const schema = useMemo(() => schemaFor(departureDate, firstZone, t), [departureDate, firstZone, t]);
+  const transport = mission?.transport;
+  const needs = transportInputs(transport);
+  const schema = useMemo(() => schemaFor(departureDate, firstZone, transport, t), [departureDate, firstZone, transport, t]);
   const {
     register,
     handleSubmit,
@@ -145,8 +167,9 @@ export default function ValidateMissionForm({ open, mission, onClose, onSubmit }
       heure_retour: v.heure_retour,
       // A zone outside the ordre's Direction is sent as 0.
       ...Object.fromEntries(COUNT_FIELDS.map((f) => [f, n(v[f])])),
-      distance_km: Number(v.distance_km),
-      transport_cost: v.transport_cost === '' ? undefined : Number(v.transport_cost),
+      // Only the figure the means of transport asks for is recorded.
+      distance_km: needs.distance ? Number(v.distance_km) : undefined,
+      transport_cost: needs.cost ? Number(v.transport_cost) : undefined,
     });
   });
 
@@ -232,16 +255,22 @@ export default function ValidateMissionForm({ open, mission, onClose, onSubmit }
           </FormSection>
         ))}
 
-        <FormSection title={t('field.transport')}>
-          <FormGrid>
-            <Field label={t('ordres:validate.distanceKm')} error={errors.distance_km?.message} required>
-              <Input type="number" min={0} inputMode="decimal" {...register('distance_km')} />
-            </Field>
-            <Field label={t('ordres:validate.transportCost')} error={errors.transport_cost?.message}>
-              <Input type="number" min={0} inputMode="decimal" {...register('transport_cost')} />
-            </Field>
-          </FormGrid>
-        </FormSection>
+        {(needs.distance || needs.cost) && (
+          <FormSection title={t('field.transport')}>
+            <FormGrid>
+              {needs.distance && (
+                <Field label={t('ordres:validate.distanceKm')} error={errors.distance_km?.message} required>
+                  <Input type="number" min={0} inputMode="decimal" {...register('distance_km')} />
+                </Field>
+              )}
+              {needs.cost && (
+                <Field label={t('ordres:validate.transportCost')} error={errors.transport_cost?.message} required>
+                  <Input type="number" min={0} inputMode="decimal" {...register('transport_cost')} />
+                </Field>
+              )}
+            </FormGrid>
+          </FormSection>
+        )}
       </form>
     </Dialog>
   );
