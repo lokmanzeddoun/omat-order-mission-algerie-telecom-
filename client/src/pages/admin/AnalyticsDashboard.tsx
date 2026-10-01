@@ -5,6 +5,7 @@ import { RefreshCw, TriangleAlert } from 'lucide-react';
 import type { RootState } from 'store/rootReducer';
 import { getAnalytics, type AnalyticsData } from 'components/admin/analytics/api';
 import { BarChart, LineChart, PieChart } from 'components/admin/analytics/Charts';
+import MonthlyRecapTable from 'components/admin/analytics/MonthlyRecapTable';
 import { IconButton, Loader, PageHeader, Panel, Tabs } from 'components/ui';
 import { decompteStatus, missionStatus } from 'constants/statusLabels';
 import { categoryLabels, directionLabels, transportLabels } from 'constants/labels';
@@ -197,6 +198,10 @@ export default function AnalyticsDashboard() {
             seriesData={[{ name: t('nav.ordres'), data: data.topDestinations.map((d) => d.count) }]}
           />
         </div>
+      </div>
+
+      <div className="mt-4">
+        <MonthlyRecapTable exerciceId={exerciceId} fileSuffix={scope === 'year' ? String(selectedYear ?? '') : 'tous'} />
       </div>
     </>
   );

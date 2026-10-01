@@ -8,7 +8,7 @@
   "kpis": "المؤشرات الرئيسية",
   "validatedShare": "مصادق عليها: {{pct}}",
   "acceptedShare": "مقبولة: {{pct}}",
-  "activeAgents": "الأعوان النشطون",
+  "activeAgents": "الموظفون النشطون",
   "average": "المتوسط: {{amount}}",
   "acceptedAmount": "المبلغ المقبول",
   "pendingDecomptes": "كشوف مصاريف قيد الانتظار",
@@ -21,5 +21,22 @@
   "byDirection": "حسب المديرية",
   "byDirectionCaption": "الأوامر بمهمة والمبالغ حسب المديرية",
   "transportModes": "وسائل النقل",
-  "topDestinations": "أهم الوجهات"
+  "topDestinations": "أهم الوجهات",
+  "monthlyRecap": {
+    "title": "الملخص الشهري لكشوف المصاريف",
+    "caption": "عدد ومبالغ كشوف المصاريف حسب الشهر والحالة",
+    "month": "الشهر",
+    "count": "عدد الكشوف",
+    "pending": "قيد الانتظار",
+    "accepted": "مقبولة",
+    "rejected": "مرفوضة",
+    "nb": "العدد",
+    "amount": "المبلغ",
+    "totalAmount": "المبلغ الإجمالي",
+    "fees": "مصاريف النقل",
+    "distance": "الكيلومترات المقطوعة",
+    "agents": "عدد الموظفين",
+    "total": "المجموع",
+    "exportExcel": "تصدير (Excel)"
+  }
 }

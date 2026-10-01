@@ -38,5 +38,6 @@
   "decompteArchived": "تمت أرشفة كشف المصاريف بنجاح",
   "commentAdded": "تمت إضافة التعليق بنجاح",
   "missionsLoadFailed": "تعذّر تحميل الأوامر بمهمة.",
-  "decomptesLoadFailed": "تعذّر تحميل كشوف المصاريف."
+  "decomptesLoadFailed": "تعذّر تحميل كشوف المصاريف.",
+  "recapExported": "تم تصدير الملخص بنجاح"
 }
