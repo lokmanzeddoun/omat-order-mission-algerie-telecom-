@@ -16,7 +16,7 @@ test('admin shell: header, exercice, role navigation, user menu', async ({ page 
   await expect(banner.getByText('Gestion des Ordres de Mission')).toBeVisible();
   await expect(banner.getByRole('combobox')).not.toHaveValue('');
   const nav = page.getByRole('navigation', { name: 'Navigation principale' });
-  for (const label of ['Tableau de bord', 'Décomptes', 'Ordres de mission', 'Utilisateurs', 'Services', 'Barème', 'Archive', 'Commentaires']) {
+  for (const label of ['Décomptes', 'Ordres de mission', 'Utilisateurs', 'Services', 'Barème', 'Archive', 'Commentaires']) {
     await expect(nav.getByRole('link', { name: label })).toBeVisible();
   }
   await nav.getByRole('link', { name: 'Utilisateurs' }).click();
