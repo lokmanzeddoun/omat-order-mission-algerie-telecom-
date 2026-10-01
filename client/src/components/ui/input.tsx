@@ -3,7 +3,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from 'lib/utils';
 
-const fieldBase =
+export const fieldBase =
   'w-full rounded-sm border border-border-strong bg-surface px-3 text-sm text-fg placeholder:text-fg-subtle ' +
   'focus:border-primary focus:outline-none focus-visible:outline-3 focus-visible:outline-focus ' +
   'disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-fg-subtle ' +

@@ -1,12 +1,12 @@
 import { useEffect, useMemo } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import dayjs from 'helpers/date';
 import { calculateMealsAndAccommodation } from 'helpers/utils';
-import { Button, DescriptionList, Dialog, Field, FormGrid, FormSection, Input } from 'components/ui';
+import { Button, DatePicker, DescriptionList, Dialog, Field, FormGrid, FormSection, Input, TimePicker } from 'components/ui';
 import { ITEMS, field, zonesOf, type Counts, type CountField, type Item, type Zone } from 'components/decomptes/zones';
 import type { IMission } from './orderReducer';
 
@@ -184,15 +184,33 @@ export default function ValidateMissionForm({ open, mission, onClose, onSubmit }
 
         <FormSection title={t('ordres:validate.schedule')}>
           <FormGrid className="sm:grid-cols-3">
-            <Field label={t('ordres:form.departureTime')} error={errors.heure_sortie?.message} required>
-              <Input type="time" {...register('heure_sortie')} />
-            </Field>
-            <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message} required>
-              <Input type="date" {...register('date_retour')} />
-            </Field>
-            <Field label={t('ordres:form.returnTime')} error={errors.heure_retour?.message} required>
-              <Input type="time" {...register('heure_retour')} />
-            </Field>
+            <Controller
+              control={control}
+              name="heure_sortie"
+              render={({ field }) => (
+                <Field label={t('ordres:form.departureTime')} error={errors.heure_sortie?.message} required>
+                  <TimePicker value={field.value} onChange={field.onChange} ref={field.ref} />
+                </Field>
+              )}
+            />
+            <Controller
+              control={control}
+              name="date_retour"
+              render={({ field }) => (
+                <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message} required>
+                  <DatePicker value={field.value} onChange={field.onChange} ref={field.ref} min={departureDate || undefined} />
+                </Field>
+              )}
+            />
+            <Controller
+              control={control}
+              name="heure_retour"
+              render={({ field }) => (
+                <Field label={t('ordres:form.returnTime')} error={errors.heure_retour?.message} required>
+                  <TimePicker value={field.value} onChange={field.onChange} ref={field.ref} />
+                </Field>
+              )}
+            />
           </FormGrid>
           <p className="mt-3 border-s-4 border-info bg-info-soft px-3 py-2 text-sm text-fg" aria-live="polite">
             <Trans t={t} i18nKey="ordres:validate.entitlements" values={{ meals, nights: accommodations }} components={{ b: <strong /> }} />

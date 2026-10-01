@@ -42,15 +42,20 @@
     "departureTime": "Heure de départ",
     "returnDate": "Date de retour",
     "returnTime": "Heure de retour",
-    "destinationHint": "Communes séparées par un tiret, ex. Alger-Oran.",
+    "destinationHint": "Choisissez des wilayas ou des communes dans la liste ; le tiret est ajouté automatiquement.",
     "choose": "— Choisir —",
     "errors": {
       "departureRequired": "La date de départ est obligatoire.",
       "motifRequired": "Le motif est obligatoire.",
-      "destinationMin": "La destination doit contenir au moins 2 caractères.",
       "transportRequired": "Choisissez un moyen de transport.",
-      "returnAfterDeparture": "Le retour doit être postérieur au départ."
-    }
+      "returnAfterDeparture": "Le retour doit être postérieur au départ.",
+      "destinationRequired": "Choisissez au moins une destination dans la liste."
+    },
+    "destinationPlaceholder": "Tapez pour rechercher (ex. Tlemcen)…",
+    "destinationRemove": "Retirer {{name}}",
+    "destinationWilaya": "Wilaya",
+    "destinationNoMatch": "Aucune wilaya ou commune trouvée.",
+    "destinationLegacy": "L’ancienne destination « {{value}} » n’est pas reconnue : choisissez-la à nouveau dans la liste."
   },
   "validate": {
     "title": "Valider l’ordre de mission",
