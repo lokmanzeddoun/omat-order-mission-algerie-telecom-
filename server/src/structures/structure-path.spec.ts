@@ -57,9 +57,7 @@ describe('parseStructurePath', () => {
 
   it('matches the root by its code, not by its full name', () => {
     expect(
-      codeOf(() =>
-        parseStructurePath('Sous Direction Commerciale / A', ROOTS),
-      ),
+      codeOf(() => parseStructurePath('Sous Direction Commerciale / A', ROOTS)),
     ).toBe('UNKNOWN_ROOT');
   });
 

@@ -94,7 +94,10 @@ export function parseStructurePath(
   }
   const segments = splitPath(path);
   if (segments.some((s) => s === '')) {
-    throw new StructurePathError('EMPTY_SEGMENT', 'Chemin avec un segment vide');
+    throw new StructurePathError(
+      'EMPTY_SEGMENT',
+      'Chemin avec un segment vide',
+    );
   }
   if (segments.length < 2) {
     throw new StructurePathError(

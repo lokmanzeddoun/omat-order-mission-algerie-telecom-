@@ -135,9 +135,7 @@ describe('StructuresService.uploadStructure', () => {
       willCreate: 1,
       willUpdate: 2,
     });
-    expect(
-      report.errors.map((e: any) => [e.row, e.field, e.message]),
-    ).toEqual([
+    expect(report.errors.map((e: any) => [e.row, e.field, e.message])).toEqual([
       [5, 'Path', expect.stringContaining('Racine inconnue')],
       [6, 'Path', expect.stringContaining('Profondeur maximale')],
       [7, 'Path', expect.stringContaining('introuvable')],

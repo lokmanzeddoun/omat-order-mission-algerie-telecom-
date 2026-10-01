@@ -14,7 +14,30 @@ export const PEOPLE = {
   userB: { matricule: 2001, role: 'USER', structure: 'STR_B' },
   adminB: { matricule: 2002, role: 'ADMIN', structure: 'STR_B' },
   superAdmin: { matricule: 9001, role: 'SUPER_ADMIN', structure: null },
+  // The tree HQ / HQ / MID / HQ / MID / LEAF, plus a sibling HQ / SIDE (ADR 0004).
+  hqUser: { matricule: 3001, role: 'USER', structure: 'HQ' },
+  hqAdmin: { matricule: 3002, role: 'ADMIN', structure: 'HQ' },
+  midUser: { matricule: 3101, role: 'USER', structure: 'HQ / MID' },
+  midAdmin: { matricule: 3102, role: 'ADMIN', structure: 'HQ / MID' },
+  leafUser: { matricule: 3201, role: 'USER', structure: 'HQ / MID / LEAF' },
+  leafAdmin: { matricule: 3202, role: 'ADMIN', structure: 'HQ / MID / LEAF' },
+  sideUser: { matricule: 3301, role: 'USER', structure: 'HQ / SIDE' },
 } as const;
+
+/** Structures of the fixture, parents first; the value is the responsible's matricule. */
+export const STRUCTURES = [
+  { code: 'STR_A', name: 'Structure A', responsible: 1002 },
+  { code: 'STR_B', name: 'Structure B', responsible: 2002 },
+  { code: 'HQ', name: 'Headquarters', responsible: 3002 },
+  { code: 'HQ / MID', name: 'MID', parentCode: 'HQ', responsible: 3102 },
+  {
+    code: 'HQ / MID / LEAF',
+    name: 'LEAF',
+    parentCode: 'HQ / MID',
+    responsible: 3202,
+  },
+  { code: 'HQ / SIDE', name: 'SIDE', parentCode: 'HQ', responsible: null },
+] as const;
 
 export type Person = keyof typeof PEOPLE;
 
@@ -48,10 +71,11 @@ export async function seedFixture(prisma: PrismaClient): Promise<Fixture> {
   ]);
 
   await prisma.structure.createMany({
-    data: [
-      { code: 'STR_A', name: 'Structure A' },
-      { code: 'STR_B', name: 'Structure B' },
-    ],
+    data: STRUCTURES.map((st) => ({
+      code: st.code,
+      name: st.name,
+      parentCode: 'parentCode' in st ? st.parentCode : null,
+    })),
   });
 
   const password = await bcrypt.hash(FIXTURE_PASSWORD, 4);
@@ -73,6 +97,15 @@ export async function seedFixture(prisma: PrismaClient): Promise<Fixture> {
       serviceId: PEOPLE[who].structure,
     })),
   });
+
+  for (const st of STRUCTURES) {
+    if (st.responsible !== null) {
+      await prisma.structure.update({
+        where: { code: st.code },
+        data: { responsibleUserId: st.responsible },
+      });
+    }
+  }
 
   const missions = {} as Fixture['missions'];
   const decomptes = {} as Fixture['decomptes'];

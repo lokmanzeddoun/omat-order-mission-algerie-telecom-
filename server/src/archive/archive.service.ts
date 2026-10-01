@@ -108,9 +108,7 @@ export class ArchiveService {
       where: { parentCode: code, soft_delete: false },
     });
     if (children > 0) {
-      throw new BadRequestException(
-        'Archive or move the sub-structures first',
-      );
+      throw new BadRequestException('Archive or move the sub-structures first');
     }
     return this.db.structure.update({
       where: { code },

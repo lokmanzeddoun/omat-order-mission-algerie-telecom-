@@ -71,9 +71,9 @@ export class StructuresService {
   ) {}
 
   /** Adds the label the UI shows: a root's full name, a child's path. */
-  private present<T extends { code: string; name: string; parentCode: string | null }>(
-    s: T,
-  ): T & { displayName: string } {
+  private present<
+    T extends { code: string; name: string; parentCode: string | null },
+  >(s: T): T & { displayName: string } {
     return { ...s, displayName: structureLabel(s) };
   }
 
@@ -389,9 +389,7 @@ export class StructuresService {
       where: { parentCode: code, soft_delete: false },
     });
     if (children > 0) {
-      throw new BadRequestException(
-        'Archive or move the sub-structures first',
-      );
+      throw new BadRequestException('Archive or move the sub-structures first');
     }
     return this.databaseService.structure.update({
       where: {
@@ -427,7 +425,9 @@ export class StructuresService {
     });
     const existingByCode = new Map(existing.map((s) => [s.code, s]));
     const roots = new Set<string>(
-      existing.filter((s) => !s.parentCode && !s.soft_delete).map((s) => s.code),
+      existing
+        .filter((s) => !s.parentCode && !s.soft_delete)
+        .map((s) => s.code),
     );
     // Roots declared by the file count as existing roots for the paths below.
     for (const { value } of items) {

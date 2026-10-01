@@ -86,7 +86,7 @@ model Structure {
   // full path ("SDC / ERSTC / Section ..."), so a descendant's code always starts
   // with its ancestor's code + " / ". `name` is the structure's own segment.
   parentCode String?
-  parent Structure? @relation("StructureTree", fields: [parentCode], references: [code], onUpdate: Cascade, onDelete: Restrict)
+  parent Structure? @relation("StructureTree", fields: [parentCode], references: [code], onUpdate: Cascade, onDelete: NoAction)
   children Structure[] @relation("StructureTree")
   // The structure's responsible (must belong to it); a user is responsible for at most one structure.
   responsibleUserId Int? @unique @map("responsible_user_id")

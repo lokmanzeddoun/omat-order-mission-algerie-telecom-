@@ -12,7 +12,7 @@ CREATE UNIQUE INDEX "Structure_responsible_user_id_key" ON "Structure"("responsi
 CREATE INDEX "Structure_parentCode_idx" ON "Structure"("parentCode");
 
 -- AddForeignKey
-ALTER TABLE "Structure" ADD CONSTRAINT "Structure_parentCode_fkey" FOREIGN KEY ("parentCode") REFERENCES "Structure"("code") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Structure" ADD CONSTRAINT "Structure_parentCode_fkey" FOREIGN KEY ("parentCode") REFERENCES "Structure"("code") ON DELETE NO ACTION ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Structure" ADD CONSTRAINT "Structure_responsible_user_id_fkey" FOREIGN KEY ("responsible_user_id") REFERENCES "User"("matricule") ON DELETE SET NULL ON UPDATE CASCADE;
