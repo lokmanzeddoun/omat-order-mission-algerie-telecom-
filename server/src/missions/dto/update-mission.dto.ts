@@ -4,9 +4,9 @@ import {
   IsDateString,
   IsEnum,
   IsNotEmpty,
-  MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { IsValidDestination } from '../../utils/destination-validator';
 import { TransportType, Direction } from '@prisma/client';
 
 const emptyToUndefined = ({ value }: { value: unknown }) =>
@@ -45,9 +45,7 @@ export class UpdateMissionDto {
   @Transform(emptyToUndefined)
   @IsString()
   @IsNotEmpty({ message: 'La destination ne peut pas être vide' })
-  @MinLength(2, {
-    message: 'La destination doit contenir au moins 2 caractères',
-  })
+  @IsValidDestination()
   destination?: string;
 
   @IsOptional()

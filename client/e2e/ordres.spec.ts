@@ -9,9 +9,9 @@ async function createOrdre(page: Page, destination: string, direction = 'Nord') 
   await dialog.getByRole('button', { name: 'Créer l’ordre de mission' }).click();
   await expect(dialog.getByText('La date de départ est obligatoire.')).toBeVisible();
   await dialog.getByLabel('Motif de la mission').fill(`Mission E2E ${destination}`);
-  await dialog.getByLabel('Date de départ').fill(`${year}-10-01`);
+  await dialog.getByLabel('Date de départ').fill(`01/10/${year}`);
   await dialog.getByLabel('Heure de départ').fill('08:00');
-  await dialog.getByLabel('Date de retour').fill(`${year}-10-03`);
+  await dialog.getByLabel('Date de retour').fill(`03/10/${year}`);
   await dialog.getByLabel('Heure de retour').fill('17:00');
   await dialog.getByLabel('Destination').fill(destination);
   await dialog.getByLabel('Moyen de transport').selectOption('SERVICE_CAR');

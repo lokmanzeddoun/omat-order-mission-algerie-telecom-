@@ -42,15 +42,20 @@
     "departureTime": "ساعة الذهاب",
     "returnDate": "تاريخ العودة",
     "returnTime": "ساعة العودة",
-    "destinationHint": "البلديات مفصولة بشرطة، مثال: الجزائر-وهران.",
+    "destinationHint": "اختر ولايات أو بلديات من القائمة؛ تُضاف الشرطة تلقائياً.",
     "choose": "— اختر —",
     "errors": {
       "departureRequired": "تاريخ الذهاب إلزامي.",
       "motifRequired": "غرض المهمة إلزامي.",
-      "destinationMin": "يجب أن تحتوي الوجهة على حرفين على الأقل.",
       "transportRequired": "اختر وسيلة النقل.",
-      "returnAfterDeparture": "يجب أن تكون العودة بعد الذهاب."
-    }
+      "returnAfterDeparture": "يجب أن تكون العودة بعد الذهاب.",
+      "destinationRequired": "اختر وجهة واحدة على الأقل من القائمة."
+    },
+    "destinationPlaceholder": "اكتب للبحث (مثال: تلمسان)…",
+    "destinationRemove": "إزالة {{name}}",
+    "destinationWilaya": "ولاية",
+    "destinationNoMatch": "لا توجد ولاية أو بلدية مطابقة.",
+    "destinationLegacy": "الوجهة القديمة «{{value}}» غير معروفة: اختَرها من جديد من القائمة."
   },
   "validate": {
     "title": "المصادقة على الأمر بمهمة",

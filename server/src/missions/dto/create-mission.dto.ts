@@ -5,9 +5,9 @@ import {
   IsDateString,
   IsEnum,
   IsNotEmpty,
-  MinLength,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { IsValidDestination } from '../../utils/destination-validator';
 import { TransportType, Direction } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
@@ -47,14 +47,13 @@ export class CreateMissionDto {
   transport: TransportType;
 
   @ApiProperty({
-    description: 'Destination (noms de communes séparés par "-")',
-    example: 'Alger-Oran',
+    description:
+      'Destination (wilayas ou communes d\'Algérie séparées par " - ")',
+    example: 'Timekten (Adrar) - Oran',
   })
   @IsString()
   @IsNotEmpty({ message: 'La destination ne peut pas être vide' })
-  @MinLength(2, {
-    message: 'La destination doit contenir au moins 2 caractères',
-  })
+  @IsValidDestination()
   destination: string;
 
   @ApiProperty({

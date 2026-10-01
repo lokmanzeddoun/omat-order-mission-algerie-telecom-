@@ -1,99 +1,60 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { Logger } from '@nestjs/common';
+import { registerDecorator, ValidationOptions } from 'class-validator';
 
-const logger = new Logger('DestinationValidator');
+/** Separator between destinations in the stored string (spaced, so hyphenated commune names stay intact). */
+export const DESTINATION_SEPARATOR = ' - ';
+export const MAX_DESTINATIONS = 10;
 
 type City = {
-  commune_name_ascii?: string;
+  commune_name_ascii: string;
+  wilaya_name_ascii: string;
 };
 
-let communeSet: Set<string> | null = null;
+const clean = (s: string) => s.trim().replace(/\s+/g, ' ');
 
-function normalizeToken(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // remove diacritics
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, ' ');
-}
+let allowed: Set<string> | null = null;
 
-function tryLoadJson(filePath: string): City[] | null {
-  try {
-    if (fs.existsSync(filePath)) {
-      const content = fs.readFileSync(filePath, 'utf-8');
-      const data = JSON.parse(content);
-      if (Array.isArray(data)) return data as City[];
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-function loadCommuneSet(): Set<string> {
-  if (communeSet) return communeSet;
-
-  const envPath = process.env.CITIES_JSON_PATH;
-  const candidates = [
-    // From env override
-    envPath && path.resolve(envPath),
-    // Server's own data folder (source)
-    path.resolve(__dirname, '../data/algeria_cities.json'),
-    // Server's own data folder (compiled dist)
-    path.resolve(__dirname, '../../src/data/algeria_cities.json'),
-    // When running from repo root
-    path.resolve(process.cwd(), 'client/src/data/algeria_cities.json'),
-    // When running from server folder (dev)
-    path.resolve(process.cwd(), '../client/src/data/algeria_cities.json'),
-    // When running TS directly (unlikely to have a copy under server/src)
-    path.resolve(process.cwd(), 'src/data/algeria_cities.json'),
-    // When running from compiled dist or ts-node; jump to repo root then client
-    path.resolve(__dirname, '../../../client/src/data/algeria_cities.json'),
-  ].filter(Boolean) as string[];
-
-  let cities: City[] | null = null;
-  for (const p of candidates) {
-    cities = tryLoadJson(p);
-    if (cities) {
-      logger.log(`Loaded cities from: ${p}`);
-      break;
-    }
-  }
-
-  if (!cities) {
-    logger.warn(
-      `Could not load algeria_cities.json; tried: ${candidates.join(', ')}`,
-    );
-  }
-
+/**
+ * Canonical destination values: a wilaya ("Oran") or a commune qualified by its
+ * wilaya ("Timekten (Adrar)"). Kept in sync with client/src/lib/destinations.ts.
+ */
+function loadAllowed(): Set<string> {
+  if (allowed) return allowed;
+  const file = path.resolve(
+    process.env.CITIES_JSON_PATH ??
+      path.join(__dirname, '../data/algeria_cities.json'),
+  );
+  const cities = JSON.parse(fs.readFileSync(file, 'utf-8')) as City[];
   const set = new Set<string>();
-  if (cities) {
-    for (const c of cities) {
-      if (c && typeof c.commune_name_ascii === 'string') {
-        set.add(normalizeToken(c.commune_name_ascii));
-      }
-    }
+  for (const c of cities) {
+    const wilaya = clean(c.wilaya_name_ascii);
+    set.add(wilaya);
+    set.add(`${clean(c.commune_name_ascii)} (${wilaya})`);
   }
-  communeSet = set;
-  return communeSet;
+  allowed = set;
+  return set;
 }
 
-export function isValidDestination(destination: string): boolean {
-  if (!destination || typeof destination !== 'string') return false;
-  const set = loadCommuneSet();
-  if (!set || set.size === 0) {
-    // If we cannot load the communes list, fail validation conservatively
-    return false;
-  }
-  // Split by '-' and ensure each token is a valid commune name (case-insensitive)
-  const parts = destination
-    .split('-')
-    .map((p) => normalizeToken(p))
-    .filter((p) => p.length > 0);
+export function isValidDestination(destination: unknown): boolean {
+  if (typeof destination !== 'string' || !destination) return false;
+  const parts = destination.split(DESTINATION_SEPARATOR);
+  if (parts.length > MAX_DESTINATIONS) return false;
+  if (new Set(parts).size !== parts.length) return false;
+  const set = loadAllowed();
+  return parts.every((p) => set.has(p));
+}
 
-  if (parts.length === 0) return false;
-
-  return parts.every((token) => set.has(token));
+export function IsValidDestination(options?: ValidationOptions) {
+  return (object: object, propertyName: string) =>
+    registerDecorator({
+      name: 'isValidDestination',
+      target: object.constructor,
+      propertyName,
+      options: {
+        message: `La destination doit être une liste de wilayas ou de communes d'Algérie (au plus ${MAX_DESTINATIONS}, sans doublon) séparées par "${DESTINATION_SEPARATOR}"`,
+        ...options,
+      },
+      validator: { validate: (value: unknown) => isValidDestination(value) },
+    });
 }

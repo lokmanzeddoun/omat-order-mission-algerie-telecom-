@@ -198,5 +198,17 @@
     "adminOnly": "Accès réservé aux administrateurs",
     "adminOnlyHint": "Le détail d’un décompte n’est consultable que par le service gestionnaire. Vous pouvez suivre vos missions depuis votre tableau de bord.",
     "myDashboard": "Mon tableau de bord"
+  },
+  "picker": {
+    "datePlaceholder": "JJ/MM/AAAA",
+    "timePlaceholder": "HH:mm",
+    "today": "Aujourd’hui",
+    "clear": "Effacer",
+    "prevMonth": "Mois précédent",
+    "nextMonth": "Mois suivant",
+    "openCalendar": "Ouvrir le calendrier",
+    "openTime": "Choisir l’heure",
+    "hours": "Heures",
+    "minutes": "Minutes"
   }
 }

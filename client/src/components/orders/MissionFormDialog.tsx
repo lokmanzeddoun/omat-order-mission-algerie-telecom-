@@ -1,13 +1,13 @@
 import { useEffect, useMemo } from 'react';
 import { useSelector } from 'react-redux';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { RootState } from 'store/rootReducer';
 import dayjs from 'helpers/date';
-import { Button, Dialog, Field, FormGrid, Input, Select, Textarea } from 'components/ui';
+import { Button, Dialog, DatePicker, DestinationInput, Field, FormGrid, Select, Textarea, TimePicker } from 'components/ui';
 import { directionLabels, transportLabels } from 'constants/labels';
 import type { IMission } from './orderReducer';
 
@@ -22,7 +22,7 @@ const schemaFor = (t: TFunction) =>
       date_retour: z.string(),
       heure_retour: z.string(),
       motif: z.string().trim().min(1, t('ordres:form.errors.motifRequired')),
-      destination: z.string().trim().min(2, t('ordres:form.errors.destinationMin')),
+      destination: z.string().min(1, t('ordres:form.errors.destinationRequired')),
       transport: z.string().min(1, t('ordres:form.errors.transportRequired')),
       direction: z.string().min(1),
     })
@@ -85,8 +85,10 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
   const schema = useMemo(() => schemaFor(t), [t]);
   const {
     register,
+    control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
 
@@ -137,26 +139,57 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
           <Textarea rows={2} readOnly={readOnly} autoFocus={!readOnly} {...register('motif')} />
         </Field>
         <FormGrid>
-          <Field label={t('ordres:form.departureDate')} error={errors.date_sortie?.message} required={!readOnly}>
-            <Input type="date" readOnly={readOnly} {...register('date_sortie')} />
-          </Field>
-          <Field label={t('ordres:form.departureTime')}>
-            <Input type="time" readOnly={readOnly} {...register('heure_sortie')} />
-          </Field>
-          <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message}>
-            <Input type="date" readOnly={readOnly} {...register('date_retour')} />
-          </Field>
-          <Field label={t('ordres:form.returnTime')}>
-            <Input type="time" readOnly={readOnly} {...register('heure_retour')} />
-          </Field>
-          <Field
-            label={t('field.destination')}
-            hint={t('ordres:form.destinationHint')}
-            error={errors.destination?.message}
-            required={!readOnly}
-          >
-            <Input readOnly={readOnly} {...register('destination')} />
-          </Field>
+          <Controller
+            control={control}
+            name="date_sortie"
+            render={({ field }) => (
+              <Field label={t('ordres:form.departureDate')} error={errors.date_sortie?.message} required={!readOnly}>
+                <DatePicker readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} />
+              </Field>
+            )}
+          />
+          <Controller
+            control={control}
+            name="heure_sortie"
+            render={({ field }) => (
+              <Field label={t('ordres:form.departureTime')} >
+                <TimePicker readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} />
+              </Field>
+            )}
+          />
+          <Controller
+            control={control}
+            name="date_retour"
+            render={({ field }) => (
+              <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message} >
+                <DatePicker readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} min={watch('date_sortie') || undefined} />
+              </Field>
+            )}
+          />
+          <Controller
+            control={control}
+            name="heure_retour"
+            render={({ field }) => (
+              <Field label={t('ordres:form.returnTime')} >
+                <TimePicker readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} />
+              </Field>
+            )}
+          />
+          <Controller
+            control={control}
+            name="destination"
+            render={({ field }) => (
+              <Field
+                label={t('field.destination')}
+                hint={readOnly ? undefined : t('ordres:form.destinationHint')}
+                error={errors.destination?.message}
+                required={!readOnly}
+                full
+              >
+                <DestinationInput readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} />
+              </Field>
+            )}
+          />
           <Field label={t('field.direction')} required={!readOnly}>
             <Select disabled={readOnly} {...register('direction')}>
               {Object.entries(directionLabels).map(([value, label]) => (

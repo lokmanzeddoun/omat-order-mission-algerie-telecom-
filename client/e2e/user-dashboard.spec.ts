@@ -14,7 +14,7 @@ test.describe('agent dashboard', () => {
     const dialog = page.getByRole('dialog', { name: 'Nouvel ordre de mission' });
     await expect(dialog).toContainText('Agent concerné : vous-même');
     await dialog.getByLabel('Motif de la mission').fill('Mission agent E2E');
-    await dialog.getByLabel('Date de départ').fill(`${year}-11-02`);
+    await dialog.getByLabel('Date de départ').fill(`02/11/${year}`);
     await dialog.getByLabel('Heure de départ').fill('07:30');
     await dialog.getByLabel('Destination').fill(destination);
     await dialog.getByLabel('Moyen de transport').selectOption('TRANSPORT_ENTREPRISE');
