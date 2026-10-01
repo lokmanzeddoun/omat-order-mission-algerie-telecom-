@@ -10,7 +10,7 @@
     "EXECUTION_MAITRISE": "تنفيذ / تحكّم"
   },
   "transport": {
-    "SERVICE_CAR": "سيارة المصلحة",
+    "SERVICE_CAR": "سيارة الهيكل",
     "TRANSPORT_ENTREPRISE": "وسيلة نقل أخرى على عاتق المؤسسة",
     "TRANSPORT_EMPLOYEE": "وسيلة نقل على عاتق العامل",
     "PERSONAL_CAR": "سيارة شخصية (استعمال استثنائي، بطلب من المسؤول السلّمي)"

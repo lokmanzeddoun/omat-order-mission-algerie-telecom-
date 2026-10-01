@@ -9,9 +9,9 @@
     "user_one": "{{count}} utilisateur",
     "user_many": "{{count}} utilisateurs",
     "user_other": "{{count}} utilisateurs",
-    "structure_one": "{{count}} service",
-    "structure_many": "{{count}} services",
-    "structure_other": "{{count}} services"
+    "structure_one": "{{count}} structure",
+    "structure_many": "{{count}} structures",
+    "structure_other": "{{count}} structures"
   },
   "result": {
     "archived_one": "{{what}} archivé",

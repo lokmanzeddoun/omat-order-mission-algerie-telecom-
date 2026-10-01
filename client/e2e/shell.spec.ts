@@ -16,7 +16,7 @@ test('admin shell: header, exercice, role navigation, user menu', async ({ page 
   await expect(banner.getByText('Gestion des Ordres de Mission')).toBeVisible();
   await expect(banner.getByRole('combobox')).not.toHaveValue('');
   const nav = page.getByRole('navigation', { name: 'Navigation principale' });
-  for (const label of ['Décomptes', 'Ordres de mission', 'Utilisateurs', 'Services', 'Barème', 'Archive', 'Commentaires']) {
+  for (const label of ['Décomptes', 'Ordres de mission', 'Utilisateurs', 'Structures', 'Barème', 'Archive', 'Commentaires']) {
     await expect(nav.getByRole('link', { name: label })).toBeVisible();
   }
   await nav.getByRole('link', { name: 'Utilisateurs' }).click();
@@ -28,11 +28,11 @@ test('admin shell: header, exercice, role navigation, user menu', async ({ page 
   await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible();
 });
 
-test('admin shell: no Services entry, page redirects away', async ({ page }) => {
+test('admin shell: no Structures entry, page redirects away', async ({ page }) => {
   await login(page, 'admin');
   const nav = page.getByRole('navigation', { name: 'Navigation principale' });
   await expect(nav.getByRole('link', { name: 'Utilisateurs' })).toBeVisible();
-  await expect(nav.getByRole('link', { name: 'Services' })).toHaveCount(0);
+  await expect(nav.getByRole('link', { name: 'Structures' })).toHaveCount(0);
   await page.goto('/dashboard/admins/structures');
   await expect(page).not.toHaveURL(/structures$/);
 });

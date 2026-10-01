@@ -1,52 +1,52 @@
 {
   "description": "Structures organisationnelles auxquelles les employés sont rattachés.",
-  "add": "Ajouter un service",
-  "caption": "Liste des services",
-  "empty": "Aucun service",
-  "archiveTitle": "Archiver le service ?",
-  "archiveHint": "Le service <b>{{name}}</b> sera déplacé dans l’archive. Vous pourrez le désarchiver plus tard.",
+  "add": "Ajouter une structure",
+  "caption": "Liste des structures",
+  "empty": "Aucune structure",
+  "archiveTitle": "Archiver la structure ?",
+  "archiveHint": "La structure <b>{{name}}</b> sera déplacée dans l’archive. Vous pourrez la désarchiver plus tard.",
   "field": {
     "code": "Code",
-    "name": "Nom du service",
-    "parent": "Service parent",
+    "name": "Nom de la structure",
+    "parent": "Structure parente",
     "responsible": "Responsable",
     "path": "Chemin",
     "users": "Utilisateurs"
   },
   "form": {
     "title": {
-      "create": "Ajouter un service",
-      "edit": "Modifier le service",
-      "view": "Détails du service"
+      "create": "Ajouter une structure",
+      "edit": "Modifier la structure",
+      "view": "Détails de la structure"
     },
-    "parentNone": "Aucun (service racine)",
+    "parentNone": "Aucun (structure racine)",
     "responsibleNone": "Aucun responsable",
-    "responsibleHint": "Le responsable doit appartenir au service. Sans responsable, le service n’est visible que des administrateurs de ses services parents et des super administrateurs.",
-    "responsibleAfterCreate": "Le responsable se choisit après l’ajout d’un utilisateur au service.",
-    "childCodeHint": "Le code d’un sous-service est son chemin complet : {{path}}",
-    "renameHint": "Renommer un sous-service change le chemin de tous ses sous-services.",
+    "responsibleHint": "Le responsable doit appartenir à la structure. Sans responsable, la structure n’est visible que des administrateurs de ses structures parentes et des super administrateurs.",
+    "responsibleAfterCreate": "Le responsable se choisit après l’ajout d’un utilisateur à la structure.",
+    "childCodeHint": "Le code d’un sous-structure est son chemin complet : {{path}}",
+    "renameHint": "Renommer un sous-structure change le chemin de tous ses sous-structures.",
     "maxDepth": "Trois niveaux au maximum."
   },
   "errors": {
     "codeRequired": "Le code est obligatoire.",
-    "nameRequired": "Le nom du service est obligatoire.",
-    "parentUnknown": "Choisissez un service parent valide."
+    "nameRequired": "Le nom de la structure est obligatoire.",
+    "parentUnknown": "Choisissez un structure parente valide."
   },
   "move": {
     "action": "Déplacer",
-    "title": "Déplacer le service",
-    "description": "Le service <b>{{name}}</b> et tous ses sous-services seront déplacés ; leurs codes (chemins) changent, les utilisateurs suivent.",
-    "target": "Nouveau service parent",
+    "title": "Déplacer la structure",
+    "description": "La structure <b>{{name}}</b> et tous ses sous-structures seront déplacées ; leurs codes (chemins) changent, les utilisateurs suivent.",
+    "target": "Nouvelle structure parente",
     "choose": "— Choisir un emplacement —",
-    "asRoot": "Faire de ce service une racine",
+    "asRoot": "Faire de cette structure une racine",
     "rootCode": "Code de la racine (abréviation)",
     "rootCodeRequired": "Le code de la racine est obligatoire.",
-    "none": "Aucun emplacement possible : ce service et ses sous-services ne tiendraient pas dans trois niveaux.",
+    "none": "Aucun emplacement possible : cette structure et ses sous-structures ne tiendraient pas dans trois niveaux.",
     "confirm": "Déplacer"
   },
   "import": {
     "title": "Aperçu de l’import",
-    "description": "Rien n’a encore été enregistré. Colonnes acceptées : Code et Nom pour une racine, Chemin (« SDC / ERSTC / Section ») pour un sous-service.",
+    "description": "Rien n’a encore été enregistré. Colonnes acceptées : Code et Nom pour une racine, Chemin (« SDC / ERSTC / Section ») pour un sous-structure.",
     "willCreate": "À créer : {{count}}",
     "willUpdate": "À mettre à jour : {{count}}",
     "errors": "Erreurs : {{count}}",

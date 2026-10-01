@@ -5,20 +5,20 @@ test.describe('services (structures)', () => {
   test.beforeEach(async ({ page }) => {
     await login(page, 'superAdmin');
     await page.goto('dashboard/admins/structures');
-    await expect(page.getByRole('heading', { name: 'Services', level: 1 })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Structures', level: 1 })).toBeVisible();
   });
 
   test('add, view, edit and archive a service', async ({ page }) => {
     const code = `E2E${Date.now().toString().slice(-6)}`;
-    const table = page.getByRole('table', { name: 'Liste des services' });
+    const table = page.getByRole('table', { name: 'Liste des structures' });
 
     // Add
-    await page.getByRole('button', { name: 'Ajouter un service' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Ajouter un service' });
+    await page.getByRole('button', { name: 'Ajouter une structure' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Ajouter une structure' });
     await dialog.getByRole('button', { name: 'Ajouter' }).click();
     await expect(dialog.getByText('Le code est obligatoire.')).toBeVisible();
     await dialog.getByLabel('Code').fill(code);
-    await dialog.getByLabel('Nom du service').fill('Service de test E2E');
+    await dialog.getByLabel('Nom de la structure').fill('Service de test E2E');
     await dialog.getByRole('button', { name: 'Ajouter' }).click();
     await expect(dialog).toBeHidden();
 
@@ -29,15 +29,15 @@ test.describe('services (structures)', () => {
 
     // View (double-click)
     await row.dblclick();
-    const view = page.getByRole('dialog', { name: 'Détails du service' });
-    await expect(view.getByLabel('Nom du service')).toHaveValue('Service de test E2E');
+    const view = page.getByRole('dialog', { name: 'Détails de la structure' });
+    await expect(view.getByLabel('Nom de la structure')).toHaveValue('Service de test E2E');
     await view.getByRole('button', { name: 'Fermer' }).first().click();
 
     // Edit
     await row.getByRole('button', { name: 'Modifier' }).click();
-    const edit = page.getByRole('dialog', { name: 'Modifier le service' });
+    const edit = page.getByRole('dialog', { name: 'Modifier la structure' });
     await expect(edit.getByLabel('Code')).toHaveAttribute('readonly', '');
-    await edit.getByLabel('Nom du service').fill('Service de test E2E (modifié)');
+    await edit.getByLabel('Nom de la structure').fill('Service de test E2E (modifié)');
     await edit.getByRole('button', { name: 'Enregistrer' }).click();
     await expect(row).toContainText('(modifié)');
 

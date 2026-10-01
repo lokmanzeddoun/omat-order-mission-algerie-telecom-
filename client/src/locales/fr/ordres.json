@@ -36,7 +36,7 @@
     "forWhom": "Ordre de mission pour",
     "yourselfTitle": "Vous-même",
     "changeOwner": "Changer",
-    "searchOwner": "Rechercher par nom, matricule ou service…",
+    "searchOwner": "Rechercher par nom, matricule ou structure…",
     "ownersLoading": "Chargement…",
     "ownersFailed": "Impossible de charger la liste.",
     "ownerNoMatch": "Aucun résultat.",
@@ -58,7 +58,7 @@
       "returnAfterDeparture": "Le retour doit être postérieur au départ.",
       "maxDuration": "Un ordre de mission ne peut pas dépasser {{count}} jours.",
       "destinationRequired": "Choisissez au moins une destination dans la liste.",
-      "ownersRequired": "Sélectionnez au moins un agent."
+      "ownersRequired": "Sélectionnez au moins un employé."
     },
     "destinationPlaceholder": "Tapez pour rechercher (ex. Tlemcen)…",
     "destinationRemove": "Retirer {{name}}",
@@ -67,7 +67,7 @@
     "destinationLegacy": "L’ancienne destination « {{value}} » n’est pas reconnue : choisissez-la à nouveau dans la liste.",
     "selectMyStructure": "Sélectionner toute ma structure",
     "clearSelection": "Tout désélectionner",
-    "selectedCount": "Agents sélectionnés : {{count}}"
+    "selectedCount": "Employés sélectionnés : {{count}}"
   },
   "validate": {
     "title": "Valider l’ordre de mission",
@@ -99,8 +99,8 @@
     }
   },
   "batch": {
-    "userNotFound": "Agent introuvable.",
-    "outOfStructure": "Cet agent n’appartient pas à votre structure.",
-    "refused": "Aucun ordre créé : {{count}} agent(s) en erreur."
+    "userNotFound": "Employé introuvable.",
+    "outOfStructure": "Cet employé n’appartient pas à votre structure.",
+    "refused": "Aucun ordre créé : {{count}} employé(s) en erreur."
   }
 }

@@ -18,12 +18,12 @@
     "user_few": "{{count}} مستخدمين",
     "user_many": "{{count}} مستخدمًا",
     "user_other": "{{count}} مستخدم",
-    "structure_zero": "{{count}} مصلحة",
-    "structure_one": "مصلحة واحدة",
-    "structure_two": "مصلحتان",
-    "structure_few": "{{count}} مصالح",
-    "structure_many": "{{count}} مصلحة",
-    "structure_other": "{{count}} مصلحة"
+    "structure_zero": "{{count}} هيكل",
+    "structure_one": "هيكل واحد",
+    "structure_two": "هيكلان",
+    "structure_few": "{{count}} هياكل",
+    "structure_many": "{{count}} هيكل",
+    "structure_other": "{{count}} هيكل"
   },
   "result": {
     "archived": "تمت أرشفة {{what}}",
@@ -54,6 +54,6 @@
   "deleteHint": "هذه العملية لا رجعة فيها: ستُحذف العناصر من قاعدة البيانات. سيتم تجاهل العناصر التي لا تزال مرتبطة ببيانات أخرى.",
   "typeToConfirm": "اكتب {{expected}} للتأكيد",
   "rejectHint": "يُرسل سبب الرفض نفسه إلى كل موظف.",
-  "acceptHint": "سيتم إعلام الموظفون بالقبول.",
-  "messageToAgents": "رسالة إلى الموظفون (اختياري)"
+  "acceptHint": "سيتم إعلام الموظفين بالقبول.",
+  "messageToAgents": "رسالة إلى الموظفين (اختياري)"
 }

@@ -1,6 +1,6 @@
 {
   "title": "Intérim et remplacements",
-  "description": "Périodes pendant lesquelles un agent tient une catégorie supérieure ; le barème de cette catégorie s’applique aux ordres de mission dont le départ tombe dans la période.",
+  "description": "Périodes pendant lesquelles un employé tient une catégorie supérieure ; le barème de cette catégorie s’applique aux ordres de mission dont le départ tombe dans la période.",
   "add": "Ajouter une période",
   "caption": "Liste des périodes d’intérim et de remplacement",
   "empty": "Aucune période",
@@ -20,7 +20,7 @@
     "ended": "Terminée"
   },
   "field": {
-    "user": "Agent",
+    "user": "Employé",
     "kind": "Type",
     "target": "Catégorie visée",
     "start": "Début",
@@ -30,13 +30,13 @@
   },
   "form": {
     "title": "Ajouter une période",
-    "pickUser": "Choisir un agent",
+    "pickUser": "Choisir un employé",
     "pickTarget": "Choisir une catégorie",
     "capRemplacant": "Remplaçant : 4 mois au plus.",
     "capInterim": "Intérim : 12 mois au plus."
   },
   "errors": {
-    "userRequired": "Choisissez un agent.",
+    "userRequired": "Choisissez un employé.",
     "targetRequired": "Choisissez la catégorie visée.",
     "startRequired": "La date de début est obligatoire.",
     "endRequired": "La date de fin est obligatoire.",

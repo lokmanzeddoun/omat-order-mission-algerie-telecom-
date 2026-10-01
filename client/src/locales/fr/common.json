@@ -12,7 +12,7 @@
     "decomptes": "Décomptes",
     "ordres": "Ordres de mission",
     "users": "Utilisateurs",
-    "structures": "Services",
+    "structures": "Structures",
     "barem": "Barème",
     "gradeAssignments": "Intérim et remplacements",
     "archive": "Archive",
@@ -197,7 +197,7 @@
   },
   "scan": {
     "adminOnly": "Accès réservé aux administrateurs",
-    "adminOnlyHint": "Le détail d’un décompte n’est consultable que par le service gestionnaire. Vous pouvez suivre vos missions depuis votre tableau de bord.",
+    "adminOnlyHint": "Le détail d’un décompte n’est consultable que par la structure gestionnaire. Vous pouvez suivre vos missions depuis votre tableau de bord.",
     "myDashboard": "Mon tableau de bord"
   },
   "picker": {

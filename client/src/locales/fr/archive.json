@@ -6,7 +6,7 @@
     "mission": "l’ordre de mission N° {{n}}",
     "decompte": "le décompte N° {{n}}",
     "user": "le compte de {{name}}",
-    "structure": "le service {{name}}"
+    "structure": "la structure {{name}}"
   },
   "restored": "Élément désarchivé",
   "kind": "Type d’élément archivé",
@@ -16,7 +16,7 @@
     "missions": "Ordres de mission archivés",
     "decomptes": "Décomptes archivés",
     "users": "Utilisateurs archivés",
-    "structures": "Services archivés"
+    "structures": "Structures archivées"
   },
   "item": "Élément archivé",
   "restoreTitle": "Désarchiver ?",
