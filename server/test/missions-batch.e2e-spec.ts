@@ -78,6 +78,9 @@ describe('Multi-user ordres (e2e)', () => {
       expect(m.motif).toBe('Audit réseau');
       expect(m.transport).toBe('SERVICE_CAR');
       expect(m.status).toBe('INPROGRESS');
+      // Same grade snapshot as a single create (fixture users are CADRE, no period).
+      expect(m.effectiveCategory).toBe('CADRE');
+      expect(m.gradeAssignmentId).toBeNull();
     }
     // One ordre per page group: one entry per created mission, in creation order.
     expect(pdf).toHaveBeenCalledTimes(1);
@@ -111,6 +114,31 @@ describe('Multi-user ordres (e2e)', () => {
       expect.objectContaining({ matricule: 999999 }),
     ]);
     expect(res.body.errors[1].message).toMatch(/not found/);
+  });
+
+  it("snapshots each user's effective category like a single create (interim in force)", async () => {
+    const period = await prisma.gradeAssignment.create({
+      data: {
+        userId: PEOPLE.userA.matricule,
+        kind: 'INTERIM',
+        targetCategory: 'CADRE_SUPERIEUR',
+        startDate: new Date('2026-10-01'),
+        endDate: new Date('2026-12-31'),
+        decisionRef: 'DEC-1',
+      },
+    });
+    await request(server())
+      .post('/missions/batch')
+      .set(s.adminA.auth)
+      .send(payload([PEOPLE.userA.matricule, PEOPLE.adminA.matricule]))
+      .expect(201);
+    const rows = await batchRows();
+    const a = rows.find((m) => m.userId === PEOPLE.userA.matricule)!;
+    const b = rows.find((m) => m.userId === PEOPLE.adminA.matricule)!;
+    expect(a.effectiveCategory).toBe('CADRE_SUPERIEUR');
+    expect(a.gradeAssignmentId).toBe(period.id);
+    expect(b.effectiveCategory).toBe('CADRE');
+    expect(b.gradeAssignmentId).toBeNull();
   });
 
   it('lets a super admin target several structures', async () => {
