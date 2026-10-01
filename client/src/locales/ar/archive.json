@@ -1,12 +1,12 @@
 {
   "archivedAt": "تاريخ الأرشفة",
   "archivedBy": "أرشفه",
-  "attachedAgents": "الأعوان التابعون",
+  "attachedAgents": "الموظفون التابعون",
   "what": {
     "mission": "الأمر بمهمة رقم {{n}}",
     "decompte": "كشف المصاريف رقم {{n}}",
     "user": "حساب {{name}}",
-    "structure": "المصلحة {{name}}"
+    "structure": "الهيكل {{name}}"
   },
   "restored": "تمت استعادة العنصر من الأرشيف",
   "kind": "نوع العنصر المؤرشف",

@@ -35,7 +35,7 @@
     },
     "yourself": "أنت",
     "matriculeOf": "رقم التسجيل {{matricule}}",
-    "owner": "العون المعني: {{name}}",
+    "owner": "الموظف المعني: {{name}}",
     "create": "إنشاء الأمر بمهمة",
     "motif": "غرض المهمة",
     "departureDate": "تاريخ الذهاب",

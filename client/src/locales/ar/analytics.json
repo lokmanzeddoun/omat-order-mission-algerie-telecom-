@@ -8,7 +8,7 @@
   "kpis": "المؤشرات الرئيسية",
   "validatedShare": "مصادق عليها: {{pct}}",
   "acceptedShare": "مقبولة: {{pct}}",
-  "activeAgents": "الأعوان النشطون",
+  "activeAgents": "الموظفون النشطون",
   "average": "المتوسط: {{amount}}",
   "acceptedAmount": "المبلغ المقبول",
   "pendingDecomptes": "كشوف مصاريف قيد الانتظار",
