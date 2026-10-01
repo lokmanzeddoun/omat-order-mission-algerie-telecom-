@@ -625,6 +625,7 @@ async function main() {
         status: hasDecompte ? 'COMPLETED' : 'INPROGRESS',
         soft_delete: archived,
         userId: p.user.matricule,
+        effectiveCategory: p.user.category,
         exerciceId: exercices[p.year],
         createdAt,
       },
@@ -693,6 +694,11 @@ async function main() {
     const decompte = await prisma.decompte.create({
       data: {
         ...toColumns(counts),
+        barem_repas_nord: baremFor(p.user.category).repas_nord,
+        barem_hebergement_nord: baremFor(p.user.category).hebergement_nord,
+        barem_repas_sud: baremFor(p.user.category).repas_sud,
+        barem_hebergement_sud: baremFor(p.user.category).hebergement_sud,
+        barem_montant_km: baremFor(p.user.category).montant_km,
         parcours: q.parcours || null,
         fees_transport: q.fees,
         montant:

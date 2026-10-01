@@ -55,7 +55,10 @@ async function main() {
     ['ordre.pdf', () => pdf.renderOrdre(toOrdrePdfData(mission))],
     [
       'decompte.pdf',
-      () => pdf.renderDecompte(toDecomptePdfData(decompte, { montant_km: 10 })),
+      () =>
+        pdf.renderDecompte(
+          toDecomptePdfData({ ...decompte, barem_montant_km: 10 }),
+        ),
     ],
     // Overflow check: long free text must not push the décompte to a 2nd page.
     [

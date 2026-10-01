@@ -630,4 +630,85 @@ describe('DecompteService', () => {
       expect(tx.commentaire.createMany).not.toHaveBeenCalled();
     });
   });
+
+  describe('barème snapshot', () => {
+    const superieur = {
+      ...barem,
+      libell: Category.CADRE_SUPERIEUR,
+      repas_nord: 150,
+      hebergement_nord: 1500,
+      repas_sud: 250,
+      hebergement_sud: 2500,
+      montant_km: 12,
+    };
+
+    it("prices an ordre at the category frozen on it, not the agent's own", async () => {
+      db.mission.findUnique.mockResolvedValue(
+        mission({ effectiveCategory: Category.CADRE_SUPERIEUR }),
+      );
+      db.barem.findFirstOrThrow.mockResolvedValue(superieur);
+      await runCreate(overnightDto());
+      expect(db.barem.findFirstOrThrow).toHaveBeenCalledWith({
+        where: { libell: Category.CADRE_SUPERIEUR },
+      });
+      expect(createdData().montant).toBe(3 * 150 + 1 * 1500);
+    });
+
+    it("falls back to the agent's category on an ordre without a snapshot", async () => {
+      db.mission.findUnique.mockResolvedValue(
+        mission({ effectiveCategory: null }),
+      );
+      await runCreate(overnightDto());
+      expect(db.barem.findFirstOrThrow).toHaveBeenCalledWith({
+        where: { libell: Category.CADRE },
+      });
+    });
+
+    it('freezes the five rates it priced with on the décompte', async () => {
+      await runCreate(overnightDto());
+      expect(createdData()).toMatchObject({
+        barem_repas_nord: 100,
+        barem_hebergement_nord: 1000,
+        barem_repas_sud: 200,
+        barem_hebergement_sud: 2000,
+        barem_montant_km: 10,
+      });
+    });
+
+    it('re-freezes the rates when a pending décompte is edited', async () => {
+      db.decompte.findFirst.mockResolvedValue({
+        status: DecompteStatus.PENDING,
+        missionId: N_MISSION,
+        mission: mission({ effectiveCategory: Category.CADRE_SUPERIEUR }),
+      });
+      db.barem.findFirstOrThrow.mockResolvedValue(superieur);
+      await service.update(1, overnightDto(), user);
+      expect(db.decompte.update.mock.calls[0][0].data).toMatchObject({
+        barem_repas_nord: 150,
+        barem_montant_km: 12,
+      });
+    });
+
+    it('prints the PDF from the frozen rates without reading the live barème', async () => {
+      const renderDecompte = jest.fn().mockResolvedValue(Buffer.from(''));
+      (service as any).pdfService = { renderDecompte };
+      db.barem.findFirst = jest.fn();
+      db.decompte.findFirst.mockResolvedValue({
+        n_decompte: 1,
+        createdAt: new Date(),
+        barem_montant_km: 8,
+        parcours: 100,
+        montant: 800,
+        mission: {
+          ...mission({ transport: TransportType.PERSONAL_CAR }),
+          // The agent has since been promoted: it must not matter.
+          user: { matricule: 1, category: Category.CADRE_SUPERIEUR },
+        },
+      });
+      const res = { set: jest.fn(), send: jest.fn() } as any;
+      await service.downloadDecompte(1, res, user);
+      expect(db.barem.findFirst).not.toHaveBeenCalled();
+      expect(renderDecompte.mock.calls[0][0].indemnite).toBe('800,00');
+    });
+  });
 });

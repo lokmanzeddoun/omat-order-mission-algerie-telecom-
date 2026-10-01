@@ -1,4 +1,10 @@
-import { Mission, Structure, TransportType, User } from '@prisma/client';
+import {
+  GradeAssignmentKind,
+  Mission,
+  Structure,
+  TransportType,
+  User,
+} from '@prisma/client';
 import { fmtDate, fmtHour, fmtMinute, text } from '../format';
 import { scanUrl } from '../qr';
 
@@ -26,7 +32,21 @@ export interface OrdrePdfData {
 
 export type MissionWithOwner = Mission & {
   user: (User & { structure?: Structure | null }) | null;
+  /** The Interim/Remplaçant period the ordre was priced under, if any. */
+  gradeAssignment?: { kind: GradeAssignmentKind } | null;
 };
+
+const KIND_LABEL: Record<GradeAssignmentKind, string> = {
+  INTERIM: 'Intérim',
+  REMPLACANT: 'Remplaçant',
+};
+
+/** The grade as printed: tagged "(Intérim)" / "(Remplaçant)" when raised by a period. */
+export function gradeLabel(mission: MissionWithOwner): string {
+  const grade = text(mission.user?.grade);
+  const kind = mission.gradeAssignment?.kind;
+  return kind ? `${grade} (${KIND_LABEL[kind]})` : grade;
+}
 
 export function momentOf(val: Date | string | null | undefined): Moment {
   return { date: fmtDate(val), hour: fmtHour(val), minute: fmtMinute(val) };
@@ -43,7 +63,7 @@ export function toOrdrePdfData(mission: MissionWithOwner): OrdrePdfData {
     date: fmtDate(mission.createdAt ?? new Date()),
     matricule: text(owner?.matricule),
     fullname: text(`${text(owner?.nom)} ${text(owner?.prenom)}`),
-    grade: text(owner?.grade),
+    grade: gradeLabel(mission),
     service: text(owner?.structure?.name),
     destination: text(mission.destination),
     motif: text(mission.motif),

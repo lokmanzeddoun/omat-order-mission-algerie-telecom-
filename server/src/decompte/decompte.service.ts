@@ -12,6 +12,7 @@ import { ExercicesService } from 'src/exercices/exercices.service';
 import { CommentsService } from 'src/comments/comments.service';
 import { partitionIds } from 'src/common/bulk';
 import {
+  Barem,
   DecompteStatus,
   Direction,
   Mission,
@@ -34,6 +35,15 @@ import {
 import { assertMissionDuration } from '../missions/mission-duration';
 import { AccessPolicy } from 'src/common/policy/access-policy';
 import { AuditService } from 'src/audit/audit.service';
+
+/** The barème rates a décompte freezes when it is settled. */
+const rateColumns = (b: Barem) => ({
+  barem_repas_nord: b.repas_nord,
+  barem_hebergement_nord: b.hebergement_nord,
+  barem_repas_sud: b.repas_sud,
+  barem_hebergement_sud: b.hebergement_sud,
+  barem_montant_km: b.montant_km,
+});
 
 const directionLabel: Record<Direction, string> = {
   NORD: 'Nord',
@@ -105,7 +115,10 @@ export class DecompteService {
    */
   private async settle(
     dto: CreateDecompteDto,
-    mission: Pick<Mission, 'date_sortie' | 'direction' | 'transport'> & {
+    mission: Pick<
+      Mission,
+      'date_sortie' | 'direction' | 'transport' | 'effectiveCategory'
+    > & {
       user: Pick<User, 'category'>;
     },
   ) {
@@ -144,8 +157,10 @@ export class DecompteService {
         'Le nombre de repas et hebergement non valid',
       );
     }
-    // calculate the montant with the barème of the agent on the mission
-    const userCategory = mission.user.category;
+    // The barème comes from the category frozen on the ordre (the agent's own,
+    // or the Interim/Remplaçant one covering the start date); an ordre written
+    // before that snapshot existed falls back to the agent's category.
+    const userCategory = mission.effectiveCategory ?? mission.user.category;
     if (!userCategory) {
       throw new BadRequestException(
         "La requete ne peu pas terminne l'utilisateur n'a pas un categorie",
@@ -165,7 +180,7 @@ export class DecompteService {
       },
       categoryBarem,
     );
-    return { counts, montant };
+    return { counts, montant, rates: rateColumns(categoryBarem) };
   }
 
   async create(createDecompteDto: CreateDecompteDto, id: number, actor: User) {
@@ -194,7 +209,10 @@ export class DecompteService {
         'Seul un ordre de mission en cours, non archivé et sans décompte peut être validé',
       );
     }
-    const { counts, montant } = await this.settle(createDecompteDto, mission);
+    const { counts, montant, rates } = await this.settle(
+      createDecompteDto,
+      mission,
+    );
     const updateMission = this.databaseService.mission.update({
       where: {
         n_mission: id,
@@ -211,6 +229,7 @@ export class DecompteService {
     const createDecomte = this.databaseService.decompte.create({
       data: {
         ...toColumns(counts),
+        ...rates,
         montant: montant,
         parcours: createDecompteDto.parcours
           ? createDecompteDto.parcours
@@ -415,7 +434,7 @@ export class DecompteService {
         'Seul un décompte en attente peut être modifié',
       );
     }
-    const { counts, montant } = await this.settle(
+    const { counts, montant, rates } = await this.settle(
       updateDecompteDto,
       decompte.mission,
     );
@@ -437,6 +456,7 @@ export class DecompteService {
       },
       data: {
         ...toColumns(counts),
+        ...rates,
         montant: montant,
         parcours: updateDecompteDto.parcours
           ? updateDecompteDto.parcours
@@ -515,27 +535,23 @@ export class DecompteService {
     const decompte = await this.databaseService.decompte.findFirst({
       where: { n_decompte: id, ...this.accessPolicy.scopeDecomptes(actor) },
       include: {
-        mission: { include: { user: { include: { structure: true } } } },
+        mission: {
+          include: {
+            user: { include: { structure: true } },
+            gradeAssignment: { select: { kind: true } },
+          },
+        },
       },
     });
     if (!decompte) {
       throw new NotFoundException(`Décompte ${id} introuvable.`);
     }
 
-    // Km rate of the mission owner's category, for the "Indemnité Kilométrique" line.
-    const category = decompte.mission?.user?.category;
-    const barem = category
-      ? await this.databaseService.barem.findFirst({
-          where: { libell: category },
-          select: { montant_km: true },
-        })
-      : null;
-
+    // The PDF reads the barème rates frozen on the décompte, never the live
+    // ones: a later barème edit or category change cannot alter a reprint.
     let pdf: Buffer;
     try {
-      pdf = await this.pdfService.renderDecompte(
-        toDecomptePdfData(decompte, barem),
-      );
+      pdf = await this.pdfService.renderDecompte(toDecomptePdfData(decompte));
     } catch (e) {
       this.logger.error(`Failed to render décompte ${id}`, (e as Error).stack);
       throw new InternalServerErrorException(

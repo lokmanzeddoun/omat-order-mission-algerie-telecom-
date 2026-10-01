@@ -147,14 +147,37 @@ describe('toDecomptePdfData', () => {
   });
 
   it('computes the km indemnity only for the personal car', () => {
-    const km = { montant_km: 12 };
+    const km = { barem_montant_km: 12 };
     expect(
-      toDecomptePdfData(
-        decompte({}, mission({ transport: 'PERSONAL_CAR' })),
-        km,
-      ).indemnite,
+      toDecomptePdfData(decompte(km, mission({ transport: 'PERSONAL_CAR' })))
+        .indemnite,
     ).toBe('10 200,00');
-    expect(toDecomptePdfData(decompte(), km).indemnite).toBe('0,00');
+    expect(toDecomptePdfData(decompte(km)).indemnite).toBe('0,00');
+  });
+
+  it('prices the km indemnity from the rate frozen on the décompte', () => {
+    const personal = mission({ transport: 'PERSONAL_CAR' });
+    expect(
+      toDecomptePdfData(decompte({ barem_montant_km: 8 }, personal)).indemnite,
+    ).toBe('6 800,00');
+    expect(
+      toDecomptePdfData(decompte({ barem_montant_km: null }, personal))
+        .indemnite,
+    ).toBe('0,00');
+  });
+
+  it.each([
+    ['INTERIM', 'Chef de Service (Intérim)'],
+    ['REMPLACANT', 'Chef de Service (Remplaçant)'],
+  ])('tags the grade of a %s ordre on both PDFs', (kind, grade) => {
+    const m = mission({ gradeAssignment: { kind } });
+    expect(toOrdrePdfData(m).grade).toBe(grade);
+    expect(toDecomptePdfData(decompte({}, m)).grade).toBe(grade);
+  });
+
+  it('leaves the grade untouched without a period', () => {
+    expect(toOrdrePdfData(mission()).grade).toBe('Chef de Service');
+    expect(toDecomptePdfData(decompte()).grade).toBe('Chef de Service');
   });
 
   it('maps identity, reference and mission days', () => {

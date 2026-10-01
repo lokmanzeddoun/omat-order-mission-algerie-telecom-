@@ -1,6 +1,6 @@
-import { Barem, Decompte, Direction, TransportType } from '@prisma/client';
+import { Decompte, Direction, TransportType } from '@prisma/client';
 import { fmtAmount, fmtCount, fmtDate, missionDays, text } from '../format';
-import { MissionWithOwner, Moment, momentOf } from './ordre.mapper';
+import { gradeLabel, MissionWithOwner, Moment, momentOf } from './ordre.mapper';
 import { scanUrl } from '../qr';
 import {
   Counts,
@@ -58,9 +58,9 @@ function split(zones: Zone[], counts: Counts, item: keyof ZoneCounts): NordSud {
   return { nord: cell('nord'), sud: cell('sud') };
 }
 
+/** Prints what the décompte froze when it was settled, never live barème rates. */
 export function toDecomptePdfData(
   decompte: DecompteWithMission,
-  barem?: Pick<Barem, 'montant_km'> | null,
 ): DecomptePdfData {
   const mission = decompte.mission;
   const user = mission?.user;
@@ -69,8 +69,9 @@ export function toDecomptePdfData(
   const transport = mission?.transport ?? null;
 
   const kmIndemnity =
-    transport === TransportType.PERSONAL_CAR && barem
-      ? (decompte.parcours ?? 0) * barem.montant_km
+    transport === TransportType.PERSONAL_CAR &&
+    decompte.barem_montant_km != null
+      ? (decompte.parcours ?? 0) * decompte.barem_montant_km
       : 0;
 
   return {
@@ -78,7 +79,7 @@ export function toDecomptePdfData(
     date: fmtDate(decompte.createdAt ?? new Date()),
     matricule: text(user?.matricule),
     fullname: text(`${text(user?.nom)} ${text(user?.prenom)}`),
-    grade: text(user?.grade),
+    grade: mission ? gradeLabel(mission) : '',
     structure: text(user?.structure?.name),
     reference: text(mission?.n_mission),
     destination: text(mission?.destination),

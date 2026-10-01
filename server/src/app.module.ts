@@ -26,6 +26,7 @@ import { RolesGuard } from './roles/roles.guard';
 import { PolicyModule } from './common/policy/policy.module';
 import { PasswordChangeGuard } from './auth/guards/password-change.guard';
 import { AuditModule } from './audit/audit.module';
+import { GradeAssignmentsModule } from './grade-assignments/grade-assignments.module';
 @Module({
   imports: [
     // First: it loads .env, which pinoParams() below reads.
@@ -66,6 +67,7 @@ import { AuditModule } from './audit/audit.module';
     CommentsModule,
     ArchiveModule,
     AnalyticsModule,
+    GradeAssignmentsModule,
   ],
   controllers: [AppController],
   providers: [

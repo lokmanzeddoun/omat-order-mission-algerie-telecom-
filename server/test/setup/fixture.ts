@@ -41,6 +41,7 @@ export async function seedFixture(prisma: PrismaClient): Promise<Fixture> {
     prisma.commentaire.deleteMany(),
     prisma.decompte.deleteMany(),
     prisma.mission.deleteMany(),
+    prisma.gradeAssignment.deleteMany(),
     prisma.user.deleteMany(),
     prisma.structure.deleteMany(),
     prisma.barem.deleteMany(),

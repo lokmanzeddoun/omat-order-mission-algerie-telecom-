@@ -17,6 +17,7 @@ import { PdfService } from 'src/pdf/pdf.service';
 import { toOrdrePdfData } from 'src/pdf/mappers/ordre.mapper';
 import { AccessPolicy } from 'src/common/policy/access-policy';
 import { AuditService } from 'src/audit/audit.service';
+import { GradeAssignmentsService } from 'src/grade-assignments/grade-assignments.service';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { assertMissionDuration } from './mission-duration';
 @Injectable()
@@ -29,6 +30,7 @@ export class MissionsService {
     private readonly pdfService: PdfService,
     private readonly accessPolicy: AccessPolicy,
     private readonly audit: AuditService,
+    private readonly gradeAssignments: GradeAssignmentsService,
   ) {}
 
   async reopen(id: number, reason: string, actor: User) {
@@ -117,9 +119,28 @@ export class MissionsService {
         ? new Date((cleanDto as any).date_retour)
         : null,
     );
+    // Freeze the category (and Interim/Remplaçant period, if any) the barème
+    // will be read from: it depends on the start date, not on when it is settled.
+    const owner = await this.databaseService.user.findUniqueOrThrow({
+      where: { matricule: targetMatricule },
+      select: { category: true },
+    });
+    const snapshot = await this.gradeAssignments.snapshotFor(
+      targetMatricule,
+      owner.category,
+      (cleanDto as any).date_sortie
+        ? new Date((cleanDto as any).date_sortie)
+        : null,
+    );
     const res = await this.databaseService.mission.create({
       data: {
         ...cleanDto,
+        effectiveCategory: snapshot.effectiveCategory,
+        ...(snapshot.gradeAssignmentId
+          ? {
+              gradeAssignment: { connect: { id: snapshot.gradeAssignmentId } },
+            }
+          : {}),
         // userId: userData.matricule,
         // Expect full ISO datetime strings; store as Date
         date_sortie: (cleanDto as any).date_sortie
@@ -298,6 +319,8 @@ export class MissionsService {
         status: true,
         date_sortie: true,
         date_retour: true,
+        userId: true,
+        user: { select: { category: true } },
       },
     });
     if (!existing) {
@@ -372,10 +395,28 @@ export class MissionsService {
       ...rest
     } = updateMissionDto as any;
 
+    // The frozen category follows the start date: re-resolve when it moves.
+    const restart =
+      dateSortie && dateSortie.getTime() !== existing.date_sortie?.getTime()
+        ? await this.gradeAssignments.snapshotFor(
+            existing.userId,
+            existing.user.category,
+            dateSortie,
+          )
+        : null;
+
     return this.databaseService.mission.update({
       where: { n_mission: id },
       data: {
         ...rest,
+        ...(restart
+          ? {
+              effectiveCategory: restart.effectiveCategory,
+              gradeAssignment: restart.gradeAssignmentId
+                ? { connect: { id: restart.gradeAssignmentId } }
+                : { disconnect: true },
+            }
+          : {}),
         ...(rest.transport !== undefined
           ? { transport: mapTransport(rest.transport) }
           : {}),
@@ -428,7 +469,10 @@ export class MissionsService {
   private async buildOrdrePdf(n_mission: number): Promise<Buffer> {
     const mission = await this.databaseService.mission.findUnique({
       where: { n_mission },
-      include: { user: { include: { structure: true } } },
+      include: {
+        user: { include: { structure: true } },
+        gradeAssignment: { select: { kind: true } },
+      },
     });
     if (!mission) {
       throw new NotFoundException(`Ordre de mission ${n_mission} introuvable.`);

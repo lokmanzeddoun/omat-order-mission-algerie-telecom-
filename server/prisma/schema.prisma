@@ -31,6 +31,8 @@ model User {
   archivedUsers User[] @relation("UserArchivedBy")
   archivedStructures Structure[] @relation("StructureArchivedBy")
   archivedMissions Mission[] @relation("MissionArchivedBy")
+  gradeAssignments GradeAssignment[] @relation("GradeAssignmentUser")
+  gradeAssignmentsCreated GradeAssignment[] @relation("GradeAssignmentCreatedBy")
   archivedDecomptes Decompte[] @relation("DecompteArchivedBy")
   // Sessions & credentials (ADR 0002)
   sessions Session[]
@@ -105,6 +107,13 @@ model Mission {
   validatedById Int?
   validatedAt DateTime?
   decompte Decompte[]
+  // Category the barème is read from, frozen at creation from the agent's
+  // category and any Interim/Remplaçant period covering date_sortie.
+  // Null only on a row written before the snapshot existed (migration backfills those).
+  effectiveCategory Category?
+  // The period that raised effectiveCategory; null when the agent's own category applies.
+  gradeAssignment GradeAssignment? @relation(fields: [gradeAssignmentId], references: [id])
+  gradeAssignmentId Int?
   // Exercice relation
   exercice   Exercice? @relation(fields: [exerciceId], references: [id])
   exerciceId Int?
@@ -138,6 +147,13 @@ model Decompte {
   mission Mission @relation(fields: [missionId],references: [n_mission])
   missionId Int
   messages Commentaire[]
+  // Barème rates frozen when the décompte is settled, so a later barème edit
+  // or category change never moves an existing amount. Null only on legacy rows.
+  barem_repas_nord Float?
+  barem_hebergement_nord Float?
+  barem_repas_sud Float?
+  barem_hebergement_sud Float?
+  barem_montant_km Float?
   // Exercice relation (denormalized for easier querying)
   exercice   Exercice? @relation(fields: [exerciceId], references: [id])
   exerciceId Int?
@@ -166,6 +182,28 @@ model Barem {
   repas_sud Float
   hebergement_sud Float
   montant_km Float
+}
+
+/// A bounded period during which a user holds a higher category (CONTEXT.md:
+/// Intérim / Remplaçant). Never deleted, only ended early (`endedAt`); the
+/// user's own `category` is never edited.
+model GradeAssignment {
+  id Int @id @default(autoincrement())
+  user User @relation("GradeAssignmentUser", fields: [userId], references: [matricule])
+  userId Int
+  kind GradeAssignmentKind
+  targetCategory Category
+  // Calendar days (Africa/Algiers), both inclusive.
+  startDate DateTime @db.Date
+  endDate DateTime @db.Date
+  decisionRef String
+  endedAt DateTime?
+  createdAt DateTime @default(now())
+  createdBy User? @relation("GradeAssignmentCreatedBy", fields: [createdById], references: [matricule], onDelete: SetNull)
+  createdById Int?
+  missions Mission[]
+
+  @@index([userId, startDate])
 }
 
 model Exercice {
@@ -197,6 +235,11 @@ model AuditLog {
   @@index([entity, entityId, at])
 }
 
+
+enum GradeAssignmentKind {
+  INTERIM
+  REMPLACANT
+}
 
 enum Role {
   USER
