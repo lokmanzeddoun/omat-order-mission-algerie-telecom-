@@ -142,7 +142,7 @@ test.describe('ordres de mission', () => {
     await dialog.getByRole('checkbox', { name: /Mansouri/ }).first().check();
     await search.fill('benali');
     await dialog.getByRole('checkbox', { name: /Benali/ }).first().check();
-    await expect(dialog.getByText('Agents sélectionnés : 2')).toBeVisible();
+    await expect(dialog.getByText('Employés sélectionnés : 2')).toBeVisible();
 
     await dialog.getByLabel('Motif de la mission').fill('Mission en lot E2E');
     await dialog.getByLabel('Date de départ').fill(`01/10/${year}`);

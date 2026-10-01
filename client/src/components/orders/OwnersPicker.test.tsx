@@ -35,14 +35,14 @@ describe('OwnersPicker', () => {
     render(<Harness />);
     expect(await checkbox(/Karim Benali/)).not.toBeChecked();
     expect(screen.queryByRole('checkbox', { name: /Zed Inactif/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Agents sélectionnés : 1')).toBeInTheDocument();
+    expect(screen.getByText('Employés sélectionnés : 1')).toBeInTheDocument();
 
     await userEvent.click(await checkbox(/Karim Benali/));
     expect(await checkbox(/Karim Benali/)).toBeChecked();
-    expect(screen.getByText('Agents sélectionnés : 2')).toBeInTheDocument();
+    expect(screen.getByText('Employés sélectionnés : 2')).toBeInTheDocument();
 
     await userEvent.click(await checkbox(/Karim Benali/));
-    expect(screen.getByText('Agents sélectionnés : 1')).toBeInTheDocument();
+    expect(screen.getByText('Employés sélectionnés : 1')).toBeInTheDocument();
   });
 
   it('searches by name, matricule or structure, ignoring accents', async () => {
@@ -64,15 +64,15 @@ describe('OwnersPicker', () => {
     expect(await checkbox(/Vous-même/)).toBeChecked();
     expect(await checkbox(/Omar Dahmani/)).toBeChecked(); // kept: the shortcut adds, never removes
     expect(screen.queryByRole('checkbox', { name: /Zed Inactif/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Agents sélectionnés : 4')).toBeInTheDocument();
+    expect(screen.getByText('Employés sélectionnés : 4')).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Tout désélectionner' }));
-    expect(screen.getByText('Agents sélectionnés : 0')).toBeInTheDocument();
+    expect(screen.getByText('Employés sélectionnés : 0')).toBeInTheDocument();
   });
 
   it('shows the server error under the matching user', async () => {
-    render(<Harness errors={{ 4: 'Cet agent n’appartient pas à votre structure.' }} />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Cet agent n’appartient pas à votre structure.');
+    render(<Harness errors={{ 4: 'Cet employé n’appartient pas à votre structure.' }} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cet employé n’appartient pas à votre structure.');
   });
 });
 
@@ -103,7 +103,7 @@ describe('MissionFormDialog multi-user creation', () => {
 
   it('submits one batch for several users, then shows per-user errors', { timeout: 30000 }, async () => {
     const onSubmit = vi.fn();
-    const onSubmitBatch = vi.fn().mockResolvedValue({ 4: 'Cet agent n’appartient pas à votre structure.' });
+    const onSubmitBatch = vi.fn().mockResolvedValue({ 4: 'Cet employé n’appartient pas à votre structure.' });
     open(admin, { onSubmit, onSubmitBatch });
     await fill();
     await userEvent.click(await screen.findByRole('checkbox', { name: /Karim Benali/ }));
@@ -115,7 +115,7 @@ describe('MissionFormDialog multi-user creation', () => {
     const [mission, matricules] = onSubmitBatch.mock.calls[0];
     expect(matricules.sort()).toEqual([1, 2, 4]);
     expect(mission).toEqual(expect.objectContaining({ destination: 'Tlemcen', date_sortie: '2026-03-10', motif: 'Audit' }));
-    expect(await screen.findByText('Cet agent n’appartient pas à votre structure.')).toBeInTheDocument();
+    expect(await screen.findByText('Cet employé n’appartient pas à votre structure.')).toBeInTheDocument();
   });
 
   it('keeps the single flow when only one person is selected', { timeout: 30000 }, async () => {
@@ -138,7 +138,7 @@ describe('MissionFormDialog multi-user creation', () => {
     await fill();
     await userEvent.click(await screen.findByRole('checkbox', { name: /Vous-même/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Créer l’ordre de mission' }));
-    expect(await screen.findByText('Sélectionnez au moins un agent.')).toBeInTheDocument();
+    expect(await screen.findByText('Sélectionnez au moins un employé.')).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 

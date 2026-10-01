@@ -36,6 +36,6 @@ describe('addOrdersBatch', () => {
     const result = await addOrdersBatch(order, [1, 4, 9], 'tok')(vi.fn());
 
     expect(result.ok).toBe(false);
-    expect(result.errors).toEqual({ 4: 'Cet agent n’appartient pas à votre structure.', 9: 'Agent introuvable.' });
+    expect(result.errors).toEqual({ 4: 'Cet employé n’appartient pas à votre structure.', 9: 'Employé introuvable.' });
   });
 });
