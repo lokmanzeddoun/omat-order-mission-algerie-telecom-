@@ -12,7 +12,7 @@ import {
 import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
-import { uploadSpreadsheet } from 'components/common/importFile';
+import { importErrorsOf, uploadSpreadsheet, type ImportRowError } from 'components/common/importFile';
 import { IStructure } from './structure.reducer';
 
 export const getAllStructures = () => async (dispatch: AppDispatch) => {
@@ -35,13 +35,15 @@ export const getAllStructures = () => async (dispatch: AppDispatch) => {
 
 export const addStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   // Sanitize empty strings - trim whitespace
-  const sanitizedStructure = {
-    code: structure.code?.trim() || '',
+  const parentCode = structure.parentCode?.trim() || undefined;
+  const sanitizedStructure: { code?: string; parentCode?: string; name: string } = {
+    // A child's code is derived from its parent's path by the server.
+    ...(parentCode ? { parentCode } : { code: structure.code?.trim() || '' }),
     name: structure.name?.trim() || '',
   };
 
   // Validate required fields
-  if (!sanitizedStructure.code || !sanitizedStructure.name) {
+  if ((!parentCode && !sanitizedStructure.code) || !sanitizedStructure.name) {
     dispatch(setAlert({ msg: i18n.t('toasts:structureCodeNameRequired'), type: AlertTypes.ERROR }));
     return;
   }
@@ -116,7 +118,7 @@ export const exportStructures = () => async (dispatch: AppDispatch) => {
 
 export const archiveStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   try {
-    const res = await http.patch(`/structures/${structure.code}/archive`);
+    const res = await http.patch(`/structures/${encodeURIComponent(structure.code)}/archive`);
     if (res) {
       await dispatch(setAlert({ msg: i18n.t('toasts:structureArchived'), type: AlertTypes.SUCCESS }));
       await dispatch(removeStructure(structure.code));
@@ -134,8 +136,8 @@ export const archiveStructure = (structure: IStructure) => async (dispatch: AppD
 export const updateStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   // Sanitize empty strings - trim whitespace
   const sanitizedStructure = {
-    code: structure.code?.trim() || '',
     name: structure.name?.trim() || '',
+    responsibleUserId: structure.responsibleUserId ?? null,
   };
 
   // Validate required fields
@@ -145,7 +147,7 @@ export const updateStructure = (structure: IStructure) => async (dispatch: AppDi
   }
 
   try {
-    const res = await http.patch(`/structures/${sanitizedStructure.code}`, sanitizedStructure);
+    const res = await http.patch(`/structures/${encodeURIComponent(structure.code)}`, sanitizedStructure);
     if (res) {
       await dispatch(setAlert({ msg: i18n.t('toasts:structureUpdated'), type: AlertTypes.SUCCESS }));
       dispatch(editStructure(res.data));
@@ -157,5 +159,44 @@ export const updateStructure = (structure: IStructure) => async (dispatch: AppDi
 
     dispatch(setAlert({ msg: errorMessage, type: AlertTypes.ERROR }));
     console.error('Error:', errorMessage);
+  }
+};
+
+/** Moves a structure (and its subtree) under `parentCode`, or to the root with `code` (super admin). */
+export const moveStructure =
+  (structure: IStructure, target: { parentCode: string | null; code?: string }) => async (dispatch: AppDispatch) => {
+    try {
+      await http.patch(`/structures/${encodeURIComponent(structure.code)}/move`, target);
+      dispatch(setAlert({ msg: i18n.t('toasts:structureMoved'), type: AlertTypes.SUCCESS }));
+      return true;
+    } catch (error) {
+      dispatch(setAlert({ msg: extractErrorMessage(error), type: AlertTypes.ERROR }));
+      return false;
+    }
+  };
+
+export interface StructureImportReport {
+  dryRun: true;
+  willCreate: number;
+  willUpdate: number;
+  errors: ImportRowError[];
+  rows: { row: number; code: string; action: 'create' | 'update' }[];
+}
+
+/** Dry run of an import: nothing is written, the report says what would happen. */
+export const previewStructureImport = (file: File) => async (dispatch: AppDispatch) => {
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const { data } = await http.post<StructureImportReport>('/structures/upload?dryRun=true', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data;
+  } catch (error) {
+    // A file the server can't even read (bad format, missing columns) comes back as per-row errors too.
+    const errors = importErrorsOf(error);
+    if (errors) return { dryRun: true, willCreate: 0, willUpdate: 0, errors, rows: [] } as StructureImportReport;
+    dispatch(setAlert({ msg: extractErrorMessage(error), type: AlertTypes.ERROR }));
+    return null;
   }
 };

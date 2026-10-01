@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
+import { sortTree, structureLabel } from 'helpers/structureTree';
 import { getAllStructures } from 'components/structures/structure.thunk';
 import type { IStructure } from 'components/structures/structure.reducer';
 import { Button, Dialog, Field, FormGrid, Input, Select } from 'components/ui';
@@ -82,17 +83,20 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
   // The API only lets super administrators change a role; admins may still change the category.
   const actor = useSelector((s: RootState) => s.auth.user);
   const isSuperAdmin = actor.role === Role.super_admin;
-  // A plain admin can only create regular users inside their own service (the API enforces it too).
+  // A plain admin can only create regular users, in their own service or a sub-service (the API
+  // enforces it too; it already lists only those structures to them).
   const adminScoped = mode === 'create' && actor.role === Role.admin;
   const ownService = actor.serviceId ?? '';
   const roleLocked = readOnly || adminScoped || (mode === 'edit' && !isSuperAdmin);
   const schema = useMemo(() => schemaFor(mode, t), [mode, t]);
+  const ownServiceListed = structures.some((s) => s.code === ownService);
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormState>({ resolver: zodResolver(schema), defaultValues: EMPTY });
 
@@ -107,9 +111,15 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
         ...initial,
         matricule: initial?.matricule ? String(initial.matricule) : '',
         ...(adminScoped ? { role: 'USER' as const } : {}),
-        serviceId: adminScoped ? ownService : (initial?.serviceId ?? ''),
+        // An admin starts on their own service when the API lists it to them.
+        serviceId: initial?.serviceId ?? '',
       });
-  }, [open, initial, reset, adminScoped, ownService]);
+  }, [open, initial, reset, adminScoped]);
+
+  // An admin starts on their own service once the API has listed it to them (it only does when it has a responsible).
+  useEffect(() => {
+    if (open && adminScoped && ownServiceListed && !getValues('serviceId')) setValue('serviceId', ownService);
+  }, [open, adminScoped, ownServiceListed, ownService, getValues, setValue]);
 
   // A native <select> drops a value whose <option> is not rendered yet. When the services
   // arrive after the form opened, re-apply only the service (never the whole form, which
@@ -143,7 +153,7 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
           onSubmit({
             ...v,
             matricule: Number(v.matricule),
-            ...(adminScoped ? { role: 'USER' as const, serviceId: ownService } : {}),
+            ...(adminScoped ? { role: 'USER' as const } : {}),
           }),
         )} className="flex flex-col gap-4">
         <FormGrid>
@@ -181,15 +191,13 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
             <Input readOnly={readOnly} {...register('grade')} />
           </Field>
           <Field label={t('users:field.service')} error={errors.serviceId?.message} required={mode === 'create'}>
-            <Select disabled={readOnly || adminScoped} {...register('serviceId')}>
+            <Select disabled={readOnly} {...register('serviceId')}>
               <option value="">{t('users:form.chooseService')}</option>
-              {structures
-                .filter((s) => !adminScoped || s.code === ownService)
-                .map((s) => (
-                  <option key={s.code} value={s.code}>
-                    {s.name}
-                  </option>
-                ))}
+              {sortTree(structures).map((s) => (
+                <option key={s.code} value={s.code}>
+                  {structureLabel(s)}
+                </option>
+              ))}
             </Select>
           </Field>
         </FormGrid>

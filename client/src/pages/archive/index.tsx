@@ -1,3 +1,4 @@
+import { structureLabel } from 'helpers/structureTree';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -58,7 +59,7 @@ type User = Audit & {
   role: string;
   category: string;
   grade: string;
-  structure?: { name: string } | null;
+  structure?: { name: string; code?: string; parentCode?: string | null } | null;
 };
 type Structure = Audit & { code: string; name: string; users?: unknown[] };
 
@@ -98,7 +99,7 @@ const columnsFor = (t: TFunction) => {
       { id: 'nom', header: t('users:field.nom') },
       { id: 'prenom', header: t('users:field.prenom') },
       { id: 'email', header: t('auth.email') },
-      { id: 'service', header: t('users:field.service'), accessor: (u: User) => u.structure?.name ?? '' },
+      { id: 'service', header: t('users:field.service'), accessor: (u: User) => (u.structure ? structureLabel({ code: u.structure.code ?? '', ...u.structure }) : '') },
       archivedAt,
       archivedBy,
     ] as DataColumn<User>[],
@@ -162,7 +163,7 @@ function details(t: TFunction, kind: Kind, item: Item) {
         { label: t('users:field.role'), value: roleLabels[u.role] ?? u.role },
         { label: t('users:field.category'), value: categoryLabels[u.category] ?? u.category },
         { label: t('users:field.grade'), value: u.grade },
-        { label: t('users:field.service'), value: u.structure?.name },
+        { label: t('users:field.service'), value: u.structure ? structureLabel({ code: u.structure.code ?? '', ...u.structure }) : undefined },
         ...audit(u),
       ];
     }

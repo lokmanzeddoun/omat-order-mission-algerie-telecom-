@@ -7,17 +7,58 @@
   "archiveHint": "Le service <b>{{name}}</b> sera déplacé dans l’archive. Vous pourrez le désarchiver plus tard.",
   "field": {
     "code": "Code",
-    "name": "Nom du service"
+    "name": "Nom du service",
+    "parent": "Service parent",
+    "responsible": "Responsable",
+    "path": "Chemin",
+    "users": "Utilisateurs"
   },
   "form": {
     "title": {
       "create": "Ajouter un service",
       "edit": "Modifier le service",
       "view": "Détails du service"
-    }
+    },
+    "parentNone": "Aucun (service racine)",
+    "responsibleNone": "Aucun responsable",
+    "responsibleHint": "Le responsable doit appartenir au service. Sans responsable, le service n’est visible que des administrateurs de ses services parents et des super administrateurs.",
+    "responsibleAfterCreate": "Le responsable se choisit après l’ajout d’un utilisateur au service.",
+    "childCodeHint": "Le code d’un sous-service est son chemin complet : {{path}}",
+    "renameHint": "Renommer un sous-service change le chemin de tous ses sous-services.",
+    "maxDepth": "Trois niveaux au maximum."
   },
   "errors": {
     "codeRequired": "Le code est obligatoire.",
-    "nameRequired": "Le nom du service est obligatoire."
+    "nameRequired": "Le nom du service est obligatoire.",
+    "parentUnknown": "Choisissez un service parent valide."
+  },
+  "move": {
+    "action": "Déplacer",
+    "title": "Déplacer le service",
+    "description": "Le service <b>{{name}}</b> et tous ses sous-services seront déplacés ; leurs codes (chemins) changent, les utilisateurs suivent.",
+    "target": "Nouveau service parent",
+    "choose": "— Choisir un emplacement —",
+    "asRoot": "Faire de ce service une racine",
+    "rootCode": "Code de la racine (abréviation)",
+    "rootCodeRequired": "Le code de la racine est obligatoire.",
+    "none": "Aucun emplacement possible : ce service et ses sous-services ne tiendraient pas dans trois niveaux.",
+    "confirm": "Déplacer"
+  },
+  "import": {
+    "title": "Aperçu de l’import",
+    "description": "Rien n’a encore été enregistré. Colonnes acceptées : Code et Nom pour une racine, Chemin (« SDC / ERSTC / Section ») pour un sous-service.",
+    "willCreate": "À créer : {{count}}",
+    "willUpdate": "À mettre à jour : {{count}}",
+    "errors": "Erreurs : {{count}}",
+    "apply": "Appliquer l’import",
+    "blocked": "Corrigez le fichier puis réimportez-le : aucune ligne n’est appliquée tant qu’il reste des erreurs.",
+    "row": "Ligne",
+    "column": "Colonne",
+    "value": "Valeur",
+    "problem": "Problème",
+    "code": "Code",
+    "action": "Action",
+    "create": "Création",
+    "update": "Mise à jour"
   }
 }

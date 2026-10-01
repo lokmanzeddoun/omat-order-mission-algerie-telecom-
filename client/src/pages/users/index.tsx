@@ -38,6 +38,7 @@ import {
 import { categoryLabels, roleLabels, toOptions } from 'constants/labels';
 import dayjs from 'helpers/date';
 import paths from 'routes/paths';
+import { structureLabel } from 'helpers/structureTree';
 
 interface UserRow {
   matricule: number;
@@ -50,7 +51,7 @@ interface UserRow {
   serviceId?: string | null;
   status?: string;
   userSince?: string;
-  structure?: { name: string; code?: string } | null;
+  structure?: { name: string; code?: string; parentCode?: string | null } | null;
 }
 
 // Built from `t` and memoized on it, so the table only rebuilds its columns when the language changes.
@@ -59,7 +60,7 @@ const userColumns = (t: TFunction): DataColumn<UserRow>[] => [
   { id: 'nom', header: t('users:field.nom'), alwaysVisible: true },
   { id: 'prenom', header: t('users:field.prenom') },
   { id: 'email', header: t('auth.email') },
-  { id: 'service', header: t('users:field.service'), accessor: (u) => u.structure?.name ?? '' },
+  { id: 'service', header: t('users:field.service'), accessor: (u) => (u.structure ? structureLabel({ code: u.structure.code ?? '', ...u.structure }) : '') },
   { id: 'grade', header: t('users:field.grade') },
   {
     id: 'category',

@@ -19,7 +19,7 @@
   "passwordPersonal": "Le mot de passe ne doit pas contenir votre nom, votre e-mail ou votre matricule.",
   "passwordCommon": "Ce mot de passe est trop courant ; choisissez-en un autre.",
   "selfApproval": "Refusé : vous ne pouvez pas valider ni décider sur votre propre dossier.",
-  "adminCreateScope": "Refusé : un administrateur ne peut créer que des employés de sa structure.",
+  "adminCreateScope": "Refusé : un administrateur ne peut créer que des employés de sa structure ou de ses sous-structures.",
   "roleChange": "Refusé : seul le super administrateur peut changer un rôle.",
   "otherStructure": "Refusé : cet utilisateur appartient à une autre structure.",
   "alreadyExists": "Un élément avec ces informations existe déjà.",

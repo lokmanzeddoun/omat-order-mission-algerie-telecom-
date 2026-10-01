@@ -39,5 +39,6 @@
   "commentAdded": "تمت إضافة التعليق بنجاح",
   "missionsLoadFailed": "تعذّر تحميل الأوامر بمهمة.",
   "decomptesLoadFailed": "تعذّر تحميل كشوف المصاريف.",
-  "recapExported": "تم تصدير الملخص بنجاح"
+  "recapExported": "تم تصدير الملخص بنجاح",
+  "structureMoved": "تم نقل المصلحة بنجاح"
 }

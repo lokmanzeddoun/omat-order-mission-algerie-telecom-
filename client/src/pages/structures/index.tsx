@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Archive, Download, Pencil, Plus, RefreshCw } from 'lucide-react';
+import { Archive, Download, MoveRight, Pencil, Plus, RefreshCw } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import {
@@ -10,11 +10,17 @@ import {
   archiveStructure,
   exportStructures,
   getAllStructures,
+  moveStructure,
+  previewStructureImport,
   updateStructure,
   uploadStructure,
+  type StructureImportReport,
 } from 'components/structures/structure.thunk';
 import type { IStructure } from 'components/structures/structure.reducer';
 import StructureFormDialog, { type StructureFormMode } from 'components/structures/StructureFormDialog';
+import StructureMoveDialog from 'components/structures/StructureMoveDialog';
+import StructureImportPreviewDialog from 'components/structures/StructureImportPreviewDialog';
+import { depthOf, sortTree } from 'helpers/structureTree';
 import FileImportButton from 'components/common/FileImportButton';
 import { ImportErrorsDialog } from 'components/common/ImportErrorsDialog';
 import type { ImportRowError } from 'components/common/importFile';
@@ -23,8 +29,24 @@ import { Button, ConfirmDialog, DataTable, IconButton, PageHeader, SummaryStrip,
 import paths from 'routes/paths';
 
 const structureColumns = (t: TFunction): DataColumn<IStructure>[] => [
-  { id: 'code', header: t('structures:field.code'), width: 160, cell: (s) => <span className="font-medium tabular-nums">{s.code}</span>, alwaysVisible: true },
-  { id: 'name', header: t('structures:field.name'), alwaysVisible: true },
+  {
+    id: 'name',
+    header: t('structures:field.name'),
+    // The tree: each level is indented; a root shows its full name, a child its own segment.
+    cell: (s) => (
+      <span className="inline-block" style={{ paddingInlineStart: `${(depthOf(s.code) - 1) * 1.25}rem` }}>
+        {s.name}
+      </span>
+    ),
+    accessor: (s) => s.displayName ?? s.name,
+    alwaysVisible: true,
+  },
+  { id: 'code', header: t('structures:field.code'), width: 280, cell: (s) => <span className="font-medium tabular-nums" dir="ltr">{s.code}</span>, alwaysVisible: true },
+  {
+    id: 'responsible',
+    header: t('structures:field.responsible'),
+    accessor: (s) => (s.responsible ? `${s.responsible.nom} ${s.responsible.prenom}` : ''),
+  },
 ];
 
 export default function StructuresPage() {
@@ -34,6 +56,9 @@ export default function StructuresPage() {
   const [form, setForm] = useState<{ mode: StructureFormMode; item: IStructure | null } | null>(null);
   const [toArchive, setToArchive] = useState<IStructure | null>(null);
   const [importErrors, setImportErrors] = useState<ImportRowError[] | null>(null);
+  const [toMove, setToMove] = useState<IStructure | null>(null);
+  const [preview, setPreview] = useState<{ report: StructureImportReport; file: File } | null>(null);
+  const tree = useMemo(() => sortTree(structures), [structures]);
   const columns = useMemo(() => structureColumns(t), [t]);
 
   useEffect(() => {
@@ -45,7 +70,7 @@ export default function StructuresPage() {
     entity: 'structures',
     mode: 'archive',
     idOf: (s) => s.code,
-    labelOf: (s) => `${s.name} (${s.code})`,
+    labelOf: (s) => `${s.displayName ?? s.name} (${s.code})`,
     noun: 'structure',
     onDone: refresh,
   });
@@ -55,6 +80,22 @@ export default function StructuresPage() {
     else await dispatch(addStructure(data));
     await refresh();
     setForm(null);
+  };
+
+  const confirmMove = async (target: { parentCode: string | null; code?: string }) => {
+    if (!toMove) return;
+    if (await dispatch(moveStructure(toMove, target))) {
+      await refresh();
+      setToMove(null);
+    }
+  };
+
+  const applyImport = async () => {
+    if (!preview) return;
+    const result = await dispatch(uploadStructure(preview.file));
+    setPreview(null);
+    if (result && !result.ok) setImportErrors(result.errors);
+    else if (result) await refresh();
   };
 
   const confirmArchive = async () => {
@@ -78,9 +119,9 @@ export default function StructuresPage() {
             <FileImportButton
               accept=".xlsx,.csv"
               onFile={async (file) => {
-                const result = await dispatch(uploadStructure(file));
-                if (result && !result.ok) setImportErrors(result.errors);
-                else if (result) await refresh();
+                // Dry run first: the report says what would change before anything is written.
+                const report = await dispatch(previewStructureImport(file));
+                if (report) setPreview({ report, file });
               }}
             />
             <Button onClick={() => dispatch(exportStructures())}>
@@ -101,14 +142,17 @@ export default function StructuresPage() {
         caption={t('structures:caption')}
         tableId="structures"
         columns={columns}
-        rows={structures}
+        rows={tree}
         getRowId={(s) => s.code}
         loading={loading && structures.length === 0}
         emptyTitle={t('structures:empty')}
         onRowDoubleClick={(s) => setForm({ mode: 'view', item: s })}
         rowActions={(s) => ({
           primary: [{ label: t('actions.edit'), icon: <Pencil />, onSelect: () => setForm({ mode: 'edit', item: s }) }],
-          menu: [{ label: t('actions.archive'), icon: <Archive />, tone: 'danger', onSelect: () => setToArchive(s) }],
+          menu: [
+            { label: t('structures:move.action'), icon: <MoveRight className="rtl:rotate-180" />, onSelect: () => setToMove(s) },
+            { label: t('actions.archive'), icon: <Archive />, tone: 'danger', onSelect: () => setToArchive(s) },
+          ],
         })}
         bulkActions={bulk.actions}
       />
@@ -118,6 +162,7 @@ export default function StructuresPage() {
         open={form !== null}
         mode={form?.mode ?? 'create'}
         initial={form?.item}
+        structures={structures}
         onClose={() => setForm(null)}
         onSubmit={submitForm}
       />
@@ -132,6 +177,8 @@ export default function StructuresPage() {
         tone="danger"
         onConfirm={confirmArchive}
       />
+      <StructureMoveDialog structure={toMove} structures={structures} onClose={() => setToMove(null)} onMove={confirmMove} />
+      <StructureImportPreviewDialog report={preview?.report ?? null} onClose={() => setPreview(null)} onApply={applyImport} />
       <ImportErrorsDialog errors={importErrors} onClose={() => setImportErrors(null)} />
     </>
   );
