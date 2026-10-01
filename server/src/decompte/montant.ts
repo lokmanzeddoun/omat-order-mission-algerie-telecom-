@@ -1,5 +1,8 @@
 import { Barem, Direction, TransportType } from '@prisma/client';
 
+/** A personal-car trip must cover at least this many km (parcours). */
+export const MIN_PARCOURS_KM = 50;
+
 export type Zone = 'nord' | 'sud';
 export const ZONES: Zone[] = ['nord', 'sud'];
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
-import { MAX_MISSION_DAYS } from 'constants/mission';
+import { MAX_MISSION_DAYS, MIN_PARCOURS_KM } from 'constants/mission';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -85,6 +85,8 @@ const schemaFor = (departureDate: string, firstZone: Zone, transport: string | u
           ctx.addIssue({ code: 'custom', path: ['distance_km'], message: t('ordres:validate.errors.distanceRequired') });
         } else if (!amount(v.distance_km)) {
           ctx.addIssue({ code: 'custom', path: ['distance_km'], message: t('ordres:validate.errors.distanceInvalid') });
+        } else if (Number(v.distance_km) < MIN_PARCOURS_KM) {
+          ctx.addIssue({ code: 'custom', path: ['distance_km'], message: t('ordres:validate.errors.distanceMin', { count: MIN_PARCOURS_KM }) });
         }
       }
       if (needs.cost) {

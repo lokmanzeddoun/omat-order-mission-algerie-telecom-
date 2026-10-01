@@ -16,6 +16,7 @@ import {
   Direction,
   Mission,
   MissionStatus,
+  TransportType,
   User,
 } from '@prisma/client';
 import { Response as ExpressResponse } from 'express';
@@ -28,6 +29,7 @@ import {
   totalMeals,
   totalNights,
   zonesOutside,
+  MIN_PARCOURS_KM,
 } from './montant';
 import { assertMissionDuration } from '../missions/mission-duration';
 import { AccessPolicy } from 'src/common/policy/access-policy';
@@ -107,6 +109,14 @@ export class DecompteService {
       user: Pick<User, 'category'>;
     },
   ) {
+    if (
+      mission.transport === TransportType.PERSONAL_CAR &&
+      !(dto.parcours >= MIN_PARCOURS_KM)
+    ) {
+      throw new BadRequestException(
+        `La distance parcourue doit être d'au moins ${MIN_PARCOURS_KM} km.`,
+      );
+    }
     const counts = toCounts(dto);
     if (zonesOutside(mission.direction, counts).length > 0) {
       throw new BadRequestException(

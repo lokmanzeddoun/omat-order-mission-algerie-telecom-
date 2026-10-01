@@ -81,6 +81,7 @@
       "returnTimeRequired": "ساعة العودة إلزامية.",
       "distanceRequired": "المسافة المقطوعة إلزامية.",
       "distanceInvalid": "مسافة غير صالحة.",
+      "distanceMin": "يجب ألا تقل المسافة المقطوعة عن {{count}} كلم.",
       "amountInvalid": "مبلغ غير صالح.",
       "returnBeforeDeparture": "لا يمكن أن تسبق العودة الذهاب.",
       "maxDuration": "لا يمكن أن تتجاوز مدة أمر المهمة {{count}} يومًا.",
