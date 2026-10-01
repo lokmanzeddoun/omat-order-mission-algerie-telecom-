@@ -33,6 +33,13 @@
       "edit": "Modifier l’ordre de mission",
       "view": "Ordre de mission"
     },
+    "forWhom": "Ordre de mission pour",
+    "yourselfTitle": "Vous-même",
+    "changeOwner": "Changer",
+    "searchOwner": "Rechercher par nom, matricule ou service…",
+    "ownersLoading": "Chargement…",
+    "ownersFailed": "Impossible de charger la liste.",
+    "ownerNoMatch": "Aucun résultat.",
     "yourself": "vous-même",
     "matriculeOf": "matricule {{matricule}}",
     "owner": "Agent concerné : {{name}}",

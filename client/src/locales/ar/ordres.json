@@ -33,6 +33,13 @@
       "edit": "تعديل الأمر بمهمة",
       "view": "الأمر بمهمة"
     },
+    "forWhom": "أمر بمهمة لفائدة",
+    "yourselfTitle": "أنت",
+    "changeOwner": "تغيير",
+    "searchOwner": "بحث بالاسم أو رقم التسجيل أو المصلحة…",
+    "ownersLoading": "جارٍ التحميل…",
+    "ownersFailed": "تعذّر تحميل القائمة.",
+    "ownerNoMatch": "لا توجد نتائج.",
     "yourself": "أنت",
     "matriculeOf": "رقم التسجيل {{matricule}}",
     "owner": "العون المعني: {{name}}",

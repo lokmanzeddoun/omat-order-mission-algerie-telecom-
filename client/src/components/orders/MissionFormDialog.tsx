@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import { Controller, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import dayjs from 'helpers/date';
 import { Button, Dialog, DatePicker, DestinationInput, Field, FormGrid, Select, Textarea, TimePicker } from 'components/ui';
 import { directionLabels, transportLabels } from 'constants/labels';
 import type { IMission } from './orderReducer';
+import OwnerPicker, { type OwnerOption } from './OwnerPicker';
 
 export type MissionFormMode = 'create' | 'edit' | 'view';
 
@@ -92,8 +93,15 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
 
+  // Admins creating from the shell (no fixed target) can choose who the ordre is for.
+  const [picked, setPicked] = useState<OwnerOption | null>(null);
+  const canPick = mode === 'create' && !target && !!me && (me.role === 'ADMIN' || me.role === 'SUPER_ADMIN');
+
   useEffect(() => {
-    if (open) reset(initial ? toForm(initial) : EMPTY);
+    if (open) {
+      reset(initial ? toForm(initial) : EMPTY);
+      setPicked(null);
+    }
   }, [open, initial, reset]);
 
   const owner =
@@ -108,6 +116,7 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
     await onSubmit({
       ...(initial?.n_mission ? { n_mission: initial.n_mission } : {}),
       ...v,
+      ...(canPick && picked && picked.matricule !== me?.matricule ? { userMatricule: picked.matricule } : {}),
       date_retour: v.date_retour || undefined,
       direction: v.direction as IMission['direction'],
     });
@@ -118,7 +127,7 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
       open={open}
       onOpenChange={(o) => !o && onClose()}
       title={t(`ordres:form.title.${mode}`)}
-      description={ownerLabel ? t('ordres:form.owner', { name: ownerLabel }) : undefined}
+      description={ownerLabel && !canPick ? t('ordres:form.owner', { name: ownerLabel }) : undefined}
       footer={
         readOnly ? (
           <Button onClick={onClose}>{t('actions.close')}</Button>
@@ -135,6 +144,7 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
       }
     >
       <form id="mission-form" noValidate onSubmit={submit} className="flex flex-col gap-4">
+        {canPick && me && <OwnerPicker me={me} value={picked ?? me} onChange={setPicked} />}
         <Field label={t('ordres:form.motif')} error={errors.motif?.message} required={!readOnly}>
           <Textarea rows={2} readOnly={readOnly} autoFocus={!readOnly} {...register('motif')} />
         </Field>
