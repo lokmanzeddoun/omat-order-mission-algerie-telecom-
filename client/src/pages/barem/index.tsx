@@ -1,13 +1,18 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import http from 'helpers/http';
+import { useApiHandler } from 'components/hooks/useErrorHandler';
 import { PageHeader, Panel } from 'components/ui';
-import baremJson from 'data/barem.json';
 import paths from 'routes/paths';
 import { categoryLabels } from 'constants/labels';
 import { formatDA } from 'lib/format';
 
+type Category = 'EXECUTION_MAITRISE' | 'CADRE' | 'CADRE_SUPERIEUR';
+
+/** A barème row as stored on the server: the rates décomptes are computed with. */
 interface BaremData {
-  id: string;
-  libelle: string;
+  id: number;
+  libell: Category;
   repas_nord: number;
   hebergement_nord: number;
   repas_sud: number;
@@ -15,19 +20,30 @@ interface BaremData {
   montant_km: number;
 }
 
-const rows: BaremData[] = baremJson;
-
 const da = (value: number) => formatDA(value, 0);
 
-// Barème rows are keyed by the official category number.
-const categoryOf: Record<string, string> = { '01': 'EXECUTION_MAITRISE', '02': 'CADRE', '03': 'CADRE_SUPERIEUR' };
+// The official category number, which also orders the table.
+const codeOf: Record<Category, string> = { EXECUTION_MAITRISE: '01', CADRE: '02', CADRE_SUPERIEUR: '03' };
 
 const th = 'border border-border px-3 py-2 font-semibold';
 const td = 'border border-border px-3 py-2 tabular-nums';
 
-/** Read-only official rate table (per catégorie and Direction). */
+/** Read-only official rate table (per catégorie and Direction), as used by the décompte calculation. */
 export default function BaremTable() {
   const { t } = useTranslation();
+  const { handleError } = useApiHandler();
+  const [rows, setRows] = useState<BaremData[] | null>(null);
+
+  useEffect(() => {
+    http
+      .get<BaremData[]>('/barem')
+      .then((res) => setRows([...res.data].sort((a, b) => codeOf[a.libell].localeCompare(codeOf[b.libell]))))
+      .catch((err) => {
+        handleError(err);
+        setRows([]);
+      });
+  }, [handleError]);
+
   return (
     <>
       <PageHeader
@@ -65,12 +81,19 @@ export default function BaremTable() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {rows === null || rows.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className={`${td} text-center text-fg-muted`}>
+                    {rows === null ? t('table.loading') : t('table.empty')}
+                  </td>
+                </tr>
+              ) : null}
+              {rows?.map((row) => (
                 <tr key={row.id} className="even:bg-surface-muted">
                   <th scope="row" className={`${td} text-start font-medium`}>
-                    {row.id}
+                    {codeOf[row.libell]}
                   </th>
-                  <td className={td}>{categoryLabels[categoryOf[row.id]] ?? row.libelle}</td>
+                  <td className={td}>{categoryLabels[row.libell] ?? row.libell}</td>
                   <td className={`${td} text-end`}>{da(row.repas_nord)}</td>
                   <td className={`${td} text-end`}>{da(row.hebergement_nord)}</td>
                   <td className={`${td} text-end`}>{da(row.repas_sud)}</td>

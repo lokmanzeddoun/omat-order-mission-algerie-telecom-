@@ -11,6 +11,7 @@ import { getAllStructures } from 'components/structures/structure.thunk';
 import type { IStructure } from 'components/structures/structure.reducer';
 import { Button, Dialog, Field, FormGrid, Input, Select } from 'components/ui';
 import { categoryLabels, roleLabels } from 'constants/labels';
+import { isEmail } from 'lib/email';
 
 export type UserFormMode = 'create' | 'edit' | 'view';
 
@@ -39,7 +40,11 @@ const schemaFor = (mode: UserFormMode, t: TFunction) =>
       .regex(/^\d+$/, t('users:errors.matriculeNumber')),
     nom: required(t('users:errors.nomRequired')),
     prenom: required(t('users:errors.prenomRequired')),
-    email: z.string().trim().min(1, t('users:errors.emailRequired')).email(t('users:errors.emailInvalid')),
+    email: z
+      .string()
+      .trim()
+      .min(1, t('users:errors.emailRequired'))
+      .refine(isEmail, t('users:errors.emailInvalid')),
     role: z.string().min(1),
     category: z.string().min(1),
     grade: required(t('users:errors.gradeRequired')),
@@ -131,7 +136,7 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
             <Input type="number" inputMode="numeric" dir="ltr" readOnly={locked} autoFocus={mode === 'create'} {...register('matricule')} />
           </Field>
           <Field label={t('auth.email')} error={errors.email?.message} required={!readOnly}>
-            <Input type="email" dir="ltr" autoComplete="off" readOnly={readOnly} {...register('email')} />
+            <Input type="text" inputMode="email" spellCheck={false} dir="ltr" autoComplete="off" readOnly={readOnly} {...register('email')} />
           </Field>
           <Field label={t('users:field.nom')} error={errors.nom?.message} required={!readOnly}>
             <Input readOnly={readOnly} {...register('nom')} />

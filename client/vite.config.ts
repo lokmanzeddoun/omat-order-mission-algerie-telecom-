@@ -27,6 +27,8 @@ export default defineConfig(({ mode }) => {
       },
       host: '0.0.0.0',
       port: PORT,
+      // ngrok tunnels get a new subdomain each run; a leading dot allows all subdomains
+      allowedHosts: ['.ngrok-free.app', '.ngrok.app', '.ngrok.io'],
     },
     resolve: {
       alias: {

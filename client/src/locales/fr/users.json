@@ -44,8 +44,8 @@
   "password": {
     "new": "Nouveau mot de passe",
     "confirm": "Confirmer le mot de passe",
-    "hint": "6 caractères minimum.",
-    "min": "Le mot de passe doit contenir au moins 6 caractères.",
+    "hint": "12 caractères minimum.",
+    "min": "Le mot de passe doit contenir au moins 12 caractères.",
     "confirmRequired": "Confirmez le mot de passe.",
     "mismatch": "Les mots de passe ne correspondent pas."
   }

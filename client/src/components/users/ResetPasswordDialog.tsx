@@ -9,7 +9,7 @@ import { Button, Dialog, Field, PasswordInput } from 'components/ui';
 const schemaFor = (t: TFunction) =>
   z
     .object({
-      password: z.string().min(6, t('users:password.min')),
+      password: z.string().min(12, t('users:password.min')),
       confirm: z.string().min(1, t('users:password.confirmRequired')),
     })
     .refine((v) => v.password === v.confirm, { path: ['confirm'], message: t('users:password.mismatch') });
@@ -23,7 +23,7 @@ interface Props {
   onSubmit: (password: string) => Promise<void> | void;
 }
 
-/** Admin reset of another user's password (same 6-character rule as before). */
+/** Admin reset of another user's password (12 characters minimum, as on the server). */
 export default function ResetPasswordDialog({ open, userName, onClose, onSubmit }: Props) {
   const { t } = useTranslation();
   const schema = useMemo(() => schemaFor(t), [t]);

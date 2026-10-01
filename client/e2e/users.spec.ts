@@ -59,9 +59,9 @@ test.describe('utilisateurs', () => {
     const reset = page.getByRole('dialog', { name: 'Réinitialiser le mot de passe' });
     await reset.getByLabel('Nouveau mot de passe').fill('abc');
     await reset.getByRole('button', { name: 'Réinitialiser' }).click();
-    await expect(reset.getByText('au moins 6 caractères')).toBeVisible();
-    await reset.getByLabel('Nouveau mot de passe').fill('Nouveau123');
-    await reset.getByLabel('Confirmer le mot de passe').fill('Nouveau123');
+    await expect(reset.getByText('au moins 12 caractères')).toBeVisible();
+    await reset.getByLabel('Nouveau mot de passe').fill('Tassili-Nouveau-2026');
+    await reset.getByLabel('Confirmer le mot de passe').fill('Tassili-Nouveau-2026');
     await reset.getByRole('button', { name: 'Réinitialiser' }).click();
     await expect(reset).toBeHidden();
 

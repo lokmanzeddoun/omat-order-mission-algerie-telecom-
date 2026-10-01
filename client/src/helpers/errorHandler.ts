@@ -17,6 +17,12 @@ export interface ApiErrorResponse {
 const KNOWN_SERVER_MESSAGES: [RegExp, string][] = [
   [/pending password reset/i, 'errors:pendingReset'],
   [/wrong credentials|invalid password/i, 'errors:invalidCredentials'],
+  [/contenir votre nom/i, 'errors:passwordPersonal'],
+  [/trop courant/i, 'errors:passwordCommon'],
+  [/your own record/i, 'errors:selfApproval'],
+  [/create only regular users/i, 'errors:adminCreateScope'],
+  [/may change roles/i, 'errors:roleChange'],
+  [/another structure/i, 'errors:otherStructure'],
   [/already exists|existe déjà|cette email exist/i, 'errors:alreadyExists'],
   [/date_retour must be strictly after/i, 'errors:returnBeforeDeparture'],
   [/nombre de repas/i, 'errors:invalidMealsCount'],
