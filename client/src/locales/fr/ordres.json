@@ -42,7 +42,7 @@
     "ownerNoMatch": "Aucun résultat.",
     "yourself": "vous-même",
     "matriculeOf": "matricule {{matricule}}",
-    "owner": "Agent concerné : {{name}}",
+    "owner": "Employé concerné : {{name}}",
     "create": "Créer l’ordre de mission",
     "motif": "Motif de la mission",
     "departureDate": "Date de départ",

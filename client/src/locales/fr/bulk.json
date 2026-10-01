@@ -47,7 +47,7 @@
   "deleteForever": "Supprimer définitivement",
   "deleteHint": "Cette action est irréversible : les éléments seront effacés de la base de données. Ceux qui sont encore liés à d’autres données seront ignorés.",
   "typeToConfirm": "Saisissez {{expected}} pour confirmer",
-  "rejectHint": "Le même motif de rejet est transmis à chaque agent.",
-  "acceptHint": "Les agents seront informés de l’acceptation.",
-  "messageToAgents": "Message aux agents (facultatif)"
+  "rejectHint": "Le même motif de rejet est transmis à chaque employé.",
+  "acceptHint": "Les employés seront informés de l’acceptation.",
+  "messageToAgents": "Message aux employés (facultatif)"
 }

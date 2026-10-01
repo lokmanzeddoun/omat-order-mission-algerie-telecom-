@@ -15,7 +15,7 @@ const serverError = (status: number, message: string) =>
 describe('extractErrorMessage — access refusals explain the rule', () => {
   it.each([
     ['You cannot validate or decide on your own record.', 'propre dossier'],
-    ['Administrators may create only regular users in their own structure.', 'que des agents de sa structure'],
+    ['Administrators may create only regular users in their own structure.', 'que des employés de sa structure'],
     ['Only super administrators may change roles.', 'super administrateur'],
     ['You cannot update a user in another structure.', 'autre structure'],
   ])('%s', (message, expected) => {
