@@ -1,5 +1,5 @@
 /**
- * Structure paths (ADR 0004). Structures form a tree of at most 3 levels:
+ * Structure paths (ADR 0005). Structures form a tree of at most 3 levels:
  *
  *   SDC                                      root:  code = abbreviation
  *   SDC / ACTEL TLEMCEN                      child: code = full path

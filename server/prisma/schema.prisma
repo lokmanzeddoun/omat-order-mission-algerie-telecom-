@@ -82,7 +82,7 @@ model Structure {
   archivedBy User? @relation("StructureArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
   archivedById Int?
   users User[]
-  // Hierarchy (ADR 0004). A root's code is its abbreviation; a child's code is its
+  // Hierarchy (ADR 0005). A root's code is its abbreviation; a child's code is its
   // full path ("SDC / ERSTC / Section ..."), so a descendant's code always starts
   // with its ancestor's code + " / ". `name` is the structure's own segment.
   parentCode String?

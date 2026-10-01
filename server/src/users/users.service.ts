@@ -67,7 +67,7 @@ export class UsersService {
     private readonly accessPolicy: AccessPolicy,
   ) {}
   async create(createUserDto: createUserDto, actor: User) {
-    // An ADMIN creates regular users anywhere in their subtree (ADR 0004);
+    // An ADMIN creates regular users anywhere in their subtree (ADR 0005);
     // without a structure given, in their own.
     const targetServiceId =
       actor.role === Role.ADMIN

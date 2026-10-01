@@ -6,7 +6,7 @@ import { createE2eApp, loginAs, Session } from './setup/app';
 import { PEOPLE, Person, seedFixture } from './setup/fixture';
 
 /**
- * Hierarchical structures (ADR 0004). The fixture tree is
+ * Hierarchical structures (ADR 0005). The fixture tree is
  *
  *   HQ ── HQ / MID ── HQ / MID / LEAF
  *    └─── HQ / SIDE   (no responsible)

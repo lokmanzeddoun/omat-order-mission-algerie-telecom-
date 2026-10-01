@@ -1,4 +1,4 @@
-# 0004 — Structures form a tree, and an admin acts on their subtree
+# 0005 — Structures form a tree, and an admin acts on their subtree
 
 Status: accepted (2026-10-01)
 

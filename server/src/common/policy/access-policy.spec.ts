@@ -15,7 +15,7 @@ const superAdmin: Actor = {
   serviceId: null,
 };
 
-describe('AccessPolicy: structure subtree (ADR 0004)', () => {
+describe('AccessPolicy: structure subtree (ADR 0005)', () => {
   const policy = new AccessPolicy();
 
   describe('canActInStructure', () => {

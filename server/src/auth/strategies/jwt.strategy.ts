@@ -52,7 +52,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
     if (!user) throw new UnauthorizedException('Invalid token');
     const { passwordChangedAt, structure, ...rest } = user;
-    // Whether the user's own structure has a responsible (AccessPolicy, ADR 0004).
+    // Whether the user's own structure has a responsible (AccessPolicy, ADR 0005).
     const current = {
       ...rest,
       serviceHasResponsible: structure?.responsibleUserId != null,

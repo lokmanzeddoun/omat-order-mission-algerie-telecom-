@@ -14,7 +14,7 @@ export const PEOPLE = {
   userB: { matricule: 2001, role: 'USER', structure: 'STR_B' },
   adminB: { matricule: 2002, role: 'ADMIN', structure: 'STR_B' },
   superAdmin: { matricule: 9001, role: 'SUPER_ADMIN', structure: null },
-  // The tree HQ / HQ / MID / HQ / MID / LEAF, plus a sibling HQ / SIDE (ADR 0004).
+  // The tree HQ / HQ / MID / HQ / MID / LEAF, plus a sibling HQ / SIDE (ADR 0005).
   hqUser: { matricule: 3001, role: 'USER', structure: 'HQ' },
   hqAdmin: { matricule: 3002, role: 'ADMIN', structure: 'HQ' },
   midUser: { matricule: 3101, role: 'USER', structure: 'HQ / MID' },

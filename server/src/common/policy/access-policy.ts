@@ -23,14 +23,14 @@ export type Actor = Pick<User, 'matricule' | 'role' | 'serviceId'> & {
   /**
    * Whether the actor's own structure has a responsible (set by the JWT
    * strategy). A structure without one is visible only to its ancestors'
-   * admins and super admins (ADR 0004). Absent means no.
+   * admins and super admins (ADR 0005). Absent means no.
    */
   serviceHasResponsible?: boolean;
 };
 
 /**
  * The single source of truth for "who may see and change what" (ADR 0001,
- * ADR 0004).
+ * ADR 0005).
  *
  * The `scope*` methods return Prisma `where` fragments that every service
  * merges into its query — `findFirst({ where: { id, ...scope } })` — so a read

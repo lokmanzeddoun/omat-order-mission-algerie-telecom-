@@ -1,5 +1,5 @@
 /**
- * Structures form a tree of at most 3 levels (ADR 0004). A root's code is its
+ * Structures form a tree of at most 3 levels (ADR 0005). A root's code is its
  * abbreviation; a child's code is its full path, so depth and ancestry can be
  * read from the codes alone (same rules as server/src/structures/structure-path.ts).
  */

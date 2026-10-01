@@ -7,7 +7,7 @@ export interface IStructureResponsible {
 export interface IStructure {
   code: string;
   name: string;
-  /** Code of the parent; absent or null for a root (ADR 0004). */
+  /** Code of the parent; absent or null for a root (ADR 0005). */
   parentCode?: string | null;
   /** A root's full name, a child's path. */
   displayName?: string;

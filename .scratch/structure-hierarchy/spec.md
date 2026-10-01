@@ -2,7 +2,7 @@
 
 Goal: structures form a tree (A / B / C, at most 3 levels) that mirrors Algérie Télécom's organisation, and an admin acts on their structure's subtree instead of on one flat structure. Work ships as small ordered PRs; each is one issue under `issues/`.
 
-Decision: [ADR 0004](../../docs/adr/0004-hierarchical-structures-and-subtree-access.md), which amends [ADR 0001](../../docs/adr/0001-access-control-policy.md). Terms (Structure, Sous-structure, Responsable, Périmètre) are in `CONTEXT.md`.
+Decision: [ADR 0005](../../docs/adr/0005-hierarchical-structures-and-subtree-access.md), which amends [ADR 0001](../../docs/adr/0001-access-control-policy.md). Terms (Structure, Sous-structure, Responsable, Périmètre) are in `CONTEXT.md`.
 
 ## Real data
 
