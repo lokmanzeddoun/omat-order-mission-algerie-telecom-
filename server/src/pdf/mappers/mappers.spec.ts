@@ -61,6 +61,8 @@ describe('toOrdrePdfData', () => {
   });
 
   it('never prints null/undefined', () => {
+    const prevUrl = process.env.APP_PUBLIC_URL;
+    delete process.env.APP_PUBLIC_URL;
     const d = toOrdrePdfData(
       mission({
         motif: null,
@@ -70,6 +72,7 @@ describe('toOrdrePdfData', () => {
         user: { ...owner, structure: null },
       }),
     );
+    if (prevUrl !== undefined) process.env.APP_PUBLIC_URL = prevUrl;
     expect(d.motif).toBe('');
     expect(d.destination).toBe('');
     expect(d.service).toBe('');

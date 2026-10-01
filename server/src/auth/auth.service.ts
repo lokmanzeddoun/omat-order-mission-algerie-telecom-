@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { Role } from '@prisma/client';
+import { MessageType, Role } from '@prisma/client';
 import { PrismaService } from 'nestjs-prisma';
 import * as bcrypt from 'bcryptjs';
 import { BCRYPT_ROUNDS } from 'src/common/validators/password';
@@ -136,6 +136,39 @@ export class AuthService {
   }
 
   /** Enrollment step 1: a new TOTP secret for an admin without MFA. */
+  /**
+   * A signed-out user asks the admins for a password reset: opens a
+   * FORGET_PASSWORD support ticket, at most one pending per user. The caller
+   * answers identically whatever happens here, so emails don't leak.
+   */
+  async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+      select: { matricule: true, soft_delete: true },
+    });
+    if (!user || user.soft_delete) return;
+
+    const pending = await this.prisma.commentaire.findFirst({
+      where: {
+        userId: user.matricule,
+        type: MessageType.FORGET_PASSWORD,
+        status: 'PENDING',
+        soft_delete: false,
+      },
+      select: { id: true },
+    });
+    if (pending) return;
+
+    await this.prisma.commentaire.create({
+      data: {
+        title: 'Mot de passe oublié',
+        type: MessageType.FORGET_PASSWORD,
+        status: 'PENDING',
+        user: { connect: { matricule: user.matricule } },
+      },
+    });
+  }
+
   async startMfaEnrollment(mfaToken: string): Promise<Enrollment> {
     const { matricule } = await this.readMfaToken(mfaToken, 'enroll');
     return this.mfa.startEnrollment(matricule);

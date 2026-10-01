@@ -49,6 +49,46 @@ describe('Authentication (e2e)', () => {
       .expect(200);
   });
 
+  describe('forgot password', () => {
+    const forgot = (email: string) =>
+      request(app.getHttpServer())
+        .post('/auth/forgot-password')
+        .send({ email });
+
+    const pendingTickets = () =>
+      prisma.commentaire.count({
+        where: {
+          userId: 1001,
+          type: 'FORGET_PASSWORD',
+          status: 'PENDING',
+          soft_delete: false,
+        },
+      });
+
+    beforeEach(() =>
+      prisma.commentaire.deleteMany({ where: { type: 'FORGET_PASSWORD' } }),
+    );
+
+    it('lets a signed-out user open a reset request', async () => {
+      await forgot(emailOf('userA')).expect(202);
+      expect(await pendingTickets()).toBe(1);
+    });
+
+    it('keeps a single pending request per user', async () => {
+      await forgot(emailOf('userA')).expect(202);
+      await forgot(emailOf('userA')).expect(202);
+      expect(await pendingTickets()).toBe(1);
+    });
+
+    it('answers the same for an unknown email', async () => {
+      const known = await forgot(emailOf('userA')).expect(202);
+      const unknown = await forgot('nobody@omat.test').expect(202);
+      expect(unknown.body).toEqual(known.body);
+    });
+
+    it('rejects a malformed email', () => forgot('not-an-email').expect(400));
+  });
+
   it('rejects a tampered token', async () => {
     const { token } = await loginAs(app, 'userA');
     const [h, p, s] = token.split('.');

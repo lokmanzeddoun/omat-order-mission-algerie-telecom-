@@ -15,6 +15,7 @@ import type { Request, Response } from 'express';
 import type { AuthConfig } from 'src/common/configs/config.interface';
 import { AuthService, MfaOutcome, SessionOutcome } from './auth.service';
 import { loginUserDto } from './dto/loginDto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { MfaSetupDto, MfaVerifyDto } from './dto/mfa.dto';
 import { LoginResponse } from './interfaces';
 import { Public } from './guards/public.decorator';
@@ -65,6 +66,22 @@ export class AuthController {
       meta(req),
     );
     return this.respond(outcome, res);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @Throttle(CREDENTIAL_LIMIT)
+  @ApiOperation({
+    summary: 'FORGOT PASSWORD',
+    description:
+      'Opens a password-reset request for the admins (one pending per user). ' +
+      'Always answers 202, whether or not the email exists.',
+  })
+  @ApiResponse({ status: 202, description: 'Request recorded' })
+  @ApiResponse({ status: 429, description: 'Too many attempts' })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    await this.authService.requestPasswordReset(dto.email);
+    return { accepted: true };
   }
 
   @Post('mfa/setup')

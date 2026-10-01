@@ -165,6 +165,8 @@ export class DecompteService {
     if (!this.accessPolicy.canActInStructure(actor, mission.user.serviceId)) {
       throw new NotFoundException(`Mission ${id} not found`);
     }
+    // Validating an ordre gives rise to a payment: never on one's own (ADR 0001).
+    this.accessPolicy.assertNotSelfApproval(actor, mission.userId);
     if (
       mission.soft_delete ||
       mission.status !== MissionStatus.INPROGRESS ||

@@ -158,6 +158,52 @@ describe('Access control (e2e)', () => {
     });
   });
 
+  describe('POST /decompte/:missionId (validation, no self-approval)', () => {
+    // A same-day trip with nothing to reimburse: valid for the settlement rules.
+    const body = {
+      heure_sortie: '08:00',
+      date_retour: '2026-09-01',
+      heure_retour: '09:00',
+    };
+
+    // Fixture ordres already carry a décompte; free this one for validation.
+    const openForValidation = (who: 'userA' | 'adminA') =>
+      prisma.decompte.delete({ where: { n_decompte: fix.decomptes[who] } });
+
+    it('an admin cannot validate their OWN ordre (self-approval → 403)', async () => {
+      await openForValidation('adminA');
+      await request(server())
+        .post(`/decompte/${fix.missions.adminA}`)
+        .set(s.adminA.auth)
+        .send(body)
+        .expect(403);
+      const row = await prisma.mission.findUnique({
+        where: { n_mission: fix.missions.adminA },
+      });
+      expect(row?.status).toBe('INPROGRESS');
+    });
+
+    it("a same-structure admin validates another agent's ordre", async () => {
+      await openForValidation('userA');
+      // The settlement needs the rates of the agent's category (fixture: CADRE).
+      await prisma.barem.create({
+        data: {
+          libell: 'CADRE',
+          repas_nord: 1200,
+          hebergement_nord: 2700,
+          repas_sud: 1300,
+          hebergement_sud: 3000,
+          montant_km: 15,
+        },
+      });
+      await request(server())
+        .post(`/decompte/${fix.missions.userA}`)
+        .set(s.adminA.auth)
+        .send(body)
+        .expect(201);
+    });
+  });
+
   describe('PATCH /decompte/:id/accept (role + scope + self-approval)', () => {
     it('a USER cannot accept (role → 403)', () =>
       request(server())
