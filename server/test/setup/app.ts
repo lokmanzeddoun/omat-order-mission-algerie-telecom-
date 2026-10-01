@@ -22,6 +22,7 @@ import {
 const fakePdf = Buffer.from('%PDF-1.4\n%e2e\n');
 const FakePdfService = {
   renderOrdre: async () => fakePdf,
+  renderOrdres: async () => fakePdf,
   renderDecompte: async () => fakePdf,
 };
 

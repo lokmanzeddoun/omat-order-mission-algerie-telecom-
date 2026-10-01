@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { MissionsService } from './missions.service';
 import { CreateMissionDto } from './dto/create-mission.dto';
+import { CreateMissionsBatchDto } from './dto/create-missions-batch.dto';
+import { assertReturnAfterDeparture } from './return-after-departure';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
@@ -24,28 +26,20 @@ export class MissionsController {
   @Auth()
   @Post()
   create(@Body() createMissionDto: CreateMissionDto, @GetUser() user: User) {
-    // Cross-field validation: date_retour must be strictly after date_sortie
-    if (
-      createMissionDto.date_retour &&
-      createMissionDto.date_retour.trim() !== ''
-    ) {
-      const dRetour = new Date(createMissionDto.date_retour);
-      const dSortie = new Date(createMissionDto.date_sortie);
-      if (isNaN(dRetour.getTime()) || isNaN(dSortie.getTime())) {
-        throw new BadRequestException('Invalid date/time format');
-      }
-      // Option B: return must be strictly after depart
-      if (!(dRetour.getTime() > dSortie.getTime())) {
-        throw new BadRequestException(
-          'date_retour must be strictly after date_sortie',
-        );
-      }
-    }
+    assertReturnAfterDeparture(createMissionDto);
 
     return this.missionsService.create(
       createMissionDto as unknown as Prisma.MissionCreateInput,
       user,
     );
+  }
+
+  /** One ordre per listed user, all-or-nothing; answers with a single PDF. */
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Post('batch')
+  createBatch(@Body() dto: CreateMissionsBatchDto, @GetUser() user: User) {
+    assertReturnAfterDeparture(dto);
+    return this.missionsService.createBatch(dto, user);
   }
 
   @Get()

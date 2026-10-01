@@ -47,6 +47,12 @@ describe('PdfService (rendered in node)', () => {
     expect(pageCount(pdf)).toBe(2);
   });
 
+  it('renders a batch of 3 ordres on 6 pages (2 per ordre)', () => {
+    const pdf = read('ordres-batch.pdf');
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pageCount(pdf)).toBe(6);
+  });
+
   it('renders the décompte on exactly 1 page', () => {
     const pdf = read('decompte.pdf');
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');

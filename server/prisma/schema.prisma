@@ -129,6 +129,11 @@ model Mission {
   // Exercice relation
   exercice   Exercice? @relation(fields: [exerciceId], references: [id])
   exerciceId Int?
+  // Set when several ordres were created together for a group of users
+  // (POST /missions/batch). Each ordre stays independent; this only links them.
+  batch_id String?
+
+  @@index([batch_id])
 }
 
 model Decompte {

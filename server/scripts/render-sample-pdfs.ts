@@ -54,6 +54,15 @@ async function main() {
   for (const [name, render] of [
     ['ordre.pdf', () => pdf.renderOrdre(toOrdrePdfData(mission))],
     [
+      'ordres-batch.pdf',
+      () =>
+        pdf.renderOrdres(
+          [1, 2, 3].map((n) =>
+            toOrdrePdfData({ ...mission, n_mission: n } as any),
+          ),
+        ),
+    ],
+    [
       'decompte.pdf',
       () =>
         pdf.renderDecompte(

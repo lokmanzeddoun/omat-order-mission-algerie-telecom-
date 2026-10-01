@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   Logger,
@@ -11,6 +12,7 @@ import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp } from 'src/archive/archive-stamp';
 import { ExercicesService } from 'src/exercices/exercices.service';
 import moment from 'moment';
+import { randomUUID } from 'crypto';
 import { MissionStatus, Prisma, User } from '@prisma/client';
 import { Response as ExpressResponse } from 'express';
 import { PdfService } from 'src/pdf/pdf.service';
@@ -18,6 +20,7 @@ import { toOrdrePdfData } from 'src/pdf/mappers/ordre.mapper';
 import { AccessPolicy } from 'src/common/policy/access-policy';
 import { AuditService } from 'src/audit/audit.service';
 import { GradeAssignmentsService } from 'src/grade-assignments/grade-assignments.service';
+import { CreateMissionsBatchDto } from './dto/create-missions-batch.dto';
 import { UpdateMissionDto } from './dto/update-mission.dto';
 import { assertMissionDuration } from './mission-duration';
 @Injectable()
@@ -68,16 +71,99 @@ export class MissionsService {
     });
     return ex?.id ?? null;
   }
-  async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
-    const exerciceId = await this.getCurrentExerciceId();
+  /**
+   * The one place that decides whether `actor` may create an ordre for
+   * `matricule` (another user): the target must exist, and an ADMIN stays
+   * inside their own structure (SUPER_ADMIN may target anyone) — ADR 0001.
+   * Throws on refusal; used by both single and batch creation.
+   */
+  private async assertCanTargetUser(
+    actor: User,
+    matricule: number,
+  ): Promise<void> {
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException(
+        `${actor.nom} is not authorized to create missions for other users`,
+      );
+    }
+    const exists = await this.databaseService.user.findUnique({
+      where: { matricule },
+      select: { matricule: true, serviceId: true },
+    });
+    if (!exists) {
+      throw new BadRequestException(
+        `Target user with matricule ${matricule} not found`,
+      );
+    }
+    if (!this.accessPolicy.canActInStructure(actor, exists.serviceId)) {
+      throw new ForbiddenException(
+        'Administrators may create missions only for users in their own structure or its sub-structures.',
+      );
+    }
+  }
+
+  /**
+   * Freezes the category (and Interim/Remplaçant period, if any) the barème
+   * will be read from: it depends on the start date, not on when it is settled.
+   * Shared by single and batch creation.
+   */
+  private async gradeSnapshotData(
+    matricule: number,
+    dateSortie: Date | null,
+  ): Promise<
+    Pick<Prisma.MissionCreateInput, 'effectiveCategory' | 'gradeAssignment'>
+  > {
+    const owner = await this.databaseService.user.findUniqueOrThrow({
+      where: { matricule },
+      select: { category: true },
+    });
+    const snapshot = await this.gradeAssignments.snapshotFor(
+      matricule,
+      owner.category,
+      dateSortie,
+    );
+    return {
+      effectiveCategory: snapshot.effectiveCategory,
+      ...(snapshot.gradeAssignmentId
+        ? { gradeAssignment: { connect: { id: snapshot.gradeAssignmentId } } }
+        : {}),
+    };
+  }
+
+  /**
+   * The fields shared by every ordre created from one request: drops legacy
+   * fields, normalises dates and transport, and enforces the 30-day cap.
+   */
+  private buildMissionFields(dto: any) {
     // Drop any legacy heure_* fields if present in request body (backward compatibility)
     const {
       heure_sortie: _h1,
       heure_retour: _h2,
-      userMatricule: requestedMatricule,
-      user: requestedUser,
+      userMatricule: _um,
+      userMatricules: _ums,
+      user: _u,
       ...cleanDto
-    } = (createMissionDto as any) || {};
+    } = dto || {};
+    const dateSortie = cleanDto.date_sortie
+      ? new Date(cleanDto.date_sortie)
+      : null;
+    const dateRetour = cleanDto.date_retour
+      ? new Date(cleanDto.date_retour)
+      : null;
+    assertMissionDuration(dateSortie, dateRetour);
+    return {
+      ...cleanDto,
+      // Expect full ISO datetime strings; store as Date
+      date_sortie: dateSortie,
+      date_retour: dateRetour,
+      transport: cleanDto.transport || null, // Set transport to null if empty
+    };
+  }
+
+  async create(createMissionDto: Prisma.MissionCreateInput, user: User) {
+    const exerciceId = await this.getCurrentExerciceId();
+    const { userMatricule: requestedMatricule, user: requestedUser } =
+      (createMissionDto as any) || {};
     // Determine target user: default to requester; allow override for admins
     let targetMatricule: number = user.matricule;
     const candidateMatricule: number | null =
@@ -88,68 +174,18 @@ export class MissionsService {
           : null;
 
     if (candidateMatricule && candidateMatricule !== user.matricule) {
-      if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
-        throw new ForbiddenException(
-          `${user.nom} is not authorized to create missions for other users`,
-        );
-      }
-      // Ensure the target user exists, and that an ADMIN stays inside their
-      // own structure (SUPER_ADMIN may target anyone) — ADR 0001.
-      const exists = await this.databaseService.user.findUnique({
-        where: { matricule: candidateMatricule },
-        select: { matricule: true, serviceId: true },
-      });
-      if (!exists) {
-        throw new BadRequestException(
-          `Target user with matricule ${candidateMatricule} not found`,
-        );
-      }
-      if (!this.accessPolicy.canActInStructure(user, exists.serviceId)) {
-        throw new ForbiddenException(
-          'Administrators may create missions only for users in their own structure or its sub-structures.',
-        );
-      }
+      await this.assertCanTargetUser(user, candidateMatricule);
       targetMatricule = candidateMatricule;
     }
-    assertMissionDuration(
-      (cleanDto as any).date_sortie
-        ? new Date((cleanDto as any).date_sortie)
-        : null,
-      (cleanDto as any).date_retour
-        ? new Date((cleanDto as any).date_retour)
-        : null,
-    );
-    // Freeze the category (and Interim/Remplaçant period, if any) the barème
-    // will be read from: it depends on the start date, not on when it is settled.
-    const owner = await this.databaseService.user.findUniqueOrThrow({
-      where: { matricule: targetMatricule },
-      select: { category: true },
-    });
-    const snapshot = await this.gradeAssignments.snapshotFor(
+    const fields = this.buildMissionFields(createMissionDto);
+    const snapshot = await this.gradeSnapshotData(
       targetMatricule,
-      owner.category,
-      (cleanDto as any).date_sortie
-        ? new Date((cleanDto as any).date_sortie)
-        : null,
+      fields.date_sortie,
     );
     const res = await this.databaseService.mission.create({
       data: {
-        ...cleanDto,
-        effectiveCategory: snapshot.effectiveCategory,
-        ...(snapshot.gradeAssignmentId
-          ? {
-              gradeAssignment: { connect: { id: snapshot.gradeAssignmentId } },
-            }
-          : {}),
-        // userId: userData.matricule,
-        // Expect full ISO datetime strings; store as Date
-        date_sortie: (cleanDto as any).date_sortie
-          ? new Date((cleanDto as any).date_sortie as any)
-          : null,
-        date_retour: (cleanDto as any).date_retour
-          ? new Date((cleanDto as any).date_retour as any)
-          : null,
-        transport: (cleanDto as any).transport || null, // Set transport to null if empty
+        ...fields,
+        ...snapshot,
         user: {
           connect: { matricule: targetMatricule },
         },
@@ -171,6 +207,97 @@ export class MissionsService {
     }
     return new StreamableFile(pdf, {
       disposition: `attachment; filename=mission-${res.n_mission}.pdf`,
+      type: 'application/pdf',
+    });
+  }
+
+  /**
+   * One ordre per listed user, all-or-nothing, in a single transaction. Every
+   * user goes through the same checks as a single creation; if any fails
+   * nothing is created and the error lists each failing user. Answers with one
+   * PDF holding every ordre.
+   */
+  async createBatch(dto: CreateMissionsBatchDto, actor: User) {
+    if (actor.role !== 'ADMIN' && actor.role !== 'SUPER_ADMIN') {
+      throw new ForbiddenException(
+        `${actor.nom} is not authorized to create missions for other users`,
+      );
+    }
+    const fields = this.buildMissionFields(dto);
+    const matricules = [...new Set(dto.userMatricules)];
+
+    const errors: { matricule: number; message: string }[] = [];
+    for (const matricule of matricules) {
+      if (matricule === actor.matricule) continue; // own ordre is always allowed
+      try {
+        await this.assertCanTargetUser(actor, matricule);
+      } catch (error) {
+        if (!(error instanceof HttpException)) throw error;
+        errors.push({ matricule, message: error.message });
+      }
+    }
+    if (errors.length) {
+      throw new BadRequestException({
+        message: `Aucun ordre créé : ${errors.length} agent(s) en erreur.`,
+        errors,
+      });
+    }
+
+    const exerciceId = await this.getCurrentExerciceId();
+    const snapshots = new Map<
+      number,
+      Awaited<ReturnType<typeof this.gradeSnapshotData>>
+    >();
+    for (const matricule of matricules) {
+      snapshots.set(
+        matricule,
+        await this.gradeSnapshotData(matricule, fields.date_sortie),
+      );
+    }
+    const batchId = randomUUID();
+    const created = await this.databaseService.$transaction(async (tx) => {
+      const rows: { n_mission: number; userId: number }[] = [];
+      for (const matricule of matricules) {
+        rows.push(
+          await tx.mission.create({
+            data: {
+              ...fields,
+              ...snapshots.get(matricule),
+              batch_id: batchId,
+              user: { connect: { matricule } },
+              ...(exerciceId
+                ? { exercice: { connect: { id: exerciceId } } }
+                : {}),
+            },
+            select: { n_mission: true, userId: true },
+          }),
+        );
+      }
+      return rows;
+    });
+    const ids = created.map((m) => m.n_mission);
+    await this.audit.record({
+      actorMatricule: actor.matricule,
+      action: 'MISSION_BATCH_CREATED',
+      entity: 'Mission',
+      entityId: batchId,
+      after: { batchId, missions: created },
+    });
+
+    // As in create(): the ordres are saved, so a render failure must not turn
+    // into an error (a retry would duplicate them all).
+    let pdf: Buffer;
+    try {
+      pdf = await this.buildOrdresPdf(ids);
+    } catch (error) {
+      this.logger.error(
+        `Batch ${batchId} created but its PDF failed to render`,
+        (error as Error).stack,
+      );
+      return;
+    }
+    return new StreamableFile(pdf, {
+      disposition: `attachment; filename=missions-lot-${batchId.slice(0, 8)}.pdf`,
       type: 'application/pdf',
     });
   }
@@ -460,6 +587,27 @@ export class MissionsService {
       'Content-Disposition': `attachment; filename=mission-${id}.pdf`,
     });
     return res.send(pdf);
+  }
+
+  /** One PDF with every listed ordre, in the given order. */
+  private async buildOrdresPdf(ids: number[]): Promise<Buffer> {
+    const missions = await this.databaseService.mission.findMany({
+      where: { n_mission: { in: ids } },
+      include: { user: { include: { structure: true } } },
+    });
+    const byId = new Map(missions.map((m) => [m.n_mission, m]));
+    const ordered = ids.map((id) => byId.get(id)!).filter(Boolean);
+    try {
+      return await this.pdfService.renderOrdres(ordered.map(toOrdrePdfData));
+    } catch (error) {
+      this.logger.error(
+        'Failed to render ordres batch',
+        (error as Error).stack,
+      );
+      throw new InternalServerErrorException(
+        'Impossible de générer le PDF des ordres de mission.',
+      );
+    }
   }
 
   /**

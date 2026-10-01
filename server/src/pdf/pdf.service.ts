@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { DocumentProps } from '@react-pdf/renderer';
 import { ReactElement, createElement } from 'react';
 import { DecompteDocument } from './documents/decompte-document';
-import { OrdreDocument } from './documents/ordre-document';
+import { OrdreDocument, OrdresBatchDocument } from './documents/ordre-document';
 import { DecomptePdfData } from './mappers/decompte.mapper';
 import { OrdrePdfData } from './mappers/ordre.mapper';
 import { loadReactPdf } from './react-pdf-runtime';
@@ -23,6 +23,11 @@ export class PdfService {
 
   renderOrdre(data: OrdrePdfData): Promise<Buffer> {
     return this.render(createElement(OrdreDocument, { data }));
+  }
+
+  /** Several ordres in one PDF, in the given order. */
+  renderOrdres(items: OrdrePdfData[]): Promise<Buffer> {
+    return this.render(createElement(OrdresBatchDocument, { items }));
   }
 
   renderDecompte(data: DecomptePdfData): Promise<Buffer> {

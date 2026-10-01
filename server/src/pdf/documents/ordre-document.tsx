@@ -490,3 +490,22 @@ export function OrdreDocument({ data }: { data: OrdrePdfData }) {
     </RP.Document>
   );
 }
+
+/** One document holding several ordres (a batch), each on its own two pages. */
+export function OrdresBatchDocument({ items }: { items: OrdrePdfData[] }) {
+  return (
+    <RP.Document
+      title={`Ordres de mission N° ${items.map((d) => d.numero).join(', ')}`}
+      author="Algérie Télécom"
+      subject="Ordres de mission"
+      creator="OMAT"
+      producer="OMAT"
+      language="fr"
+    >
+      {items.flatMap((data) => [
+        <OrdrePage key={`${data.numero}-ordre`} data={data} />,
+        <CompteRenduPage key={`${data.numero}-compte-rendu`} data={data} />,
+      ])}
+    </RP.Document>
+  );
+}
