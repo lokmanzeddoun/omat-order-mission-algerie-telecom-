@@ -124,7 +124,11 @@ describe('MissionsService', () => {
         gradeAssignmentId: null,
       });
       db.mission.create.mockResolvedValue({ n_mission: 6 });
-      db.mission.findUnique.mockResolvedValue(null);
+      db.mission.findUnique.mockResolvedValue({
+        n_mission: 6,
+        user: { structure: null },
+      });
+      pdf.renderOrdre.mockResolvedValue(Buffer.from(''));
 
       await service.create({ date_sortie: sortie } as any, agent);
 

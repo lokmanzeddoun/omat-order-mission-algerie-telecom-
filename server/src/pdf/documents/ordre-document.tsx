@@ -365,7 +365,7 @@ function EtapeBand({
   );
 }
 
-function CompteRenduPage({ data }: { data: OrdrePdfData }) {
+function CompteRenduPage(_props: { data: OrdrePdfData }) {
   return (
     <RP.Page size="A4" style={pageStyle}>
       <Letterhead />
