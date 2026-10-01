@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Archive, BookOpen, Building2, FileCheck2, MessageSquare, ReceiptText, Users } from 'lucide-react';
+import { Archive, BookOpen, Building2, FileCheck2, MessageSquare, ReceiptText, UserCog, Users } from 'lucide-react';
 import paths from './paths';
 
 export type Role = 'USER' | 'ADMIN' | 'SUPER_ADMIN';
@@ -24,6 +24,7 @@ export const navigation: NavItem[] = [
   { id: 'users', labelKey: 'nav.users', path: `${paths.admins}/users`, icon: Users, roles: ADMINS },
   { id: 'structures', labelKey: 'nav.structures', path: `${paths.admins}/structures`, icon: Building2, roles: ['SUPER_ADMIN'] },
   { id: 'barem', labelKey: 'nav.barem', path: `${paths.admins}/barem`, icon: ReceiptText, roles: ADMINS },
+  { id: 'grade-assignments', labelKey: 'nav.gradeAssignments', path: `${paths.admins}/grade-assignments`, icon: UserCog, roles: ['SUPER_ADMIN'] },
   { id: 'comments', labelKey: 'nav.comments', path: `${paths.admins}/support`, icon: MessageSquare, roles: ADMINS },
   { id: 'archive', labelKey: 'nav.archive', path: `${paths.admins}/archive`, icon: Archive, roles: ADMINS },
   { id: 'my-ordres', labelKey: 'nav.myOrdres', path: paths.users, icon: BookOpen, roles: ['USER'], end: true },

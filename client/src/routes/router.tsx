@@ -20,6 +20,7 @@ const MyProfile = lazy(() => import('pages/userProfile'));
 const OrderDashboard = lazy(() => import('pages/ordres'));
 const OrdreDetail = lazy(() => import('pages/ordres/detail'));
 const DataGridWithJson = lazy(() => import('pages/barem'));
+const GradeAssignments = lazy(() => import('pages/grade-assignments'));
 const Archive = lazy(() => import('pages/archive'));
 const DecomptesPage = lazy(() => import('pages/decomptes'));
 const DecompteDetail = lazy(() => import('pages/decomptes/detail'));
@@ -104,6 +105,14 @@ const router = createBrowserRouter(
               ),
             },
             { path: 'barem', element: <DataGridWithJson /> },
+            {
+              path: 'grade-assignments',
+              element: (
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <GradeAssignments />
+                </ProtectedRoute>
+              ),
+            },
             { path: 'decomptes', element: <DecomptesPage /> },
             { path: 'decomptes/:id', element: <DecompteDetail /> },
             { path: 'support', element: <AdminComments /> },

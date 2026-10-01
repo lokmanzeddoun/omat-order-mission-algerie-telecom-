@@ -1,0 +1,46 @@
+{
+  "title": "Intérim et remplacements",
+  "description": "Périodes pendant lesquelles un agent tient une catégorie supérieure ; le barème de cette catégorie s’applique aux ordres de mission dont le départ tombe dans la période.",
+  "add": "Ajouter une période",
+  "caption": "Liste des périodes d’intérim et de remplacement",
+  "empty": "Aucune période",
+  "created": "Période enregistrée.",
+  "ended": "Période terminée.",
+  "end": "Terminer la période",
+  "endTitle": "Terminer la période ?",
+  "endHint": "La période de <b>{{name}}</b> prendra fin aujourd’hui. Les ordres de mission déjà créés gardent leur barème ; la période reste dans l’historique.",
+  "kind": {
+    "INTERIM": "Intérim",
+    "REMPLACANT": "Remplaçant"
+  },
+  "state": {
+    "active": "En cours",
+    "upcoming": "À venir",
+    "expired": "Échue",
+    "ended": "Terminée"
+  },
+  "field": {
+    "user": "Agent",
+    "kind": "Type",
+    "target": "Catégorie visée",
+    "start": "Début",
+    "end": "Fin",
+    "decisionRef": "Référence de la décision",
+    "state": "État"
+  },
+  "form": {
+    "title": "Ajouter une période",
+    "pickUser": "Choisir un agent",
+    "pickTarget": "Choisir une catégorie",
+    "capRemplacant": "Remplaçant : 4 mois au plus.",
+    "capInterim": "Intérim : 12 mois au plus."
+  },
+  "errors": {
+    "userRequired": "Choisissez un agent.",
+    "targetRequired": "Choisissez la catégorie visée.",
+    "startRequired": "La date de début est obligatoire.",
+    "endRequired": "La date de fin est obligatoire.",
+    "endBeforeStart": "La fin doit suivre le début.",
+    "decisionRequired": "La référence de la décision est obligatoire."
+  }
+}
