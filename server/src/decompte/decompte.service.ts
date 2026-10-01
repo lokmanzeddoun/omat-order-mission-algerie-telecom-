@@ -29,6 +29,7 @@ import {
   totalNights,
   zonesOutside,
 } from './montant';
+import { assertMissionDuration } from '../missions/mission-duration';
 import { AccessPolicy } from 'src/common/policy/access-policy';
 import { AuditService } from 'src/audit/audit.service';
 
@@ -112,6 +113,13 @@ export class DecompteService {
         `Les repas et nuitées doivent être déclarés dans la direction de l'ordre de mission (${directionLabel[mission.direction]})`,
       );
     }
+    // Validating or editing the décompte sets the real return: the trip stays within the limit.
+    assertMissionDuration(
+      new Date(
+        `${mission.date_sortie.toISOString().split('T')[0]}T${dto.heure_sortie}:00`,
+      ),
+      new Date(`${dto.date_retour}T${dto.heure_retour}:00`),
+    );
     const { meals, accommodations } = calculateMealsAndAccommodation(
       mission.date_sortie.toISOString().split('T')[0],
       dto.heure_sortie,

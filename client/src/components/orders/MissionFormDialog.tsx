@@ -11,6 +11,7 @@ import { Button, Dialog, DatePicker, DestinationInput, Field, FormGrid, Select, 
 import { directionLabels, transportLabels } from 'constants/labels';
 import type { IMission } from './orderReducer';
 import OwnerPicker, { type OwnerOption } from './OwnerPicker';
+import { MAX_MISSION_DAYS } from 'constants/mission';
 
 export type MissionFormMode = 'create' | 'edit' | 'view';
 
@@ -35,6 +36,15 @@ const schemaFor = (t: TFunction) =>
         return !end.isBefore(start);
       },
       { path: ['date_retour'], message: t('ordres:form.errors.returnAfterDeparture') },
+    )
+    .refine(
+      (v) => {
+        if (!v.date_retour) return true;
+        const start = dayjs(`${v.date_sortie}T${v.heure_sortie || '00:00'}`);
+        const end = dayjs(`${v.date_retour}T${v.heure_retour || '00:00'}`);
+        return end.diff(start, 'minute') <= MAX_MISSION_DAYS * 24 * 60;
+      },
+      { path: ['date_retour'], message: t('ordres:form.errors.maxDuration', { count: MAX_MISSION_DAYS }) },
     );
 
 type FormValues = z.infer<ReturnType<typeof schemaFor>>;

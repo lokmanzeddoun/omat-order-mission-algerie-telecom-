@@ -56,6 +56,7 @@
       "motifRequired": "غرض المهمة إلزامي.",
       "transportRequired": "اختر وسيلة النقل.",
       "returnAfterDeparture": "يجب أن تكون العودة بعد الذهاب.",
+      "maxDuration": "لا يمكن أن تتجاوز مدة أمر المهمة {{count}} يومًا.",
       "destinationRequired": "اختر وجهة واحدة على الأقل من القائمة."
     },
     "destinationPlaceholder": "اكتب للبحث (مثال: تلمسان)…",
@@ -82,6 +83,7 @@
       "distanceInvalid": "مسافة غير صالحة.",
       "amountInvalid": "مبلغ غير صالح.",
       "returnBeforeDeparture": "لا يمكن أن تسبق العودة الذهاب.",
+      "maxDuration": "لا يمكن أن تتجاوز مدة أمر المهمة {{count}} يومًا.",
       "nightsTotal": "يجب أن يساوي مجموع التوزيع {{count}} ليلة مبيت.",
       "mealsTotal": "يجب أن يساوي مجموع التوزيع {{count}} وجبة.",
       "costRequired": "مصاريف النقل المدفوعة إلزامية."
