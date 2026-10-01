@@ -7,7 +7,7 @@ import { Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Sun, X } from 'lucide-
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import { toggleTheme } from 'store/theme.slice';
-import { addOrder } from 'components/orders/orderthunk';
+import { addOrder, addOrdersBatch } from 'components/orders/orderthunk';
 import MissionFormDialog from 'components/orders/MissionFormDialog';
 import type { IMission } from 'components/orders/orderReducer';
 import { Button } from 'components/ui';
@@ -90,6 +90,12 @@ export default function AppShell({ children }: PropsWithChildren) {
   const submitMission = async (data: IMission) => {
     const success = await dispatch(addOrder(data, token));
     if (success) setMissionOpen(false);
+  };
+
+  const submitBatch = async (data: IMission, matricules: number[]) => {
+    const result = await dispatch(addOrdersBatch(data, matricules, token));
+    if (result.ok) setMissionOpen(false);
+    else return result.errors;
   };
 
   return (
@@ -199,7 +205,7 @@ export default function AppShell({ children }: PropsWithChildren) {
         {t('app.footer')}
       </footer>
 
-      <MissionFormDialog open={missionOpen} mode="create" onClose={() => setMissionOpen(false)} onSubmit={submitMission} />
+      <MissionFormDialog open={missionOpen} mode="create" onClose={() => setMissionOpen(false)} onSubmit={submitMission} onSubmitBatch={submitBatch} />
     </div>
   );
 }

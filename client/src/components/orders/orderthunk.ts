@@ -16,21 +16,92 @@ import { AlertTypes } from 'constants/alert';
 import { AppDispatch } from 'store';
 import { saveAs } from 'file-saver';
 
+/** Combines date + time into ISO datetimes and drops the UI-only heure_* fields. */
+const toPayload = (order: IMission): any => {
+  const payload: any = { ...order };
+  if (order.date_sortie) {
+    const time = order.heure_sortie || '00:00';
+    payload.date_sortie = new Date(`${order.date_sortie}T${time}:00`).toISOString();
+  }
+  if (order.date_retour) {
+    const time = order.heure_retour || '00:00';
+    payload.date_retour = new Date(`${order.date_retour}T${time}:00`).toISOString();
+  }
+  delete payload.heure_sortie;
+  delete payload.heure_retour;
+  return payload;
+};
+
+/** Outcome of a batch creation: per-user messages (by matricule) when refused. */
+export interface BatchResult {
+  ok: boolean;
+  errors?: Record<number, string>;
+}
+
+// The API answers in English; show the user a translated reason.
+const batchReason = (message: string): string => {
+  if (/not found/i.test(message)) return i18n.t('ordres:batch.userNotFound');
+  if (/own structure/i.test(message)) return i18n.t('ordres:batch.outOfStructure');
+  return message || i18n.t('errors:generic');
+};
+
+/** The error body of a request made with responseType 'blob' arrives as a Blob. */
+const readBlobJson = async (data: unknown): Promise<any> => {
+  try {
+    if (data instanceof Blob) return JSON.parse(await data.text());
+  } catch {
+    // not JSON: fall through
+  }
+  return data && typeof data === 'object' ? data : null;
+};
+
+/**
+ * One ordre per user, all-or-nothing, answered with a single PDF. On refusal the
+ * per-user reasons are returned so the form can show them under each user.
+ */
+export const addOrdersBatch =
+  (order: IMission, matricules: number[], token: string | null) =>
+  async (dispatch: AppDispatch): Promise<BatchResult> => {
+    try {
+      const payload = toPayload(order);
+      delete payload.userMatricule; // the batch lists its users in userMatricules
+      const res = await http.post<Blob>(
+        `/missions/batch`,
+        { ...payload, userMatricules: matricules },
+        {
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          responseType: 'blob',
+        },
+      );
+      if (res?.data && res.data.size > 0) {
+        const contentDisposition = res.headers['content-disposition'];
+        saveAs(res.data, contentDisposition ? contentDisposition.split('filename=')[1] : 'ordres-mission.pdf');
+        dispatch(setAlert({ msg: i18n.t('toasts:missionsBatchCreated', { count: matricules.length }), type: AlertTypes.SUCCESS }));
+      } else {
+        // Saved, but the PDF could not be rendered: don't invite a retry (it would duplicate).
+        dispatch(setAlert({ msg: i18n.t('toasts:missionsBatchCreatedNoPdf'), type: AlertTypes.WARNING }));
+      }
+      await dispatch(fetchUserOrders(token));
+      return { ok: true };
+    } catch (error: any) {
+      const body = await readBlobJson(error?.response?.data);
+      if (error?.response?.status === 400 && Array.isArray(body?.errors)) {
+        const errors: Record<number, string> = {};
+        for (const e of body.errors as { matricule: number; message: string }[]) {
+          errors[e.matricule] = batchReason(e.message);
+        }
+        dispatch(setAlert({ msg: i18n.t('ordres:batch.refused', { count: body.errors.length }), type: AlertTypes.ERROR }));
+        return { ok: false, errors };
+      }
+      dispatch(setAlert({ msg: extractErrorMessage(error), type: AlertTypes.ERROR }));
+      return { ok: false };
+    }
+  };
+
 export const addOrder =
   (order: IMission, token: string | null) => async (dispatch: AppDispatch) => {
     try {
-      // Build payload: combine date + time into ISO datetimes; remove UI-only heure_* fields
-      const payload: any = { ...order };
-      if (order.date_sortie) {
-        const time = order.heure_sortie || '00:00';
-        payload.date_sortie = new Date(`${order.date_sortie}T${time}:00`).toISOString();
-      }
-      if (order.date_retour) {
-        const time = order.heure_retour || '00:00';
-        payload.date_retour = new Date(`${order.date_retour}T${time}:00`).toISOString();
-      }
-      delete payload.heure_sortie;
-      delete payload.heure_retour;
+      const payload = toPayload(order);
 
       // Set responseType to blob to handle file downloads
       const res = await http.post<Blob>(`/missions`, payload, {

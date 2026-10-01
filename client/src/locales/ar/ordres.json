@@ -57,13 +57,17 @@
       "transportRequired": "اختر وسيلة النقل.",
       "returnAfterDeparture": "يجب أن تكون العودة بعد الذهاب.",
       "maxDuration": "لا يمكن أن تتجاوز مدة أمر المهمة {{count}} يومًا.",
-      "destinationRequired": "اختر وجهة واحدة على الأقل من القائمة."
+      "destinationRequired": "اختر وجهة واحدة على الأقل من القائمة.",
+      "ownersRequired": "حدّد موظفًا واحدًا على الأقل."
     },
     "destinationPlaceholder": "اكتب للبحث (مثال: تلمسان)…",
     "destinationRemove": "إزالة {{name}}",
     "destinationWilaya": "ولاية",
     "destinationNoMatch": "لا توجد ولاية أو بلدية مطابقة.",
-    "destinationLegacy": "الوجهة القديمة «{{value}}» غير معروفة: اختَرها من جديد من القائمة."
+    "destinationLegacy": "الوجهة القديمة «{{value}}» غير معروفة: اختَرها من جديد من القائمة.",
+    "selectMyStructure": "تحديد كل موظفي مصلحتي",
+    "clearSelection": "إلغاء التحديد",
+    "selectedCount": "عدد الموظفين المحددين: {{count}}"
   },
   "validate": {
     "title": "المصادقة على الأمر بمهمة",
@@ -89,5 +93,10 @@
       "mealsTotal": "يجب أن يساوي مجموع التوزيع {{count}} وجبة.",
       "costRequired": "مصاريف النقل المدفوعة إلزامية."
     }
+  },
+  "batch": {
+    "userNotFound": "الموظف غير موجود.",
+    "outOfStructure": "هذا الموظف لا ينتمي إلى مصلحتك.",
+    "refused": "لم يُنشأ أي أمر: {{count}} موظف(ين) به خطأ."
   }
 }

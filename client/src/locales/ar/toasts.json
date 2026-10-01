@@ -40,5 +40,7 @@
   "missionsLoadFailed": "تعذّر تحميل الأوامر بمهمة.",
   "decomptesLoadFailed": "تعذّر تحميل كشوف المصاريف.",
   "recapExported": "تم تصدير الملخص بنجاح",
-  "structureMoved": "تم نقل المصلحة بنجاح"
+  "structureMoved": "تم نقل المصلحة بنجاح",
+  "missionsBatchCreated": "تم إنشاء {{count}} أوامر بمهمة بنجاح",
+  "missionsBatchCreatedNoPdf": "تم إنشاء الأوامر بمهمة، لكن تعذّر توليد ملف PDF. يمكنك تنزيلها من قائمة الأوامر."
 }

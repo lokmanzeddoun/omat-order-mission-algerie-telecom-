@@ -57,13 +57,17 @@
       "transportRequired": "Choisissez un moyen de transport.",
       "returnAfterDeparture": "Le retour doit être postérieur au départ.",
       "maxDuration": "Un ordre de mission ne peut pas dépasser {{count}} jours.",
-      "destinationRequired": "Choisissez au moins une destination dans la liste."
+      "destinationRequired": "Choisissez au moins une destination dans la liste.",
+      "ownersRequired": "Sélectionnez au moins un agent."
     },
     "destinationPlaceholder": "Tapez pour rechercher (ex. Tlemcen)…",
     "destinationRemove": "Retirer {{name}}",
     "destinationWilaya": "Wilaya",
     "destinationNoMatch": "Aucune wilaya ou commune trouvée.",
-    "destinationLegacy": "L’ancienne destination « {{value}} » n’est pas reconnue : choisissez-la à nouveau dans la liste."
+    "destinationLegacy": "L’ancienne destination « {{value}} » n’est pas reconnue : choisissez-la à nouveau dans la liste.",
+    "selectMyStructure": "Sélectionner toute ma structure",
+    "clearSelection": "Tout désélectionner",
+    "selectedCount": "Agents sélectionnés : {{count}}"
   },
   "validate": {
     "title": "Valider l’ordre de mission",
@@ -93,5 +97,10 @@
       "mealsTotal_other": "La répartition doit totaliser {{count}} repas.",
       "costRequired": "Les frais de transport engagés sont obligatoires."
     }
+  },
+  "batch": {
+    "userNotFound": "Agent introuvable.",
+    "outOfStructure": "Cet agent n’appartient pas à votre structure.",
+    "refused": "Aucun ordre créé : {{count}} agent(s) en erreur."
   }
 }

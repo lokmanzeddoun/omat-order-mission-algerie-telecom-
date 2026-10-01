@@ -40,5 +40,7 @@
   "missionsLoadFailed": "Impossible de charger les ordres de mission.",
   "decomptesLoadFailed": "Impossible de charger les décomptes.",
   "recapExported": "Récapitulatif exporté avec succès",
-  "structureMoved": "Service déplacé avec succès"
+  "structureMoved": "Service déplacé avec succès",
+  "missionsBatchCreated": "{{count}} ordres de mission créés avec succès",
+  "missionsBatchCreatedNoPdf": "Ordres de mission créés, mais le PDF n'a pas pu être généré. Téléchargez-les depuis la liste des ordres."
 }

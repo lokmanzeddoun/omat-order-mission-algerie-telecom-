@@ -10,7 +10,7 @@ import dayjs from 'helpers/date';
 import { Button, Dialog, DatePicker, DestinationInput, Field, FormGrid, Select, Textarea, TimePicker } from 'components/ui';
 import { directionLabels, transportLabels } from 'constants/labels';
 import type { IMission } from './orderReducer';
-import OwnerPicker, { type OwnerOption } from './OwnerPicker';
+import OwnersPicker from './OwnersPicker';
 import { MAX_MISSION_DAYS } from 'constants/mission';
 
 export type MissionFormMode = 'create' | 'edit' | 'view';
@@ -87,9 +87,18 @@ interface Props {
   onClose: () => void;
   /** Receives date/heure as separate fields, as the order thunks expect. */
   onSubmit: (mission: IMission) => Promise<unknown> | void;
+  /**
+   * Enables the multi-user picker (admins creating from the shell). Called when
+   * several users are selected; resolves with per-user error messages (by
+   * matricule) when the server refused the batch, nothing on success.
+   */
+  onSubmitBatch?: (mission: IMission, matricules: number[]) => Promise<BatchErrors | void>;
 }
 
-export default function MissionFormDialog({ open, mode, initial, target, onClose, onSubmit }: Props) {
+/** Per-user server errors of a refused batch, by matricule. */
+export type BatchErrors = Record<number, string>;
+
+export default function MissionFormDialog({ open, mode, initial, target, onClose, onSubmit, onSubmitBatch }: Props) {
   const { t } = useTranslation();
   const me = useSelector((s: RootState) => s.auth.user) as IUser | null;
   const readOnly = mode === 'view';
@@ -103,15 +112,21 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: EMPTY });
 
-  // Admins creating from the shell (no fixed target) can choose who the ordre is for.
-  const [picked, setPicked] = useState<OwnerOption | null>(null);
-  const canPick = mode === 'create' && !target && !!me && (me.role === 'ADMIN' || me.role === 'SUPER_ADMIN');
+  // Admins creating from the shell (no fixed target) can choose one or several users to create the ordre for.
+  const [selected, setSelected] = useState<number[]>([]);
+  const [batchErrors, setBatchErrors] = useState<BatchErrors>({});
+  const [pickError, setPickError] = useState(false);
+  const canPick =
+    mode === 'create' && !target && !!me && (me.role === 'ADMIN' || me.role === 'SUPER_ADMIN') && !!onSubmitBatch;
 
   useEffect(() => {
     if (open) {
       reset(initial ? toForm(initial) : EMPTY);
-      setPicked(null);
+      setSelected(me ? [me.matricule] : []);
+      setBatchErrors({});
+      setPickError(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-seed the selection only when the dialog opens
   }, [open, initial, reset]);
 
   const owner =
@@ -122,14 +137,35 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
       : `${owner.prenom ?? ''} ${owner.nom ?? ''}`.trim() || t('ordres:form.matriculeOf', { matricule: owner.matricule })
     : '';
 
+  const changeSelection = (next: number[]) => {
+    setSelected(next);
+    setBatchErrors({});
+    setPickError(false);
+  };
+
   const submit = handleSubmit(async (v) => {
-    await onSubmit({
+    const mission = {
       ...(initial?.n_mission ? { n_mission: initial.n_mission } : {}),
       ...v,
-      ...(canPick && picked && picked.matricule !== me?.matricule ? { userMatricule: picked.matricule } : {}),
       date_retour: v.date_retour || undefined,
       direction: v.direction as IMission['direction'],
-    });
+    };
+    if (canPick && onSubmitBatch) {
+      if (selected.length === 0) {
+        setPickError(true);
+        return;
+      }
+      if (selected.length > 1) {
+        const errors = await onSubmitBatch(mission, selected);
+        setBatchErrors(errors ?? {});
+        return;
+      }
+      // One person: the usual single creation (for oneself, or for the picked user).
+      const [only] = selected;
+      await onSubmit({ ...mission, ...(only !== me?.matricule ? { userMatricule: only } : {}) });
+      return;
+    }
+    await onSubmit(mission);
   });
 
   return (
@@ -154,7 +190,12 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
       }
     >
       <form id="mission-form" noValidate onSubmit={submit} className="flex flex-col gap-4">
-        {canPick && me && <OwnerPicker me={me} value={picked ?? me} onChange={setPicked} />}
+        {canPick && me && <OwnersPicker me={me} value={selected} onChange={changeSelection} errors={batchErrors} />}
+        {canPick && pickError && (
+          <p role="alert" className="-mt-2 text-xs text-danger">
+            {t('ordres:form.errors.ownersRequired')}
+          </p>
+        )}
         <Field label={t('ordres:form.motif')} error={errors.motif?.message} required={!readOnly}>
           <Textarea rows={2} readOnly={readOnly} autoFocus={!readOnly} {...register('motif')} />
         </Field>
