@@ -7,6 +7,9 @@
     "assets": [
       {
         "include": "pdf/fonts/**/*"
+      },
+      {
+        "include": "data/*.json"
       }
     ]
   }

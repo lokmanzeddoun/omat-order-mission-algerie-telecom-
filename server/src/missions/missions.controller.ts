@@ -18,8 +18,6 @@ import { Prisma, User } from '@prisma/client';
 import { Response } from 'express';
 import { BadRequestException } from '@nestjs/common';
 import { ReopenDto } from 'src/common/dto/reopen.dto';
-// Removed destination validator import - now just using string validation
-// import { isValidDestination } from '../utils/destination-validator';
 @Controller('missions')
 export class MissionsController {
   constructor(private readonly missionsService: MissionsService) {}
@@ -43,9 +41,6 @@ export class MissionsController {
         );
       }
     }
-
-    // Destination is now validated as a string by the DTO
-    // No need for complex JSON file validation
 
     return this.missionsService.create(
       createMissionDto as unknown as Prisma.MissionCreateInput,
@@ -134,9 +129,6 @@ export class MissionsController {
         }
       }
     }
-
-    // Destination is now validated as a string by the DTO
-    // No need for complex JSON file validation
 
     return this.missionsService.update(+id, updateMissionDto, actor);
   }
