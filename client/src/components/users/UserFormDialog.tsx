@@ -12,6 +12,7 @@ import type { IStructure } from 'components/structures/structure.reducer';
 import { Button, Dialog, Field, FormGrid, Input, Select } from 'components/ui';
 import { categoryLabels, roleLabels } from 'constants/labels';
 import { isEmail } from 'lib/email';
+import { Role } from 'constants/role';
 
 export type UserFormMode = 'create' | 'edit' | 'view';
 
@@ -78,6 +79,9 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
   const readOnly = mode === 'view';
   // Identity fields are fixed once the account exists (same rule as before).
   const locked = mode !== 'create';
+  // The API only lets super administrators change a role; admins may still change the category.
+  const isSuperAdmin = useSelector((s: RootState) => s.auth.user.role) === Role.super_admin;
+  const roleLocked = readOnly || (mode === 'edit' && !isSuperAdmin);
   const schema = useMemo(() => schemaFor(mode, t), [mode, t]);
 
   const {
@@ -145,7 +149,7 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
             <Input readOnly={readOnly} {...register('prenom')} />
           </Field>
           <Field label={t('users:field.role')} required={!readOnly}>
-            <Select disabled={locked} {...register('role')}>
+            <Select disabled={roleLocked} {...register('role')}>
               {Object.entries(roleLabels).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -154,7 +158,7 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
             </Select>
           </Field>
           <Field label={t('users:field.category')} required={!readOnly}>
-            <Select disabled={locked} {...register('category')}>
+            <Select disabled={readOnly} {...register('category')}>
               {Object.entries(categoryLabels).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
