@@ -461,7 +461,7 @@ export function DataTable<Row extends RowData>({
           <thead>
             <tr className="bg-surface-header">
               {selectable && (
-                <th scope="col" className="w-px border border-border px-2 py-2 text-center">
+                <th scope="col" className="w-px border-b border-border px-2 py-2 text-center">
                   <Checkbox
                     aria-label={t('table.selectPage')}
                     checked={pageAllSelected}
@@ -483,7 +483,7 @@ export function DataTable<Row extends RowData>({
                     style={{ width: col.width }}
                     aria-sort={sorted === 'asc' ? 'ascending' : sorted === 'desc' ? 'descending' : undefined}
                     className={cn(
-                      'border border-border px-2 py-2 font-semibold whitespace-nowrap text-fg',
+                      'border-b border-border px-2 py-2 font-semibold whitespace-nowrap text-fg',
                       alignClass(col.align),
                     )}
                   >
@@ -511,7 +511,7 @@ export function DataTable<Row extends RowData>({
               {rowActions && (
                 <th
                   scope="col"
-                  className="w-px border border-border px-2 py-2 text-center font-semibold whitespace-nowrap"
+                  className="w-px border-b border-border px-2 py-2 text-center font-semibold whitespace-nowrap"
                 >
                   {t('table.actions')}
                 </th>
@@ -519,14 +519,14 @@ export function DataTable<Row extends RowData>({
             </tr>
             {showFilters && (
               <tr className="bg-surface-muted">
-                {selectable && <td className="border border-border p-1" />}
+                {selectable && <td className="border-b border-border p-1" />}
                 {visibleColumns.map((column) => {
                   const col = colById.get(column.id)!;
                   const label = t('table.filter', { column: col.header });
                   const value = filters[col.id] ?? '';
                   const set = (v: string) => setFilters((f) => ({ ...f, [col.id]: v }));
                   return (
-                    <td key={column.id} className="border border-border p-1">
+                    <td key={column.id} className="border-b border-border p-1">
                       {col.filter === false ? null : col.filter === 'date' ? (
                         <Input
                           type="date"
@@ -561,7 +561,7 @@ export function DataTable<Row extends RowData>({
                     </td>
                   );
                 })}
-                {rowActions && <td className="border border-border p-1" />}
+                {rowActions && <td className="border-b border-border p-1" />}
               </tr>
             )}
           </thead>
@@ -570,7 +570,7 @@ export function DataTable<Row extends RowData>({
               Array.from({ length: 5 }, (_, i) => (
                 <tr key={`sk-${i}`}>
                   {Array.from({ length: colSpan }, (__, j) => (
-                    <td key={j} className="border border-border px-2 py-2">
+                    <td key={j} className="border-b border-border px-2 py-2">
                       <Skeleton className="h-4 w-full" />
                     </td>
                   ))}
@@ -578,7 +578,7 @@ export function DataTable<Row extends RowData>({
               ))
             ) : pageRows.length === 0 ? (
               <tr>
-                <td colSpan={colSpan} className="border border-border">
+                <td colSpan={colSpan} className="border-b border-border">
                   <EmptyState title={emptyTitle ?? t('table.empty')} hint={emptyHint ?? t('table.emptyHint')} />
                 </td>
               </tr>
@@ -602,7 +602,7 @@ export function DataTable<Row extends RowData>({
                       )}
                     >
                       {selectable && (
-                        <td className="border border-border px-2 py-1.5 text-center align-middle">
+                        <td className="border-b border-border px-2 py-1.5 text-center align-middle">
                           <Checkbox
                             aria-label={t('table.selectRow', {
                               label: toText(valueOf(columns[0], original)) || row.id,
@@ -620,14 +620,14 @@ export function DataTable<Row extends RowData>({
                         return (
                           <td
                             key={column.id}
-                            className={cn('border border-border px-2 py-1.5 align-middle', alignClass(col.align))}
+                            className={cn('border-b border-border px-2 py-1.5 align-middle', alignClass(col.align))}
                           >
                             {col.cell ? col.cell(original) : toText(valueOf(col, original)) || '—'}
                           </td>
                         );
                       })}
                       {actions && (
-                        <td className="border border-border px-1 py-1">
+                        <td className="border-b border-border px-1 py-1">
                           <div className="flex items-center justify-center gap-0.5">
                             {actions.primary
                               ?.filter((a) => !a.hidden)

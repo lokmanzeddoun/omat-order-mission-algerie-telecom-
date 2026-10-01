@@ -44,7 +44,7 @@ function NavList({ items, collapsed, onNavigate }: { items: NavItem[]; collapsed
               title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 border-s-4 px-4 py-2 text-sm',
+                  'flex items-center gap-3 border-s-2 px-4 py-2 text-sm',
                   collapsed && 'justify-center px-0',
                   isActive
                     ? 'border-accent bg-primary-soft font-semibold text-primary'
@@ -102,7 +102,7 @@ export default function AppShell({ children }: PropsWithChildren) {
       </a>
 
       {/* Official header band */}
-      <header className="border-b-4 border-accent bg-band text-white">
+      <header className="border-b-2 border-accent bg-band text-white">
         <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-4">
           <button
             type="button"
@@ -179,7 +179,7 @@ export default function AppShell({ children }: PropsWithChildren) {
               aria-describedby={undefined}
               className="omat-ui fixed inset-y-0 start-0 z-[1400] w-72 border-e border-border bg-surface text-fg lg:hidden"
             >
-              <div className="flex items-center justify-between border-b-4 border-accent bg-band px-4 py-3 text-white">
+              <div className="flex items-center justify-between border-b-2 border-accent bg-band px-4 py-3 text-white">
                 <RadixDialog.Title className="text-sm font-semibold">{t('app.title')}</RadixDialog.Title>
                 <RadixDialog.Close aria-label={t('actions.close')} className="cursor-pointer rounded-xs p-1 hover:bg-white/10">
                   <X className="size-4" />

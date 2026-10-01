@@ -80,8 +80,12 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
   // Identity fields are fixed once the account exists (same rule as before).
   const locked = mode !== 'create';
   // The API only lets super administrators change a role; admins may still change the category.
-  const isSuperAdmin = useSelector((s: RootState) => s.auth.user.role) === Role.super_admin;
-  const roleLocked = readOnly || (mode === 'edit' && !isSuperAdmin);
+  const actor = useSelector((s: RootState) => s.auth.user);
+  const isSuperAdmin = actor.role === Role.super_admin;
+  // A plain admin can only create regular users inside their own service (the API enforces it too).
+  const adminScoped = mode === 'create' && actor.role === Role.admin;
+  const ownService = actor.serviceId ?? '';
+  const roleLocked = readOnly || adminScoped || (mode === 'edit' && !isSuperAdmin);
   const schema = useMemo(() => schemaFor(mode, t), [mode, t]);
 
   const {
@@ -102,9 +106,10 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
         ...EMPTY,
         ...initial,
         matricule: initial?.matricule ? String(initial.matricule) : '',
-        serviceId: initial?.serviceId ?? '',
+        ...(adminScoped ? { role: 'USER' as const } : {}),
+        serviceId: adminScoped ? ownService : (initial?.serviceId ?? ''),
       });
-  }, [open, initial, reset]);
+  }, [open, initial, reset, adminScoped, ownService]);
 
   // A native <select> drops a value whose <option> is not rendered yet. When the services
   // arrive after the form opened, re-apply only the service (never the whole form, which
@@ -134,7 +139,13 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
         )
       }
     >
-      <form id="user-form" noValidate onSubmit={handleSubmit(async (v) => onSubmit({ ...v, matricule: Number(v.matricule) }))} className="flex flex-col gap-4">
+      <form id="user-form" noValidate onSubmit={handleSubmit(async (v) =>
+          onSubmit({
+            ...v,
+            matricule: Number(v.matricule),
+            ...(adminScoped ? { role: 'USER' as const, serviceId: ownService } : {}),
+          }),
+        )} className="flex flex-col gap-4">
         <FormGrid>
           <Field label={t('field.matricule')} error={errors.matricule?.message} required={!readOnly}>
             <Input type="number" inputMode="numeric" dir="ltr" readOnly={locked} autoFocus={mode === 'create'} {...register('matricule')} />
@@ -170,13 +181,15 @@ export default function UserFormDialog({ open, mode, initial, onClose, onSubmit 
             <Input readOnly={readOnly} {...register('grade')} />
           </Field>
           <Field label={t('users:field.service')} error={errors.serviceId?.message} required={mode === 'create'}>
-            <Select disabled={readOnly} {...register('serviceId')}>
+            <Select disabled={readOnly || adminScoped} {...register('serviceId')}>
               <option value="">{t('users:form.chooseService')}</option>
-              {structures.map((s) => (
-                <option key={s.code} value={s.code}>
-                  {s.name}
-                </option>
-              ))}
+              {structures
+                .filter((s) => !adminScoped || s.code === ownService)
+                .map((s) => (
+                  <option key={s.code} value={s.code}>
+                    {s.name}
+                  </option>
+                ))}
             </Select>
           </Field>
         </FormGrid>

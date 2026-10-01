@@ -95,7 +95,14 @@ const router = createBrowserRouter(
             { index: true, element: <OrderDashboard /> },
             { path: 'ordres/:id', element: <OrdreDetail /> },
             { path: 'users', element: <Users /> },
-            { path: 'structures', element: <Structures /> },
+            {
+              path: 'structures',
+              element: (
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <Structures />
+                </ProtectedRoute>
+              ),
+            },
             { path: 'barem', element: <DataGridWithJson /> },
             { path: 'decomptes', element: <DecomptesPage /> },
             { path: 'decomptes/:id', element: <DecompteDetail /> },
