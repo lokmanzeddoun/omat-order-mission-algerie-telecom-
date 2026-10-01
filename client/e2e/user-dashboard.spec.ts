@@ -12,7 +12,7 @@ test.describe('agent dashboard', () => {
     const destination = `Oran-AGT${Date.now() % 100000}`;
     await page.getByRole('banner').getByRole('button', { name: 'Nouvel ordre de mission' }).click();
     const dialog = page.getByRole('dialog', { name: 'Nouvel ordre de mission' });
-    await expect(dialog).toContainText('Agent concerné : vous-même');
+    await expect(dialog).toContainText('Employé concerné : vous-même');
     await dialog.getByLabel('Motif de la mission').fill('Mission agent E2E');
     await dialog.getByLabel('Date de départ').fill(`02/11/${year}`);
     await dialog.getByLabel('Heure de départ').fill('07:30');

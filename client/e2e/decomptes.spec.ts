@@ -46,7 +46,7 @@ test.describe('décomptes', () => {
     await expect(page).toHaveURL(/admins\/decomptes\/\d+$/);
     await page.getByRole('button', { name: 'Accepter' }).click();
     const accept = page.getByRole('alertdialog');
-    await accept.getByLabel(/Message à l’agent/).fill('Dossier complet (E2E)');
+    await accept.getByLabel(/Message à l’employé/).fill('Dossier complet (E2E)');
     await accept.getByRole('button', { name: 'Accepter' }).click();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Accepté');
 
