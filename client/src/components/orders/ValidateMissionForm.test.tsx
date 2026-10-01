@@ -6,19 +6,19 @@ import ValidateMissionForm from './ValidateMissionForm';
 import type { IMission } from './orderReducer';
 
 // Leaves on the 10th at 08:00, back on the 11th at 15:00: 3 meals, 1 night.
-const mission = (direction: Direction): IMission => ({
+const mission = (direction: Direction, transport = 'SERVICE_CAR'): IMission => ({
   n_mission: 7,
   date_sortie: '2026-03-10T08:00:00',
   date_retour: '2026-03-11T15:00:00',
   motif: 'Audit',
   destination: 'Ouargla',
-  transport: 'SERVICE_CAR',
+  transport,
   direction,
 });
 
-const setup = (direction: Direction) => {
+const setup = (direction: Direction, transport?: string) => {
   const onSubmit = vi.fn();
-  render(<ValidateMissionForm open mission={mission(direction)} onClose={() => {}} onSubmit={onSubmit} />);
+  render(<ValidateMissionForm open mission={mission(direction, transport)} onClose={() => {}} onSubmit={onSubmit} />);
   return onSubmit;
 };
 
@@ -36,7 +36,6 @@ describe('ValidateMissionForm', () => {
     const split = screen.getByRole('group', { name: 'Répartition' });
     await fill(split, 'Repas sans prise en charge', '3');
     await fill(split, 'Nuitées sans prise en charge', '1');
-    await userEvent.type(screen.getByLabelText(/Distance parcourue/), '0');
     await submit();
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -56,7 +55,6 @@ describe('ValidateMissionForm', () => {
     await fill(nord, 'Repas sans prise en charge', '2');
     await fill(nord, 'Nuitées sans prise en charge', '1');
     await fill(sud, 'Repas sans prise en charge', '1');
-    await userEvent.type(screen.getByLabelText(/Distance parcourue/), '0');
     await submit();
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -76,10 +74,57 @@ describe('ValidateMissionForm', () => {
     await fill(nord, 'Repas sans prise en charge', '2');
     await fill(sud, 'Repas sans prise en charge', '2');
     await fill(sud, 'Nuitées sans prise en charge', '1');
-    await userEvent.type(screen.getByLabelText(/Distance parcourue/), '0');
     await submit();
 
     expect(await screen.findByText('La répartition doit totaliser 3 repas.')).toBeInTheDocument();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  describe('transport inputs depend on the means of transport', () => {
+    const rights = async (transport: string) => {
+      const onSubmit = setup(Direction.sud, transport);
+      const split = screen.getByRole('group', { name: 'Répartition' });
+      await fill(split, 'Repas sans prise en charge', '3');
+      await fill(split, 'Nuitées sans prise en charge', '1');
+      return onSubmit;
+    };
+    const distance = () => screen.queryByLabelText(/Distance parcourue/);
+    const cost = () => screen.queryByLabelText(/Frais de transport engagés/);
+
+    it.each(['SERVICE_CAR', 'TRANSPORT_ENTREPRISE'])('%s needs no transport input', async (transport) => {
+      const onSubmit = await rights(transport);
+      expect(distance()).not.toBeInTheDocument();
+      expect(cost()).not.toBeInTheDocument();
+      await submit();
+      const figures = onSubmit.mock.calls[0][0];
+      expect(figures.distance_km).toBeUndefined();
+      expect(figures.transport_cost).toBeUndefined();
+    });
+
+    it('PERSONAL_CAR asks for the distance only', async () => {
+      const onSubmit = await rights('PERSONAL_CAR');
+      expect(cost()).not.toBeInTheDocument();
+      await submit();
+      expect(await screen.findByText('La distance parcourue est obligatoire.')).toBeInTheDocument();
+      expect(onSubmit).not.toHaveBeenCalled();
+      await userEvent.type(distance()!, '120');
+      await submit();
+      const figures = onSubmit.mock.calls[0][0];
+      expect(figures.distance_km).toBe(120);
+      expect(figures.transport_cost).toBeUndefined();
+    });
+
+    it('TRANSPORT_EMPLOYEE asks for the transport fees only', async () => {
+      const onSubmit = await rights('TRANSPORT_EMPLOYEE');
+      expect(distance()).not.toBeInTheDocument();
+      await submit();
+      expect(await screen.findByText('Les frais de transport engagés sont obligatoires.')).toBeInTheDocument();
+      expect(onSubmit).not.toHaveBeenCalled();
+      await userEvent.type(cost()!, '2500');
+      await submit();
+      const figures = onSubmit.mock.calls[0][0];
+      expect(figures.transport_cost).toBe(2500);
+      expect(figures.distance_km).toBeUndefined();
+    });
   });
 });
