@@ -277,10 +277,9 @@ describe('DecompteService', () => {
       expect(createdData().montant).toBe(NORD_OVERNIGHT * 0.25);
     });
 
-    // Code behaviour that CONTRADICTS docs/decompte-workflow.md: the doc pays
-    // SUD on hebergement_total / repas_total, the code only on sans_pec, and
-    // the 25% rule still applies on top. Pending a business decision.
-    it('SUD with any pec item: pays only sans_pec items, then keeps 25%', async () => {
+    // SUD pays every meal and night like NORD (docs/decompte-workflow.md),
+    // then the 25% rule applies on top.
+    it('SUD with any pec item: pays pec and sans_pec items, then keeps 25%', async () => {
       db.mission.findUnique.mockResolvedValue(
         mission({ direction: Direction.SUD }),
       );
@@ -288,7 +287,7 @@ describe('DecompteService', () => {
         inSud(overnightDto({ repas_pec_nord: 1, repas_sans_pec_nord: 2 })),
         N_MISSION,
       );
-      expect(createdData().montant).toBe((2 * 200 + 2000) * 0.25);
+      expect(createdData().montant).toBe((3 * 200 + 2000) * 0.25);
     });
 
     it("uses the barème of the mission's agent, not the admin's", async () => {

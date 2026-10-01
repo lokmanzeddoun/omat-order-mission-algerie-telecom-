@@ -27,7 +27,7 @@ describe('computeMontant', () => {
     expect(computeMontant({ ...base, counts }, barem)).toBe(3 * 100 + 1000);
   });
 
-  it('Sud: pays only sans_pec meals and nights at the sud rates', () => {
+  it('Sud: pays every meal and night at the sud rates, pec or not', () => {
     const counts = emptyCounts();
     counts.sud = {
       repas_pec: 1,
@@ -35,9 +35,9 @@ describe('computeMontant', () => {
       hebergement_pec: 0,
       hebergement_sans_pec: 1,
     };
-    // The pec meal is not paid in Sud, and any pec item keeps 25%.
+    // The pec meal is paid like the others, and any pec item keeps 25%.
     expect(computeMontant({ ...base, counts }, barem)).toBe(
-      (2 * 200 + 2000) * 0.25,
+      (3 * 200 + 2000) * 0.25,
     );
   });
 
@@ -67,7 +67,7 @@ describe('computeMontant', () => {
     counts.sud.repas_sans_pec = 1;
     counts.sud.hebergement_pec = 1;
     expect(computeMontant({ ...base, counts }, barem)).toBe(
-      (2 * 100 + 200) * 0.25,
+      (2 * 100 + 200 + 2000) * 0.25,
     );
   });
 

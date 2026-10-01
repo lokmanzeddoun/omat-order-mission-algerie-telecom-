@@ -103,8 +103,8 @@ type Rates = Pick<
 
 /**
  * Montant of a décompte, each zone priced at its own barème rates.
- * Nord pays every meal and night; Sud pays only the sans_pec ones. Any pec
- * item, in either zone, keeps 25% of the total; fees_transport is added last.
+ * Both zones pay every meal and night, pec or not. Any pec item, in either
+ * zone, keeps 25% of the total; fees_transport is added last.
  */
 export function computeMontant(input: MontantInput, barem: Rates): number {
   const { nord, sud } = input.counts;
@@ -112,8 +112,8 @@ export function computeMontant(input: MontantInput, barem: Rates): number {
     (nord.hebergement_pec + nord.hebergement_sans_pec) *
       barem.hebergement_nord +
     (nord.repas_pec + nord.repas_sans_pec) * barem.repas_nord +
-    sud.hebergement_sans_pec * barem.hebergement_sud +
-    sud.repas_sans_pec * barem.repas_sud;
+    (sud.hebergement_pec + sud.hebergement_sans_pec) * barem.hebergement_sud +
+    (sud.repas_pec + sud.repas_sans_pec) * barem.repas_sud;
 
   if (input.transport === TransportType.PERSONAL_CAR) {
     montant += input.parcours * barem.montant_km;
