@@ -31,6 +31,52 @@ describe('UsersService', () => {
   });
 });
 
+describe('UsersService.create (admin scope)', () => {
+  const ADMIN = { matricule: 1, role: Role.ADMIN, serviceId: 'DR1' } as User;
+  const dto = (over: object) =>
+    ({
+      matricule: 5,
+      nom: 'a',
+      prenom: 'b',
+      email: 'a@b.dz',
+      grade: 'g',
+      category: 'CADRE',
+      role: Role.USER,
+      serviceId: 'DR1',
+      ...over,
+    }) as never;
+  let service: UsersService;
+
+  beforeEach(async () => {
+    const module = await Test.createTestingModule({
+      providers: [
+        UsersService,
+        AccessPolicy,
+        { provide: DatabaseService, useValue: {} },
+      ],
+    }).compile();
+    service = module.get(UsersService);
+  });
+
+  it('rejects an admin creating a user in another service', async () => {
+    await expect(
+      service.create(dto({ serviceId: 'DR2' }), ADMIN),
+    ).rejects.toThrow('own structure');
+  });
+
+  it('rejects an admin creating a non-USER role', async () => {
+    await expect(
+      service.create(dto({ role: Role.ADMIN }), ADMIN),
+    ).rejects.toThrow('own structure');
+  });
+
+  it('rejects an admin without a service', async () => {
+    await expect(
+      service.create(dto({}), { ...ADMIN, serviceId: null } as User),
+    ).rejects.toThrow('own structure');
+  });
+});
+
 describe('UsersService.uploadUsers', () => {
   const HEADER = [
     'Matricule',

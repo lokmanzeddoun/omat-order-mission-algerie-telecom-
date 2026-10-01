@@ -28,6 +28,15 @@ test('admin shell: header, exercice, role navigation, user menu', async ({ page 
   await expect(page.getByRole('navigation', { name: 'Navigation principale' })).toBeVisible();
 });
 
+test('admin shell: no Services entry, page redirects away', async ({ page }) => {
+  await login(page, 'admin');
+  const nav = page.getByRole('navigation', { name: 'Navigation principale' });
+  await expect(nav.getByRole('link', { name: 'Utilisateurs' })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Services' })).toHaveCount(0);
+  await page.goto('/dashboard/admins/structures');
+  await expect(page).not.toHaveURL(/structures$/);
+});
+
 test('user shell: own navigation and exercice loaded', async ({ page }) => {
   await login(page, 'user');
   const nav = page.getByRole('navigation', { name: 'Navigation principale' });

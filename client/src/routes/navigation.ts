@@ -22,7 +22,7 @@ export const navigation: NavItem[] = [
   { id: 'ordres', labelKey: 'nav.ordres', path: paths.admins, icon: BookOpen, roles: ADMINS, end: true },
   { id: 'decomptes', labelKey: 'nav.decomptes', path: `${paths.admins}/decomptes`, icon: FileCheck2, roles: ADMINS },
   { id: 'users', labelKey: 'nav.users', path: `${paths.admins}/users`, icon: Users, roles: ADMINS },
-  { id: 'structures', labelKey: 'nav.structures', path: `${paths.admins}/structures`, icon: Building2, roles: ADMINS },
+  { id: 'structures', labelKey: 'nav.structures', path: `${paths.admins}/structures`, icon: Building2, roles: ['SUPER_ADMIN'] },
   { id: 'barem', labelKey: 'nav.barem', path: `${paths.admins}/barem`, icon: ReceiptText, roles: ADMINS },
   { id: 'comments', labelKey: 'nav.comments', path: `${paths.admins}/support`, icon: MessageSquare, roles: ADMINS },
   { id: 'archive', labelKey: 'nav.archive', path: `${paths.admins}/archive`, icon: Archive, roles: ADMINS },
