@@ -57,7 +57,7 @@ export const DRT_LABEL = 'TLEMCEN';
 
 export const COMPANY = {
   legal: 'EPE / SPA au capital social de',
-  capital: '61 275 180 000,00 DA',
+  capital: '115 000 000 000,00 DA',
   rc: 'R.C. n° 02 B 18083',
   address:
     'Siège Social : Route Nationale n° 5, Cinq-Maisons, Mohammadia 16030 Alger',
