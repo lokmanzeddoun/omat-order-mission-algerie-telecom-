@@ -7,7 +7,7 @@ RUN npm ci --workspace=client --include-workspace-root
 COPY client client
 RUN npm run build --workspace=client
 
-FROM nginx:1.29-alpine
+FROM nginx:1.31-alpine
 COPY deploy/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/client/dist /usr/share/nginx/html/omat
 EXPOSE 8443
