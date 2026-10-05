@@ -19,13 +19,12 @@ import { saveAs } from 'file-saver';
 /** Combines date + time into ISO datetimes and drops the UI-only heure_* fields. */
 const toPayload = (order: IMission): any => {
   const payload: any = { ...order };
-  if (order.date_sortie) {
-    const time = order.heure_sortie || '00:00';
-    payload.date_sortie = new Date(`${order.date_sortie}T${time}:00`).toISOString();
+  // The form requires each date's hour: never invent a 00:00.
+  if (order.date_sortie && order.heure_sortie) {
+    payload.date_sortie = new Date(`${order.date_sortie}T${order.heure_sortie}:00`).toISOString();
   }
-  if (order.date_retour) {
-    const time = order.heure_retour || '00:00';
-    payload.date_retour = new Date(`${order.date_retour}T${time}:00`).toISOString();
+  if (order.date_retour && order.heure_retour) {
+    payload.date_retour = new Date(`${order.date_retour}T${order.heure_retour}:00`).toISOString();
   }
   delete payload.heure_sortie;
   delete payload.heure_retour;
@@ -209,17 +208,15 @@ export const updateMission = (order: IMission) => async (dispatch: AppDispatch, 
     const body: any = { ...rawBody };
     if (rawBody.date_sortie) {
       const d = rawBody.date_sortie;
-      // If provided value looks like YYYY-MM-DD, combine with heure_sortie (if any)
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-        const t = rawBody.heure_sortie || '00:00';
-        body.date_sortie = new Date(`${d}T${t}:00`).toISOString();
+      // A YYYY-MM-DD value is combined with its hour, which the form requires.
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && rawBody.heure_sortie) {
+        body.date_sortie = new Date(`${d}T${rawBody.heure_sortie}:00`).toISOString();
       }
     }
     if (rawBody.date_retour) {
       const d = rawBody.date_retour;
-      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
-        const t = rawBody.heure_retour || '00:00';
-        body.date_retour = new Date(`${d}T${t}:00`).toISOString();
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d) && rawBody.heure_retour) {
+        body.date_retour = new Date(`${d}T${rawBody.heure_retour}:00`).toISOString();
       }
     }
     delete body.heure_sortie;

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { canBecomeRoot, moveTargets, structureLabel } from 'helpers/structureTree';
-import { Button, Dialog, Field, Input, Select } from 'components/ui';
+import { Button, Dialog, Field, Select } from 'components/ui';
 import type { IStructure } from './structure.reducer';
 
 const ROOT = '__root__';
@@ -11,37 +11,33 @@ interface Props {
   structure: IStructure | null;
   structures: IStructure[];
   onClose: () => void;
-  onMove: (target: { parentCode: string | null; code?: string }) => Promise<void> | void;
+  onMove: (target: { parentCode: string | null }) => Promise<void> | void;
 }
 
 /**
- * Moves a service and its subtree (super admin). Only the places the API would accept are
+ * Moves a structure and its subtree (super admin); codes never change. Only the places the API would accept are
  * offered: never under itself or a descendant, and never deeper than three levels.
  */
 export default function StructureMoveDialog({ structure, structures, onClose, onMove }: Props) {
   const { t } = useTranslation();
   const [target, setTarget] = useState('');
-  const [rootCode, setRootCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
 
   const targets = useMemo(() => (structure ? moveTargets(structure, structures) : []), [structure, structures]);
   const rootAllowed = !!structure && canBecomeRoot(structure, structures);
-  const asRoot = target === ROOT;
-  const rootCodeMissing = asRoot && !rootCode.trim();
 
   useEffect(() => {
     setTarget('');
-    setRootCode('');
     setTouched(false);
   }, [structure]);
 
   const submit = async () => {
     setTouched(true);
-    if (!target || rootCodeMissing) return;
+    if (!target) return;
     setBusy(true);
     try {
-      await onMove(asRoot ? { parentCode: null, code: rootCode.trim() } : { parentCode: target });
+      await onMove({ parentCode: target === ROOT ? null : target });
     } finally {
       setBusy(false);
     }
@@ -84,11 +80,6 @@ export default function StructureMoveDialog({ structure, structures, onClose, on
               ))}
             </Select>
           </Field>
-          {asRoot && (
-            <Field label={t('structures:move.rootCode')} error={touched && rootCodeMissing ? t('structures:move.rootCodeRequired') : undefined} required>
-              <Input dir="ltr" value={rootCode} onChange={(e) => setRootCode(e.target.value)} />
-            </Field>
-          )}
         </div>
       )}
     </Dialog>

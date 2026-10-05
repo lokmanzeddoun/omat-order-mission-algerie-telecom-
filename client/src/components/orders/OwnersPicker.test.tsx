@@ -56,8 +56,8 @@ describe('OwnersPicker', () => {
   it('selects everyone in my structure only, and clears the selection', async () => {
     render(<Harness initial={[4]} />);
     await checkbox(/Karim Benali/);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Sélectionner toute ma structure' })).toBeEnabled());
-    await userEvent.click(screen.getByRole('button', { name: 'Sélectionner toute ma structure' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: /Sélectionner toute ma structure/ })).toBeEnabled());
+    await userEvent.click(screen.getByRole('button', { name: /Sélectionner toute ma structure/ }));
 
     expect(await checkbox(/Karim Benali/)).toBeChecked();
     expect(await checkbox(/Sara Cherif/)).toBeChecked();
@@ -68,6 +68,32 @@ describe('OwnersPicker', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Tout désélectionner' }));
     expect(screen.getByText('Employés sélectionnés : 0')).toBeInTheDocument();
+  });
+
+  it('also selects the users of my sub-structures, down to grandchildren', async () => {
+    vi.mocked(http.get).mockResolvedValue({
+      data: [
+        users[0],
+        { matricule: 6, nom: 'Fils', prenom: 'Nadia', serviceId: 'DT1', status: 'ACTIVE', structure: { name: 'DT / Réseau', parentCode: 'DT' } },
+        {
+          matricule: 7,
+          nom: 'Petit',
+          prenom: 'Yacine',
+          serviceId: 'DT11',
+          status: 'ACTIVE',
+          structure: { name: 'DT / Réseau / Fibre', parentCode: 'DT1', parent: { parentCode: 'DT' } },
+        },
+        users[3],
+      ],
+    } as never);
+    render(<Harness initial={[]} />);
+    await checkbox(/Yacine Petit/);
+    await userEvent.click(screen.getByRole('button', { name: /Sélectionner toute ma structure/ }));
+
+    expect(await checkbox(/Nadia Fils/)).toBeChecked();
+    expect(await checkbox(/Yacine Petit/)).toBeChecked();
+    expect(await checkbox(/Omar Dahmani/)).not.toBeChecked();
+    expect(screen.getByText('Employés sélectionnés : 3')).toBeInTheDocument();
   });
 
   it('shows the server error under the matching user', async () => {
@@ -83,6 +109,7 @@ describe('MissionFormDialog multi-user creation', () => {
   const fill = async () => {
     await userEvent.type(screen.getByLabelText(/^Motif de la mission/), 'Audit');
     await userEvent.type(screen.getByLabelText(/^Date de départ/), '10032026');
+    await userEvent.type(screen.getByLabelText(/^Heure de départ/), '0800');
     await userEvent.selectOptions(screen.getByLabelText(/^Moyen de transport/), 'SERVICE_CAR');
     await userEvent.type(screen.getByLabelText(/^Destination/), 'tl');
     await userEvent.click(await screen.findByRole('option', { name: 'Tlemcen' }));
@@ -144,6 +171,6 @@ describe('MissionFormDialog multi-user creation', () => {
 
   it('does not offer the picker to a regular user', () => {
     open({ matricule: 7, nom: 'U', prenom: 'U', role: 'USER' }, { onSubmitBatch: vi.fn() });
-    expect(screen.queryByRole('button', { name: 'Sélectionner toute ma structure' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Sélectionner toute ma structure/ })).not.toBeInTheDocument();
   });
 });

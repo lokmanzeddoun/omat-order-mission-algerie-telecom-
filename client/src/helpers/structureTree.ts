@@ -1,10 +1,9 @@
 /**
- * Structures form a tree of at most 3 levels (ADR 0005). A root's code is its
- * abbreviation; a child's code is its full path, so depth and ancestry can be
- * read from the codes alone (same rules as server/src/structures/structure-path.ts).
+ * Structures form a tree of at most 3 levels (ADR 0005, 0006). A code is an opaque identifier
+ * (the HR "Unité org." number); depth and ancestry come from `parentCode` alone (same rules as
+ * server/src/structures/structure-tree.ts).
  */
 export const MAX_STRUCTURE_DEPTH = 3;
-export const PATH_SEPARATOR = ' / ';
 
 export interface TreeStructure {
   code: string;
@@ -12,23 +11,39 @@ export interface TreeStructure {
   parentCode?: string | null;
 }
 
-/** What to show for a structure: a root's full name, a child's path. */
-export const structureLabel = (s: TreeStructure): string => (s.parentCode ? s.code : s.name);
+/** What to show for a structure. */
+export const structureLabel = (s: TreeStructure): string => s.name;
+
+/** `code` and its ancestors, nearest first (stops on a cycle). */
+const ancestry = (code: string, all: TreeStructure[]): string[] => {
+  const parentOf = new Map(all.map((s) => [s.code, s.parentCode ?? null]));
+  const chain: string[] = [];
+  for (let c: string | null | undefined = code; c != null && !chain.includes(c); c = parentOf.get(c)) chain.push(c);
+  return chain;
+};
 
 /** 1 for a root, +1 per level. */
-export const depthOf = (code: string): number => code.split(PATH_SEPARATOR).length;
+export const depthOf = (code: string, all: TreeStructure[]): number => ancestry(code, all).length;
 
-export const isDescendant = (ancestorCode: string, code: string): boolean => code.startsWith(ancestorCode + PATH_SEPARATOR);
+export const isDescendant = (ancestorCode: string, code: string, all: TreeStructure[]): boolean =>
+  code !== ancestorCode && ancestry(code, all).includes(ancestorCode);
 
 /** Height of the subtree under `code`: 0 for a leaf. */
 export const heightOf = (code: string, all: TreeStructure[]): number =>
-  Math.max(0, ...all.filter((s) => isDescendant(code, s.code)).map((s) => depthOf(s.code) - depthOf(code)));
+  Math.max(0, ...all.filter((s) => isDescendant(code, s.code, all)).map((s) => depthOf(s.code, all) - depthOf(code, all)));
 
-/** Parents → children order (codes embed the path, so a plain sort does it). */
-export const sortTree = <T extends TreeStructure>(all: T[]): T[] => [...all].sort((a, b) => a.code.localeCompare(b.code));
+/** Parents → children order: each structure right after its parent, siblings by code. */
+export const sortTree = <T extends TreeStructure>(all: T[]): T[] => {
+  const key = (s: T) =>
+    ancestry(s.code, all)
+      .reverse()
+      .map((c) => c.padEnd(64))
+      .join('\u0000');
+  return [...all].sort((a, b) => key(a).localeCompare(key(b)));
+};
 
 /** The structures a new child may be created under. */
-export const parentCandidates = <T extends TreeStructure>(all: T[]): T[] => sortTree(all.filter((s) => depthOf(s.code) < MAX_STRUCTURE_DEPTH));
+export const parentCandidates = <T extends TreeStructure>(all: T[]): T[] => sortTree(all.filter((s) => depthOf(s.code, all) < MAX_STRUCTURE_DEPTH));
 
 /**
  * The structures `node` may be moved under: not itself or one of its
@@ -40,9 +55,9 @@ export const moveTargets = <T extends TreeStructure>(node: TreeStructure, all: T
     all.filter(
       (s) =>
         s.code !== node.code &&
-        !isDescendant(node.code, s.code) &&
+        !isDescendant(node.code, s.code, all) &&
         s.code !== (node.parentCode ?? null) &&
-        depthOf(s.code) + 1 + height <= MAX_STRUCTURE_DEPTH,
+        depthOf(s.code, all) + 1 + height <= MAX_STRUCTURE_DEPTH,
     ),
   );
 };

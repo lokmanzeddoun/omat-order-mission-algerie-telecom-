@@ -6,7 +6,7 @@ import ValidateMissionForm from './ValidateMissionForm';
 import type { IMission } from './orderReducer';
 
 // Leaves on the 10th at 08:00, back on the 11th at 15:00: 3 meals, 1 night.
-const mission = (direction: Direction, transport = 'SERVICE_CAR'): IMission => ({
+const mission = (direction: Direction, transport = 'SERVICE_CAR', overrides: Partial<IMission> = {}): IMission => ({
   n_mission: 7,
   date_sortie: '2026-03-10T08:00:00',
   date_retour: '2026-03-11T15:00:00',
@@ -14,11 +14,12 @@ const mission = (direction: Direction, transport = 'SERVICE_CAR'): IMission => (
   destination: 'Ouargla',
   transport,
   direction,
+  ...overrides,
 });
 
 const setup = (direction: Direction, transport?: string) => {
   const onSubmit = vi.fn();
-  render(<ValidateMissionForm open mission={mission(direction, transport)} onClose={() => {}} onSubmit={onSubmit} />);
+  render(<ValidateMissionForm open missions={[mission(direction, transport)]} onClose={() => {}} onSubmit={onSubmit} />);
   return onSubmit;
 };
 
@@ -45,6 +46,7 @@ describe('ValidateMissionForm', () => {
         repas_sans_pec_nord: 0,
         hebergement_sans_pec_nord: 0,
       }),
+      [expect.objectContaining({ n_mission: 7 })],
     );
   });
 
@@ -64,6 +66,7 @@ describe('ValidateMissionForm', () => {
         repas_sans_pec_sud: 1,
         hebergement_sans_pec_sud: 0,
       }),
+      [expect.objectContaining({ n_mission: 7 })],
     );
   });
 
@@ -125,6 +128,59 @@ describe('ValidateMissionForm', () => {
       const figures = onSubmit.mock.calls[0][0];
       expect(figures.transport_cost).toBe(2500);
       expect(figures.distance_km).toBeUndefined();
+    });
+  });
+
+  describe('several ordres in one form', () => {
+    const renderMany = (missions: IMission[]) => {
+      const onSubmit = vi.fn();
+      render(<ValidateMissionForm open missions={missions} onClose={() => {}} onSubmit={onSubmit} />);
+      return onSubmit;
+    };
+
+    it('validates ordres entitled to the same figures with one submission', async () => {
+      const a = mission(Direction.sud, 'SERVICE_CAR', { n_mission: 1 });
+      const b = mission(Direction.sud, 'SERVICE_CAR', { n_mission: 2 });
+      const onSubmit = renderMany([a, b]);
+      expect(screen.getByText('Valider 2 ordres de mission')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const split = screen.getByRole('group', { name: 'Répartition' });
+      await fill(split, 'Repas sans prise en charge', '3');
+      await fill(split, 'Nuitées sans prise en charge', '1');
+      await submit();
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+      expect(onSubmit.mock.calls[0][1]).toEqual([a, b]);
+    });
+
+    it('flags ordres with other entitlements and blocks until they are removed', async () => {
+      const a = mission(Direction.sud, 'SERVICE_CAR', { n_mission: 1 });
+      const b = mission(Direction.sud, 'SERVICE_CAR', { n_mission: 2 });
+      // Leaves a day earlier: more meals and nights for the same return.
+      const early = mission(Direction.sud, 'SERVICE_CAR', { n_mission: 3, date_sortie: '2026-03-09T08:00:00' });
+      const onSubmit = renderMany([a, b, early]);
+      expect(screen.getByRole('alert')).toHaveTextContent('n’ont pas les mêmes droits');
+      const submitButton = screen.getByRole('button', { name: 'Valider et créer le décompte' });
+      expect(submitButton).toBeDisabled();
+
+      const row = screen.getByText('N° 3').closest('li')!;
+      expect(row).toHaveTextContent('5 repas · 2 nuitée(s)');
+      await userEvent.click(within(row).getByRole('button', { name: 'Retirer' }));
+
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(submitButton).toBeEnabled();
+      const split = screen.getByRole('group', { name: 'Répartition' });
+      await fill(split, 'Repas sans prise en charge', '3');
+      await fill(split, 'Nuitées sans prise en charge', '1');
+      await submit();
+      expect(onSubmit.mock.calls[0][1]).toEqual([a, b]);
+    });
+
+    it('does not mix Directions in one form', () => {
+      renderMany([
+        mission(Direction.sud, 'SERVICE_CAR', { n_mission: 1 }),
+        mission(Direction.nord, 'SERVICE_CAR', { n_mission: 2 }),
+      ]);
+      expect(screen.getByRole('alert')).toBeInTheDocument();
     });
   });
 });

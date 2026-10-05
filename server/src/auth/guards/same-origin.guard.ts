@@ -7,12 +7,12 @@ import {
 import { ConfigService } from '@nestjs/config';
 import type { AuthConfig } from 'src/common/configs/config.interface';
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
-
 /**
  * CSRF defence in depth for the cookie-authenticated auth routes: a browser
  * always sends Origin on a POST, so a foreign Origin is refused. Requests
  * without Origin (curl, server-to-server) cannot be forged cross-site.
+ * Outside production every Origin is accepted, so the app can be opened from
+ * LAN addresses and tunnels without listing each one.
  */
 @Injectable()
 export class SameOriginGuard implements CanActivate {
@@ -23,13 +23,7 @@ export class SameOriginGuard implements CanActivate {
     if (!origin) return true;
     const auth = this.config.get<AuthConfig>('auth');
     if (auth.allowedOrigins.includes(origin)) return true;
-    if (auth.allowLocalhostOrigins) {
-      try {
-        if (LOCAL_HOSTS.has(new URL(origin).hostname)) return true;
-      } catch {
-        // fall through
-      }
-    }
+    if (auth.allowDevOrigins) return true;
     throw new ForbiddenException('Origine non autorisée');
   }
 }

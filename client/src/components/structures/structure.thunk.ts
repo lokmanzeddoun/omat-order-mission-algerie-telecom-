@@ -36,14 +36,14 @@ export const getAllStructures = () => async (dispatch: AppDispatch) => {
 export const addStructure = (structure: IStructure) => async (dispatch: AppDispatch) => {
   // Sanitize empty strings - trim whitespace
   const parentCode = structure.parentCode?.trim() || undefined;
-  const sanitizedStructure: { code?: string; parentCode?: string; name: string } = {
-    // A child's code is derived from its parent's path by the server.
-    ...(parentCode ? { parentCode } : { code: structure.code?.trim() || '' }),
+  const sanitizedStructure: { code: string; parentCode?: string; name: string } = {
+    code: structure.code?.trim() || '',
+    ...(parentCode ? { parentCode } : {}),
     name: structure.name?.trim() || '',
   };
 
   // Validate required fields
-  if ((!parentCode && !sanitizedStructure.code) || !sanitizedStructure.name) {
+  if (!sanitizedStructure.code || !sanitizedStructure.name) {
     dispatch(setAlert({ msg: i18n.t('toasts:structureCodeNameRequired'), type: AlertTypes.ERROR }));
     return;
   }
@@ -162,9 +162,9 @@ export const updateStructure = (structure: IStructure) => async (dispatch: AppDi
   }
 };
 
-/** Moves a structure (and its subtree) under `parentCode`, or to the root with `code` (super admin). */
+/** Moves a structure (and its subtree) under `parentCode`, or to the root (super admin). */
 export const moveStructure =
-  (structure: IStructure, target: { parentCode: string | null; code?: string }) => async (dispatch: AppDispatch) => {
+  (structure: IStructure, target: { parentCode: string | null }) => async (dispatch: AppDispatch) => {
     try {
       await http.patch(`/structures/${encodeURIComponent(structure.code)}/move`, target);
       dispatch(setAlert({ msg: i18n.t('toasts:structureMoved'), type: AlertTypes.SUCCESS }));

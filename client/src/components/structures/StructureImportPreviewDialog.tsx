@@ -52,8 +52,16 @@ export default function StructureImportPreviewDialog({
       }
     >
       <ul className="mb-4 flex flex-wrap gap-x-6 gap-y-1 text-sm font-medium">
-        <li>{t('structures:import.willCreate', { count: report?.willCreate ?? 0 })}</li>
-        <li>{t('structures:import.willUpdate', { count: report?.willUpdate ?? 0 })}</li>
+        <li>
+          {t('structures:import.willCreate', {
+            count: report?.willCreate ?? 0,
+          })}
+        </li>
+        <li>
+          {t('structures:import.willUpdate', {
+            count: report?.willUpdate ?? 0,
+          })}
+        </li>
         <li className={errors.length ? 'text-danger' : undefined}>{t('structures:import.errors', { count: errors.length })}</li>
       </ul>
       {errors.length > 0 ? (

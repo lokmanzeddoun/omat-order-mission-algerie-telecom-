@@ -6,10 +6,12 @@ import { createE2eApp, loginAs, Session } from './setup/app';
 import { PEOPLE, Person, seedFixture } from './setup/fixture';
 
 /**
- * Hierarchical structures (ADR 0005). The fixture tree is
+ * Hierarchical structures (ADR 0005, 0006). The fixture tree is
  *
- *   HQ ── HQ / MID ── HQ / MID / LEAF
- *    └─── HQ / SIDE   (no responsible)
+ *   HQ ── MID ── LEAF
+ *    └─── SIDE   (no responsible)
+ *
+ * Codes are opaque: the tree is given by `parentCode` alone.
  *
  * An ADMIN acts on their structure's subtree only: downwards, never up or
  * sideways. A structure without a responsible is visible only to its
@@ -174,7 +176,7 @@ describe('Structure hierarchy (e2e)', () => {
     );
 
     it('a sibling structure is not visible sideways', async () => {
-      // sideUser is in HQ / SIDE: midAdmin and leafAdmin must not see them.
+      // sideUser is in SIDE: midAdmin and leafAdmin must not see them.
       await request(server())
         .get(`/missions/${missions.sideUser}`)
         .set(s.midAdmin.auth)
@@ -186,15 +188,15 @@ describe('Structure hierarchy (e2e)', () => {
     });
 
     it('a structure without responsible is visible to its ancestors, not to its own admins', async () => {
-      // HQ / SIDE has no responsible: hqAdmin (ancestor) sees it.
+      // SIDE has no responsible: hqAdmin (ancestor) sees it.
       await request(server())
         .get(`/missions/${missions.sideUser}`)
         .set(s.hqAdmin.auth)
         .expect(200);
-      // Remove the responsible of HQ / MID: its own admin loses sight of it,
+      // Remove the responsible of MID: its own admin loses sight of it,
       // while HQ's admin still sees it and midAdmin still sees LEAF below.
       await prisma.structure.update({
-        where: { code: 'HQ / MID' },
+        where: { code: 'MID' },
         data: { responsibleUserId: null },
       });
       await request(server())
@@ -212,10 +214,10 @@ describe('Structure hierarchy (e2e)', () => {
     });
 
     it.each([
-      ['hqAdmin', ['HQ', 'HQ / MID', 'HQ / MID / LEAF', 'HQ / SIDE']],
-      ['midAdmin', ['HQ / MID', 'HQ / MID / LEAF']],
-      ['leafAdmin', ['HQ / MID / LEAF']],
-      ['leafUser', ['HQ / MID / LEAF']],
+      ['hqAdmin', ['HQ', 'MID', 'LEAF', 'SIDE']],
+      ['midAdmin', ['MID', 'LEAF']],
+      ['leafAdmin', ['LEAF']],
+      ['leafUser', ['LEAF']],
       ['userA', ['STR_A']],
     ] as const)('GET /structures as %s', async (who, codes) => {
       const { body } = await request(server())
@@ -232,8 +234,8 @@ describe('Structure hierarchy (e2e)', () => {
         .expect(200);
       const byCode = Object.fromEntries(body.map((x: any) => [x.code, x]));
       expect(byCode.HQ.displayName).toBe('Headquarters');
-      expect(byCode['HQ / MID'].displayName).toBe('HQ / MID');
-      expect(byCode['HQ / MID'].parentCode).toBe('HQ');
+      expect(byCode.MID.displayName).toBe('HQ / MID');
+      expect(byCode.MID.parentCode).toBe('HQ');
     });
   });
 
@@ -311,7 +313,7 @@ describe('Structure hierarchy (e2e)', () => {
     });
   });
 
-  describe('creating and editing users', () => {
+  describe('managing users (super admin only)', () => {
     const newUser = (serviceId: string, matricule = 7001) => ({
       matricule,
       nom: 'Nouveau',
@@ -322,64 +324,95 @@ describe('Structure hierarchy (e2e)', () => {
       category: 'CADRE',
       serviceId,
     });
-    const create = (who: Person, serviceId: string) =>
-      request(server())
-        .post('/users')
-        .set(s[who].auth)
-        .send(newUser(serviceId));
 
-    it.each([
-      ['midAdmin', 'HQ / MID / LEAF', 201], // a descendant
-      ['midAdmin', 'HQ / MID', 201], // their own (it has a responsible)
-      ['midAdmin', 'HQ', 403], // up
-      ['midAdmin', 'HQ / SIDE', 403], // sideways
-      ['midAdmin', 'STR_A', 403], // another tree
-      ['leafAdmin', 'HQ / MID', 403],
-      ['hqAdmin', 'HQ / MID / LEAF', 201], // a grandchild
-    ] as const)(
-      '%s creating a user in %s -> %i',
-      async (who, serviceId, status) => {
-        await create(who, serviceId).expect(status);
-      },
-    );
-
-    it('an admin cannot create an admin', async () => {
+    it('an admin cannot create, edit, archive or reset a user, even in their subtree', async () => {
+      const id = PEOPLE.leafUser.matricule;
+      const auth = s.hqAdmin.auth;
       await request(server())
         .post('/users')
-        .set(s.hqAdmin.auth)
-        .send({ ...newUser('HQ / MID'), role: 'ADMIN' })
+        .set(auth)
+        .send(newUser('LEAF'))
+        .expect(403);
+      await request(server())
+        .patch(`/users/${id}`)
+        .set(auth)
+        .send({ grade: 'G9' })
+        .expect(403);
+      await request(server())
+        .patch(`/users/${id}/archive`)
+        .set(auth)
+        .expect(403);
+      await request(server())
+        .post(`/users/${id}/reset-password`)
+        .set(auth)
+        .send({})
         .expect(403);
     });
 
-    it('an ancestor admin edits a descendant user; the reverse is 403', async () => {
+    it('an admin still consults the users of their subtree', async () => {
       await request(server())
-        .patch(`/users/${PEOPLE.leafUser.matricule}`)
+        .get(`/users/${PEOPLE.leafUser.matricule}`)
         .set(s.hqAdmin.auth)
-        .send({ grade: 'G9' })
         .expect(200);
+    });
+
+    it('a super admin creates and edits users anywhere', async () => {
+      await request(server())
+        .post('/users')
+        .set(s.superAdmin.auth)
+        .send(newUser('LEAF'))
+        .expect(201);
       await request(server())
         .patch(`/users/${PEOPLE.midUser.matricule}`)
-        .set(s.leafAdmin.auth)
-        .send({ grade: 'G9' })
-        .expect(403);
+        .set(s.superAdmin.auth)
+        .send({ serviceId: 'LEAF' })
+        .expect(200);
+    });
+  });
+
+  describe('archive (admin consults their subtree only)', () => {
+    beforeEach(async () => {
+      await prisma.mission.updateMany({
+        where: { n_mission: { in: Object.values(missions) } },
+        data: { soft_delete: true },
+      });
+      await prisma.decompte.updateMany({
+        where: { n_decompte: { in: Object.values(decomptes) } },
+        data: { soft_delete: true },
+      });
     });
 
-    it('an admin may move a user within their subtree only, and cannot change roles', async () => {
-      const id = PEOPLE.midUser.matricule;
-      await request(server())
-        .patch(`/users/${id}`)
+    it('lists archived ordres and décomptes of the subtree only', async () => {
+      const ids = (body: any[], key: string) =>
+        body.map((x) => x[key]).sort((a, b) => a - b);
+      const { body: ms } = await request(server())
+        .get('/archive/missions')
         .set(s.midAdmin.auth)
-        .send({ serviceId: 'HQ / MID / LEAF' })
         .expect(200);
-      await request(server())
-        .patch(`/users/${id}`)
+      expect(ids(ms, 'n_mission')).toEqual(
+        [missions.midUser, missions.leafUser].sort((a, b) => a - b),
+      );
+      const { body: ds } = await request(server())
+        .get('/archive/decomptes')
         .set(s.midAdmin.auth)
-        .send({ serviceId: 'HQ' })
+        .expect(200);
+      expect(ids(ds, 'n_decompte')).toEqual(
+        [decomptes.midUser, decomptes.leafUser].sort((a, b) => a - b),
+      );
+    });
+
+    it('cannot see archived users or structures, nor restore anything', async () => {
+      await request(server())
+        .get('/archive/users')
+        .set(s.midAdmin.auth)
         .expect(403);
       await request(server())
-        .patch(`/users/${id}`)
+        .get('/archive/structures')
         .set(s.midAdmin.auth)
-        .send({ role: 'ADMIN' })
+        .expect(403);
+      await request(server())
+        .patch(`/archive/missions/${missions.leafUser}/restore`)
+        .set(s.midAdmin.auth)
         .expect(403);
     });
   });
@@ -392,10 +425,10 @@ describe('Structure hierarchy (e2e)', () => {
         .send(body);
 
     it('must belong to the structure', async () => {
-      await patch('HQ / MID', {
+      await patch('MID', {
         responsibleUserId: PEOPLE.leafUser.matricule,
       }).expect(400);
-      await patch('HQ / MID', { responsibleUserId: PEOPLE.midUser.matricule })
+      await patch('MID', { responsibleUserId: PEOPLE.midUser.matricule })
         .expect(200)
         .expect((res) => {
           expect(res.body.responsible.matricule).toBe(PEOPLE.midUser.matricule);
@@ -403,23 +436,23 @@ describe('Structure hierarchy (e2e)', () => {
     });
 
     it('a user is responsible for at most one structure', async () => {
-      // midAdmin leads HQ / MID; move them to LEAF is refused while responsible.
-      await patch('HQ / MID / LEAF', {
+      // midAdmin leads MID; move them to LEAF is refused while responsible.
+      await patch('LEAF', {
         responsibleUserId: PEOPLE.midAdmin.matricule,
       }).expect(400);
       await request(server())
         .patch(`/users/${PEOPLE.midAdmin.matricule}`)
         .set(s.superAdmin.auth)
-        .send({ serviceId: 'HQ / MID / LEAF' })
+        .send({ serviceId: 'LEAF' })
         .expect(400);
     });
 
     it('can be cleared, and only by a super admin', async () => {
-      await patch('HQ / MID', { responsibleUserId: null })
+      await patch('MID', { responsibleUserId: null })
         .expect(200)
         .expect((res) => expect(res.body.responsible).toBeNull());
       await request(server())
-        .patch(`/structures/${enc('HQ / MID')}`)
+        .patch(`/structures/${enc('MID')}`)
         .set(s.hqAdmin.auth)
         .send({ responsibleUserId: PEOPLE.midUser.matricule })
         .expect(403);
@@ -430,35 +463,38 @@ describe('Structure hierarchy (e2e)', () => {
     const create = (body: object) =>
       request(server()).post('/structures').set(s.superAdmin.auth).send(body);
 
-    it('derives a child code from its parent path', async () => {
+    it('creates a child with its own code under a parent', async () => {
       const { body } = await create({
+        code: '13CA010000',
         parentCode: 'HQ',
-        name: 'ACTEL TLEMCEN',
+        name: 'SDC / ACTEL TLEMCEN',
       }).expect(201);
       expect(body).toMatchObject({
-        code: 'HQ / ACTEL TLEMCEN',
-        name: 'ACTEL TLEMCEN',
+        code: '13CA010000',
+        name: 'SDC / ACTEL TLEMCEN',
         parentCode: 'HQ',
-        displayName: 'HQ / ACTEL TLEMCEN',
+        displayName: 'SDC / ACTEL TLEMCEN',
       });
     });
 
     it('rejects a fourth level', async () => {
-      await create({ parentCode: 'HQ / MID / LEAF', name: 'TOO DEEP' }).expect(
-        400,
-      );
+      await create({
+        code: 'DEEP',
+        parentCode: 'LEAF',
+        name: 'TOO DEEP',
+      }).expect(400);
     });
 
-    it('rejects an unknown parent and a "/" in a root code', async () => {
-      await create({ parentCode: 'NOPE', name: 'X' }).expect(400);
-      await create({ code: 'A / B', name: 'X' }).expect(400);
+    it('rejects an unknown parent and a missing code', async () => {
+      await create({ code: 'X', parentCode: 'NOPE', name: 'X' }).expect(400);
+      await create({ parentCode: 'HQ', name: 'X' }).expect(400);
     });
 
     it('is reserved to super admins', async () => {
       await request(server())
         .post('/structures')
         .set(s.hqAdmin.auth)
-        .send({ parentCode: 'HQ', name: 'X' })
+        .send({ code: 'X', parentCode: 'HQ', name: 'X' })
         .expect(403);
     });
   });
@@ -470,36 +506,22 @@ describe('Structure hierarchy (e2e)', () => {
         .set(s[who].auth)
         .send(body);
 
-    it('re-keys the whole subtree and every foreign key', async () => {
-      // HQ / MID (with LEAF below) goes under STR_A.
-      const { body } = await move('HQ / MID', {
-        parentCode: 'STR_A',
-      }).expect(200);
-      expect(body.code).toBe('STR_A / MID');
+    it('moves the whole subtree without changing any code', async () => {
+      // MID (with LEAF below) goes under STR_A.
+      const { body } = await move('MID', { parentCode: 'STR_A' }).expect(200);
+      expect(body.code).toBe('MID');
       expect(body.parentCode).toBe('STR_A');
 
-      const codes = (
-        await prisma.structure.findMany({ select: { code: true } })
-      ).map((x) => x.code);
-      expect(codes).toEqual(
-        expect.arrayContaining(['STR_A / MID', 'STR_A / MID / LEAF']),
-      );
-      expect(codes).not.toContain('HQ / MID');
-      expect(codes).not.toContain('HQ / MID / LEAF');
-
       const leaf = await prisma.structure.findUnique({
-        where: { code: 'STR_A / MID / LEAF' },
+        where: { code: 'LEAF' },
       });
-      expect(leaf?.parentCode).toBe('STR_A / MID');
+      expect(leaf?.parentCode).toBe('MID');
       expect(leaf?.responsibleUserId).toBe(PEOPLE.leafAdmin.matricule);
       const users = await prisma.user.findMany({
         where: { matricule: { in: m('midUser', 'leafUser') } },
         orderBy: { matricule: 'asc' },
       });
-      expect(users.map((u) => u.serviceId)).toEqual([
-        'STR_A / MID',
-        'STR_A / MID / LEAF',
-      ]);
+      expect(users.map((u) => u.serviceId)).toEqual(['MID', 'LEAF']);
       // Visibility follows the new position: HQ's admin lost the subtree,
       // STR_A's admin gained it.
       await request(server())
@@ -513,43 +535,28 @@ describe('Structure hierarchy (e2e)', () => {
       const audit = await prisma.auditLog.findFirst({
         where: { action: 'structure.move' },
       });
-      expect(audit?.entityId).toBe('HQ / MID');
+      expect(audit?.entityId).toBe('MID');
     });
 
     it('rejects a cycle', async () => {
-      await move('HQ / MID', { parentCode: 'HQ / MID / LEAF' }).expect(400);
-      await move('HQ', { parentCode: 'HQ / MID' }).expect(400);
-      await move('HQ / MID', { parentCode: 'HQ / MID' }).expect(400);
+      await move('MID', { parentCode: 'LEAF' }).expect(400);
+      await move('HQ', { parentCode: 'MID' }).expect(400);
+      await move('MID', { parentCode: 'MID' }).expect(400);
     });
 
     it('rejects a move that makes the subtree deeper than 3', async () => {
       // HQ has height 2: under STR_A it would reach depth 4.
       await move('HQ', { parentCode: 'STR_A' }).expect(400);
-      // HQ / MID has height 1: under HQ / SIDE (depth 2) LEAF would be at depth 4...
-      await move('HQ / MID', { parentCode: 'HQ / SIDE' }).expect(400);
+      // MID has height 1: under SIDE (depth 2) LEAF would be at depth 4...
+      await move('MID', { parentCode: 'SIDE' }).expect(400);
       // ...while a leaf (height 0) fits there.
-      await move('HQ / MID / LEAF', { parentCode: 'HQ / SIDE' }).expect(200);
+      await move('LEAF', { parentCode: 'SIDE' }).expect(200);
     });
 
-    it('rejects a name clash under the new parent', async () => {
-      await prisma.structure.create({
-        data: { code: 'STR_A / MID', name: 'MID', parentCode: 'STR_A' },
-      });
-      await move('HQ / MID', { parentCode: 'STR_A' }).expect(409);
-    });
-
-    it('makes a structure a root with a new code', async () => {
-      await move('HQ / MID / LEAF', { parentCode: null }).expect(400); // code required
-      const { body } = await move('HQ / MID / LEAF', {
-        parentCode: null,
-        code: 'LEAFR',
-      }).expect(200);
-      expect(body.code).toBe('LEAFR');
+    it('makes a structure a root, keeping its code', async () => {
+      const { body } = await move('LEAF', { parentCode: null }).expect(200);
+      expect(body.code).toBe('LEAF');
       expect(body.parentCode).toBeNull();
-      const user = await prisma.user.findUnique({
-        where: { matricule: PEOPLE.leafUser.matricule },
-      });
-      expect(user?.serviceId).toBe('LEAFR');
       // It left HQ's tree: hqAdmin no longer sees it.
       await request(server())
         .get(`/missions/${missions.leafUser}`)
@@ -557,38 +564,37 @@ describe('Structure hierarchy (e2e)', () => {
         .expect(404);
     });
 
-    it('renaming a child re-keys its subtree', async () => {
+    it('renaming a structure keeps its code and its subtree', async () => {
       const { body } = await request(server())
-        .patch(`/structures/${enc('HQ / MID')}`)
+        .patch(`/structures/MID`)
         .set(s.superAdmin.auth)
-        .send({ name: 'MIDDLE' })
+        .send({ name: 'HQ / MIDDLE' })
         .expect(200);
-      expect(body.code).toBe('HQ / MIDDLE');
+      expect(body).toMatchObject({ code: 'MID', name: 'HQ / MIDDLE' });
       const leaf = await prisma.structure.findUnique({
-        where: { code: 'HQ / MIDDLE / LEAF' },
+        where: { code: 'LEAF' },
       });
-      expect(leaf?.parentCode).toBe('HQ / MIDDLE');
+      expect(leaf?.parentCode).toBe('MID');
     });
 
     it('is reserved to super admins', async () => {
-      await move('HQ / MID', { parentCode: 'HQ / SIDE' }, 'hqAdmin').expect(
-        403,
-      );
+      await move('MID', { parentCode: 'SIDE' }, 'hqAdmin').expect(403);
     });
 
     it('a parent with sub-structures cannot be archived', async () => {
       await request(server())
-        .patch(`/structures/${enc('HQ / MID')}/archive`)
+        .patch(`/structures/${enc('MID')}/archive`)
         .set(s.superAdmin.auth)
         .expect(400);
     });
   });
 
   describe('import', () => {
+    /** The HR extract: "Unité org." is the code, "Lib long UO" the name. */
     const sheet = async (...rows: unknown[][]) => {
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet('S');
-      [['Code', 'Name', 'Path'], ...rows].forEach((r) => ws.addRow(r));
+      [['Unité org.', 'Lib long UO'], ...rows].forEach((r) => ws.addRow(r));
       return Buffer.from(await wb.xlsx.writeBuffer());
     };
     const upload = (buffer: Buffer, query = '') =>
@@ -599,47 +605,69 @@ describe('Structure hierarchy (e2e)', () => {
 
     it('dry run reports create/update/errors and writes nothing', async () => {
       const file = await sheet(
-        [null, null, 'HQ / ACTEL TLEMCEN'],
-        [null, null, 'HQ / MID'],
-        [null, null, 'NOPE / X'],
+        ['13C0000000', 'Sous Direction Commerciale'],
+        ['13CA010000', 'SDC / ACTEL TLEMCEN'],
+        ['MID', 'HQ / MID'],
+        ['', 'Sans code'],
       );
       const { body } = await upload(file, '?dryRun=true').expect(201);
       expect(body).toMatchObject({
         dryRun: true,
-        willCreate: 1,
+        willCreate: 2,
         willUpdate: 1,
       });
       expect(body.errors).toHaveLength(1);
-      expect(body.errors[0]).toMatchObject({ row: 4, field: 'Path' });
+      expect(body.errors[0]).toMatchObject({ row: 5, field: 'Code' });
       expect(
-        await prisma.structure.count({ where: { code: 'HQ / ACTEL TLEMCEN' } }),
+        await prisma.structure.count({ where: { code: '13C0000000' } }),
       ).toBe(0);
     });
 
-    it('apply creates the children', async () => {
+    it('apply creates the tree the HR codes imply, parents first', async () => {
       const file = await sheet(
-        [null, null, 'HQ / ERSTC / Section Réseau Intranet AT'],
-        [null, null, 'HQ / ERSTC'],
+        ['13CT100000', 'SDC / ERSTC / Section Realisation et intervention'],
+        ['13C0000000', 'Sous Direction Commerciale'],
+        ['13CT000000', 'SDC / ERSTC'],
       );
       await upload(file).expect(201);
       const leaf = await prisma.structure.findUnique({
-        where: { code: 'HQ / ERSTC / Section Réseau Intranet AT' },
+        where: { code: '13CT100000' },
       });
       expect(leaf).toMatchObject({
-        name: 'Section Réseau Intranet AT',
-        parentCode: 'HQ / ERSTC',
+        name: 'SDC / ERSTC / Section Realisation et intervention',
+        parentCode: '13CT000000',
       });
+      const mid = await prisma.structure.findUnique({
+        where: { code: '13CT000000' },
+      });
+      expect(mid?.parentCode).toBe('13C0000000');
     });
 
-    it('apply rejects the whole file when a root does not exist', async () => {
+    it('places opaque codes from their " / " name when the code says nothing', async () => {
       const file = await sheet(
-        [null, null, 'HQ / OK'],
-        [null, null, 'NOPE / X'],
+        ['NM-2', 'DOO / CTR / Section Transmission'],
+        ['NM-1', 'DOO / Centre Technique Régional'],
+        ['NM-0', 'Direction Opérationnelle Oran'],
       );
+      await upload(file).expect(201);
+      const parents = await prisma.structure.findMany({
+        where: { code: { startsWith: 'NM-' } },
+        select: { code: true, parentCode: true },
+        orderBy: { code: 'asc' },
+      });
+      expect(parents).toEqual([
+        { code: 'NM-0', parentCode: null },
+        { code: 'NM-1', parentCode: 'NM-0' },
+        { code: 'NM-2', parentCode: 'NM-1' },
+      ]);
+    });
+
+    it('apply rejects the whole file when a row is invalid', async () => {
+      const file = await sheet(['13C0000000', 'OK'], ['ARCH', '']);
       await upload(file).expect(400);
-      expect(await prisma.structure.count({ where: { code: 'HQ / OK' } })).toBe(
-        0,
-      );
+      expect(
+        await prisma.structure.count({ where: { code: '13C0000000' } }),
+      ).toBe(0);
     });
   });
 });

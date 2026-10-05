@@ -146,7 +146,9 @@ test.describe('ordres de mission', () => {
 
     await dialog.getByLabel('Motif de la mission').fill('Mission en lot E2E');
     await dialog.getByLabel('Date de départ').fill(`01/10/${year}`);
+    await dialog.getByLabel('Heure de départ').fill('08:00');
     await dialog.getByLabel('Date de retour').fill(`03/10/${year}`);
+    await dialog.getByLabel('Heure de retour').fill('17:00');
     await dialog.getByLabel('Destination').fill('Tlem');
     await page.getByRole('option', { name: destination, exact: true }).click();
     await dialog.getByLabel('Moyen de transport').selectOption('SERVICE_CAR');

@@ -53,6 +53,9 @@
     "choose": "— اختر —",
     "errors": {
       "departureRequired": "تاريخ الذهاب إلزامي.",
+      "departureTimeRequired": "ساعة الذهاب إلزامية.",
+      "returnTimeRequired": "حدّد ساعة العودة.",
+      "returnDateRequired": "حدّد تاريخ العودة.",
       "motifRequired": "غرض المهمة إلزامي.",
       "transportRequired": "اختر وسيلة النقل.",
       "returnAfterDeparture": "يجب أن تكون العودة بعد الذهاب.",
@@ -65,7 +68,7 @@
     "destinationWilaya": "ولاية",
     "destinationNoMatch": "لا توجد ولاية أو بلدية مطابقة.",
     "destinationLegacy": "الوجهة القديمة «{{value}}» غير معروفة: اختَرها من جديد من القائمة.",
-    "selectMyStructure": "تحديد كل موظفي مصلحتي",
+    "selectMyStructure": "تحديد كل موظفي هيكلي ({{count}})",
     "clearSelection": "إلغاء التحديد",
     "selectedCount": "عدد الموظفين المحددين: {{count}}"
   },
@@ -77,6 +80,14 @@
     "split": "التوزيع",
     "entitlements": "الحقوق المحسوبة: <b>{{meals}}</b> وجبة و<b>{{nights}}</b> ليلة مبيت.",
     "distanceKm": "المسافة المقطوعة (كم)",
+    "bulkTitle": "المصادقة على {{count}} أوامر بمهمة",
+    "bulkDescription": "تُطبَّق نفس المواعيد ونفس التوزيع على كل أمر؛ ويُنشأ كشف لكل واحد منها.",
+    "ordres": "الأوامر المراد المصادقة عليها ({{count}})",
+    "mismatch": "هذه الأوامر لا تملك نفس الحقوق (الليالي / الوجبات).",
+    "mismatchHint": "لا يمكنها مشاركة نفس التوزيع أو نفس الاتجاه أو نفس وسيلة النقل. أزِل الأوامر المُشار إليها للمتابعة، ثم صادِق عليها كلٌّ على حدة.",
+    "rowEntitlements": "{{meals}} وجبة · {{nights}} ليلة",
+    "remove": "إزالة",
+    "bulkDone": "تمت المصادقة على {{count}} أوامر وإنشاء الكشوف.",
     "transportCost": "مصاريف النقل المدفوعة (د.ج)",
     "errors": {
       "wholeNumber": "{{label}}: يُنتظر عدد صحيح موجب.",

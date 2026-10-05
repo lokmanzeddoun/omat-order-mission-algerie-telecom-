@@ -2,11 +2,18 @@ import { ForbiddenException } from '@nestjs/common';
 import { Role } from '@prisma/client';
 import { AccessPolicy, Actor } from './access-policy';
 
+/** The fixture tree: HQ ── MID ── LEAF, HQ ── SIDE; OTHER and HQX stand alone. */
+const DESCENDANTS: Record<string, string[]> = {
+  HQ: ['MID', 'LEAF', 'SIDE'],
+  MID: ['LEAF'],
+  LEAF: [],
+};
 const admin = (serviceId: string | null, hasResponsible = true): Actor => ({
   matricule: 10,
   role: Role.ADMIN,
   serviceId,
   serviceHasResponsible: hasResponsible,
+  descendantCodes: serviceId ? (DESCENDANTS[serviceId] ?? []) : [],
 });
 const user: Actor = { matricule: 20, role: Role.USER, serviceId: 'HQ' };
 const superAdmin: Actor = {
@@ -15,23 +22,22 @@ const superAdmin: Actor = {
   serviceId: null,
 };
 
-describe('AccessPolicy: structure subtree (ADR 0005)', () => {
+describe('AccessPolicy: structure subtree (ADR 0005, 0006)', () => {
   const policy = new AccessPolicy();
 
   describe('canActInStructure', () => {
     // [actor structure, target structure, allowed]
     it.each([
       ['HQ', 'HQ', true],
-      ['HQ', 'HQ / MID', true],
-      ['HQ', 'HQ / MID / LEAF', true],
-      ['HQ / MID', 'HQ / MID', true],
-      ['HQ / MID', 'HQ / MID / LEAF', true],
-      ['HQ / MID', 'HQ', false], // never upwards
-      ['HQ / MID', 'HQ / SIDE', false], // never sideways
-      ['HQ / MID / LEAF', 'HQ / MID', false],
-      ['HQ / MID / LEAF', 'HQ / MID / LEAF', true],
+      ['HQ', 'MID', true],
+      ['HQ', 'LEAF', true],
+      ['MID', 'MID', true],
+      ['MID', 'LEAF', true],
+      ['MID', 'HQ', false], // never upwards
+      ['MID', 'SIDE', false], // never sideways
+      ['LEAF', 'MID', false],
+      ['LEAF', 'LEAF', true],
       ['HQ', 'HQX', false], // a prefix is not a descendant
-      ['HQ', 'HQX / A', false],
       ['HQ', 'OTHER', false],
     ])('admin of %s on %s -> %s', (own, target, allowed) => {
       expect(policy.canActInStructure(admin(own), target)).toBe(allowed);
@@ -43,29 +49,23 @@ describe('AccessPolicy: structure subtree (ADR 0005)', () => {
     });
 
     it('a structure without responsible is out of reach of its own admin, not of ancestors', () => {
-      expect(
-        policy.canActInStructure(admin('HQ / MID', false), 'HQ / MID'),
-      ).toBe(false);
-      expect(
-        policy.canActInStructure(admin('HQ / MID', false), 'HQ / MID / LEAF'),
-      ).toBe(true);
-      expect(policy.canActInStructure(admin('HQ', true), 'HQ / MID')).toBe(
-        true,
-      );
+      expect(policy.canActInStructure(admin('MID', false), 'MID')).toBe(false);
+      expect(policy.canActInStructure(admin('MID', false), 'LEAF')).toBe(true);
+      expect(policy.canActInStructure(admin('HQ', true), 'MID')).toBe(true);
     });
 
     it('a super admin acts everywhere, a user nowhere', () => {
-      expect(policy.canActInStructure(superAdmin, 'ANY / THING')).toBe(true);
+      expect(policy.canActInStructure(superAdmin, 'ANY')).toBe(true);
       expect(policy.canActInStructure(user, 'HQ')).toBe(false);
     });
   });
 
   describe('canAccessUser', () => {
     it('follows the subtree and always allows oneself', () => {
-      const a = admin('HQ / MID');
-      expect(
-        policy.canAccessUser(a, { matricule: 1, serviceId: 'HQ / MID / LEAF' }),
-      ).toBe(true);
+      const a = admin('MID');
+      expect(policy.canAccessUser(a, { matricule: 1, serviceId: 'LEAF' })).toBe(
+        true,
+      );
       expect(policy.canAccessUser(a, { matricule: 1, serviceId: 'HQ' })).toBe(
         false,
       );
@@ -89,10 +89,11 @@ describe('AccessPolicy: structure subtree (ADR 0005)', () => {
 
   describe('where fragments', () => {
     it('scope an admin to the strict descendants plus their own structure when it has a responsible', () => {
-      expect(policy.scopeStructures(admin('HQ / MID'))).toEqual({
+      expect(policy.scopeStructures(admin('MID'))).toEqual({
         OR: [
-          { code: { startsWith: 'HQ / MID / ' } },
-          { code: 'HQ / MID', responsibleUserId: { not: null } },
+          { parentCode: 'MID' },
+          { parent: { parentCode: 'MID' } },
+          { code: 'MID', responsibleUserId: { not: null } },
         ],
       });
       expect(policy.scopeMissions(admin('HQ'))).toEqual({

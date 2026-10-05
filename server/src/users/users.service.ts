@@ -29,7 +29,7 @@ import {
 } from 'src/common/validators/password';
 import { exportWorkbook } from 'src/utils/export-workbook';
 import { AccessPolicy } from 'src/common/policy/access-policy';
-import { PATH_SEPARATOR } from 'src/structures/structure-path';
+import { subtreeWhere } from 'src/structures/structure-tree';
 
 /** Expected columns of the users spreadsheet, matched by header name (see src/utils/AABook1.xlsx). */
 const USER_IMPORT_COLUMNS: ImportColumn[] = [
@@ -57,7 +57,16 @@ const SAFE_USER_SELECT = {
   grade: true,
   status: true,
   serviceId: true,
-  structure: { select: { code: true, name: true, parentCode: true } },
+  structure: {
+    select: {
+      code: true,
+      name: true,
+      parentCode: true,
+      // The grandparent too: the tree is at most 3 levels deep, so a client
+      // can tell whether a user sits anywhere in a given structure's subtree.
+      parent: { select: { parentCode: true } },
+    },
+  },
 } as const;
 
 @Injectable()
@@ -66,22 +75,9 @@ export class UsersService {
     private readonly databaseService: DatabaseService,
     private readonly accessPolicy: AccessPolicy,
   ) {}
-  async create(createUserDto: createUserDto, actor: User) {
-    // An ADMIN creates regular users anywhere in their subtree (ADR 0005);
-    // without a structure given, in their own.
-    const targetServiceId =
-      actor.role === Role.ADMIN
-        ? (createUserDto.serviceId ?? actor.serviceId)
-        : createUserDto.serviceId;
-    if (
-      actor.role === Role.ADMIN &&
-      (!this.accessPolicy.canActInStructure(actor, targetServiceId ?? null) ||
-        createUserDto.role !== Role.USER)
-    ) {
-      throw new ForbiddenException(
-        'Administrators may create only regular users in their own structure or its sub-structures.',
-      );
-    }
+  // Only a SUPER_ADMIN reaches the account-management methods (the
+  // controller guards them); an ADMIN only consults users.
+  async create(createUserDto: createUserDto) {
     let userSince: Date;
     // check if the user exist
     const user = await this.databaseService.user.findUnique({
@@ -106,8 +102,7 @@ export class UsersService {
       const created = await this.databaseService.user.create({
         data: {
           ...createUserDto,
-          role: actor.role === Role.ADMIN ? Role.USER : createUserDto.role,
-          serviceId: targetServiceId,
+          role: createUserDto.role,
           password: hashedPassword,
           mustChangePassword: true,
           userSince: userSince ?? undefined, // Will be set only if userSince is defined
@@ -195,12 +190,7 @@ export class UsersService {
       where: {
         AND: [
           {
-            structure: {
-              OR: [
-                { code: user.serviceId },
-                { code: { startsWith: user.serviceId + PATH_SEPARATOR } },
-              ],
-            },
+            structure: subtreeWhere(user.serviceId),
             role: Role.USER,
             soft_delete: false,
           },
@@ -229,7 +219,7 @@ export class UsersService {
     });
   }
 
-  async update(matricule: number, updateUserDto: UpdateUserDto, actor: User) {
+  async update(matricule: number, updateUserDto: UpdateUserDto) {
     const existing = await this.databaseService.user.findUnique({
       where: { matricule },
       select: { matricule: true, role: true, serviceId: true },
@@ -240,33 +230,6 @@ export class UsersService {
       updateUserDto.matricule !== matricule
     ) {
       throw new BadRequestException("You can't modify user's matricule");
-    }
-    if (!this.accessPolicy.canAccessUser(actor, existing)) {
-      throw new ForbiddenException(
-        'You cannot update a user in another structure.',
-      );
-    }
-    if (
-      actor.role === Role.ADMIN &&
-      updateUserDto.role !== undefined &&
-      updateUserDto.role !== existing.role
-    ) {
-      throw new ForbiddenException(
-        'Only super administrators may change roles.',
-      );
-    }
-    if (
-      actor.role === Role.ADMIN &&
-      updateUserDto.serviceId !== undefined &&
-      updateUserDto.serviceId !== existing.serviceId &&
-      !this.accessPolicy.canActInStructure(
-        actor,
-        updateUserDto.serviceId ?? null,
-      )
-    ) {
-      throw new ForbiddenException(
-        'Administrators cannot move users to another structure outside their own sub-structures.',
-      );
     }
 
     // Validate serviceId if it's being updated
@@ -335,14 +298,9 @@ export class UsersService {
   private async assertAndArchive(matricule: number, actor: User) {
     const target = await this.databaseService.user.findUnique({
       where: { matricule },
-      select: { matricule: true, serviceId: true },
+      select: { matricule: true },
     });
     if (!target) throw new NotFoundException('User not found');
-    if (!this.accessPolicy.canAccessUser(actor, target)) {
-      throw new ForbiddenException(
-        'You cannot archive a user in another structure.',
-      );
-    }
     // An archived user can no longer be a structure's responsible.
     const [, archived] = await this.databaseService.$transaction([
       this.databaseService.structure.updateMany({
@@ -365,7 +323,7 @@ export class UsersService {
    * existing emails and services); if anything is wrong nothing is written and the whole
    * list of problems is returned as a 400.
    */
-  async uploadUsers(file: ImportExcel, actor: User) {
+  async uploadUsers(file: ImportExcel) {
     const rows = await readRows(
       file.buffer,
       USER_IMPORT_COLUMNS,
@@ -414,21 +372,7 @@ export class UsersService {
           message: 'Un SUPER_ADMIN ne peut pas être modifié par import',
         });
       }
-      const targetService =
-        actor.role === Role.ADMIN
-          ? (u.serviceId ?? current?.serviceId ?? actor.serviceId)
-          : (u.serviceId ?? null);
-      if (
-        actor.role === Role.ADMIN &&
-        (!this.accessPolicy.canActInStructure(actor, targetService ?? null) ||
-          (current && !this.accessPolicy.canAccessUser(actor, current)))
-      ) {
-        errors.push({
-          row,
-          field: 'ServiceId',
-          message: 'Utilisateur hors de votre structure',
-        });
-      }
+      const targetService = u.serviceId ?? null;
       const owner = emailOwners.find(
         (o) => o.email.toLowerCase() === u.email.toLowerCase(),
       );
@@ -466,12 +410,7 @@ export class UsersService {
       ),
     );
     const writes = items.map(({ value: u }) => {
-      const serviceId =
-        actor.role === Role.ADMIN
-          ? (u.serviceId ??
-            existingById.get(u.matricule)?.serviceId ??
-            actor.serviceId)
-          : (u.serviceId ?? null);
+      const serviceId = u.serviceId ?? null;
       const data = {
         nom: u.nom,
         prenom: u.prenom,
@@ -550,20 +489,12 @@ export class UsersService {
 
   // Admin reset: a temporary password (chosen by the admin, or generated and
   // returned once) that the user must replace at next sign-in.
-  async resetPassword(
-    matricule: number,
-    newPassword: string | undefined,
-    actor: User,
-  ) {
+  async resetPassword(matricule: number, newPassword: string | undefined) {
     const user = await this.databaseService.user.findFirst({
       where: { matricule, soft_delete: false },
-      select: { matricule: true, serviceId: true, role: true },
+      select: { matricule: true },
     });
-    if (!user || !this.accessPolicy.canAccessUser(actor, user))
-      throw new NotFoundException();
-    if (user.role === Role.SUPER_ADMIN && actor.role !== Role.SUPER_ADMIN) {
-      throw new ForbiddenException();
-    }
+    if (!user) throw new NotFoundException();
 
     const password = newPassword ?? temporaryPassword();
     const hashed = await bcrypt.hash(password, BCRYPT_ROUNDS);

@@ -16,11 +16,13 @@ import { MAX_MISSION_DAYS } from 'constants/mission';
 export type MissionFormMode = 'create' | 'edit' | 'view';
 
 // Mirrors the server's CreateMissionDto so errors are caught before submitting.
+// Hours are never assumed: a date without its hour (or the reverse) is an error,
+// so a same-day return is never compared against a made-up 00:00.
 const schemaFor = (t: TFunction) =>
   z
     .object({
       date_sortie: z.string().min(1, t('ordres:form.errors.departureRequired')),
-      heure_sortie: z.string(),
+      heure_sortie: z.string().min(1, t('ordres:form.errors.departureTimeRequired')),
       date_retour: z.string(),
       heure_retour: z.string(),
       motif: z.string().trim().min(1, t('ordres:form.errors.motifRequired')),
@@ -28,24 +30,23 @@ const schemaFor = (t: TFunction) =>
       transport: z.string().min(1, t('ordres:form.errors.transportRequired')),
       direction: z.string().min(1),
     })
-    .refine(
-      (v) => {
-        if (!v.date_retour) return true;
-        const start = dayjs(`${v.date_sortie}T${v.heure_sortie || '00:00'}`);
-        const end = dayjs(`${v.date_retour}T${v.heure_retour || '00:00'}`);
-        return !end.isBefore(start);
-      },
-      { path: ['date_retour'], message: t('ordres:form.errors.returnAfterDeparture') },
-    )
-    .refine(
-      (v) => {
-        if (!v.date_retour) return true;
-        const start = dayjs(`${v.date_sortie}T${v.heure_sortie || '00:00'}`);
-        const end = dayjs(`${v.date_retour}T${v.heure_retour || '00:00'}`);
-        return end.diff(start, 'minute') <= MAX_MISSION_DAYS * 24 * 60;
-      },
-      { path: ['date_retour'], message: t('ordres:form.errors.maxDuration', { count: MAX_MISSION_DAYS }) },
-    );
+    .superRefine((v, ctx) => {
+      if (v.date_retour && !v.heure_retour) {
+        ctx.addIssue({ code: 'custom', path: ['heure_retour'], message: t('ordres:form.errors.returnTimeRequired') });
+      }
+      if (v.heure_retour && !v.date_retour) {
+        ctx.addIssue({ code: 'custom', path: ['date_retour'], message: t('ordres:form.errors.returnDateRequired') });
+      }
+      // Compare only full datetimes; a missing part is reported above.
+      if (!v.date_sortie || !v.heure_sortie || !v.date_retour || !v.heure_retour) return;
+      const start = dayjs(`${v.date_sortie}T${v.heure_sortie}`);
+      const end = dayjs(`${v.date_retour}T${v.heure_retour}`);
+      if (!end.isAfter(start)) {
+        ctx.addIssue({ code: 'custom', path: ['date_retour'], message: t('ordres:form.errors.returnAfterDeparture') });
+      } else if (end.diff(start, 'minute') > MAX_MISSION_DAYS * 24 * 60) {
+        ctx.addIssue({ code: 'custom', path: ['date_retour'], message: t('ordres:form.errors.maxDuration', { count: MAX_MISSION_DAYS }) });
+      }
+    });
 
 type FormValues = z.infer<ReturnType<typeof schemaFor>>;
 
@@ -213,7 +214,7 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
             control={control}
             name="heure_sortie"
             render={({ field }) => (
-              <Field label={t('ordres:form.departureTime')} >
+              <Field label={t('ordres:form.departureTime')} error={errors.heure_sortie?.message} required={!readOnly}>
                 <TimePicker readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} />
               </Field>
             )}
@@ -222,7 +223,7 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
             control={control}
             name="date_retour"
             render={({ field }) => (
-              <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message} >
+              <Field label={t('ordres:form.returnDate')} error={errors.date_retour?.message}>
                 <DatePicker readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} min={watch('date_sortie') || undefined} />
               </Field>
             )}
@@ -231,7 +232,7 @@ export default function MissionFormDialog({ open, mode, initial, target, onClose
             control={control}
             name="heure_retour"
             render={({ field }) => (
-              <Field label={t('ordres:form.returnTime')} >
+              <Field label={t('ordres:form.returnTime')} error={errors.heure_retour?.message} required={!readOnly && !!watch('date_retour')}>
                 <TimePicker readOnly={readOnly} value={field.value} onChange={field.onChange} ref={field.ref} />
               </Field>
             )}

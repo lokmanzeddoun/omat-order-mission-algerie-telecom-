@@ -11,6 +11,7 @@ import { fetchAllDecompte, fetchUserDecompte } from 'components/orders/decompte.
 import type { IMission } from 'components/orders/orderReducer';
 import type { IDecompte } from 'components/orders/decompte.reducer';
 import { countItems } from 'components/decomptes/zones';
+import { useDecompteDownload } from 'components/decomptes/useDecompteActions';
 import { isValidated, useMissionActions } from 'components/orders/useMissionActions';
 import { agentName, formatDate, formatDateTime, missionDuration } from 'components/orders/format';
 import {
@@ -98,6 +99,7 @@ export default function OrdreDetailPage() {
       .catch(() => setMissing(true));
   }, [fromStore, fetched, token, n]);
 
+  const downloadDecompte = useDecompteDownload();
   const { actionsFor, dialogs, download } = useMissionActions({
     admin: isAdmin,
     onChanged: async () => {
@@ -198,7 +200,18 @@ export default function OrdreDetailPage() {
             />
           </Panel>
           {validated && decompte && (
-            <Panel title={t('decomptes:title', { n: decompte.n_decompte })} actions={<StatusBadge map={decompteStatus} code={decompte.status} />}>
+            <Panel
+              title={t('decomptes:title', { n: decompte.n_decompte })}
+              actions={
+                <span className="flex items-center gap-2">
+                  <StatusBadge map={decompteStatus} code={decompte.status} />
+                  <Button size="sm" onClick={() => downloadDecompte(decompte)}>
+                    <Download />
+                    {t('actions.download')}
+                  </Button>
+                </span>
+              }
+            >
               <DescriptionList
                 columns={3}
                 items={[

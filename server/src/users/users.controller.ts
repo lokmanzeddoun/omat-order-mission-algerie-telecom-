@@ -33,28 +33,22 @@ export class UsersController {
   @ApiOperation({
     summary: 'CREATE USER',
     description:
-      'Private endpoint to Create a new User. It is allowed only by "admin" users, and allows the creation of users with "admin" Role.',
+      'Private endpoint to Create a new User. Only super admins manage accounts; an ADMIN may only consult the users of their structure.',
   })
   @ApiResponse({ status: 201, description: 'Created', type: User })
   @ApiResponse({ status: 400, description: 'Bad request' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({ status: 500, description: 'Server error' })
   @Post()
-  @Auth('ADMIN', 'SUPER_ADMIN')
-  create(
-    @Body() createUserDto: createUserDto,
-    @GetUser() actor: AuthenticatedUser,
-  ) {
-    return this.usersService.create(createUserDto, actor);
+  @Auth('SUPER_ADMIN')
+  create(@Body() createUserDto: createUserDto) {
+    return this.usersService.create(createUserDto);
   }
 
   @Post('upload')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   @UseInterceptors(FileInterceptor('file', multerOptions))
-  async uploadFile(
-    @UploadedFile() file: Express.Multer.File,
-    @GetUser() actor: AuthenticatedUser,
-  ) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File) {
     if (!file) {
       throw new HttpException(
         `Please provide correct file name with extension ${JSON.stringify(SUPPORTED_FILES)}`,
@@ -66,7 +60,7 @@ export class UsersController {
       buffer: file.buffer, // Store the file buffer to process the Excel file
     };
     // file is the uploaded file
-    return this.usersService.uploadUsers(importUsers, actor);
+    return this.usersService.uploadUsers(importUsers);
   }
 
   @Get('export')
@@ -105,17 +99,13 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Auth('ADMIN', 'SUPER_ADMIN')
-  update(
-    @Param('id') id: string,
-    @Body() updateUserDto: UpdateUserDto,
-    @GetUser() actor: AuthenticatedUser,
-  ) {
-    return this.usersService.update(+id, updateUserDto, actor);
+  @Auth('SUPER_ADMIN')
+  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
+    return this.usersService.update(+id, updateUserDto);
   }
 
   @Patch(':id/archive')
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  @Auth('SUPER_ADMIN')
   @ApiOperation({
     summary: 'ARCHIVE USER',
     description: 'Archive a user by setting soft_delete to true',
@@ -125,12 +115,13 @@ export class UsersController {
   archive(@Param('id') id: string, @GetUser() actor: AuthenticatedUser) {
     return this.usersService.archive(+id, actor);
   }
-  // Admin-only endpoint to reset a user's password
-  @Auth('ADMIN', 'SUPER_ADMIN')
+  // Super-admin-only endpoint to reset a user's password
+  @Auth('SUPER_ADMIN')
   @Post(':id/reset-password')
   @ApiOperation({
     summary: 'RESET USER PASSWORD',
-    description: 'Admin can reset a user password by providing a new password',
+    description:
+      'A super admin can reset a user password by providing a new password',
   })
   @ApiResponse({ status: 200, description: 'Password reset successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
@@ -138,13 +129,8 @@ export class UsersController {
   async resetPassword(
     @Param('id') id: string,
     @Body() resetPasswordDto: ResetPasswordDto,
-    @GetUser() actor: AuthenticatedUser,
   ) {
-    return this.usersService.resetPassword(
-      +id,
-      resetPasswordDto.newPassword,
-      actor,
-    );
+    return this.usersService.resetPassword(+id, resetPasswordDto.newPassword);
   }
   @Auth()
   @Post('/changePassword')

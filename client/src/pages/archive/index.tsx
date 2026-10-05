@@ -209,15 +209,16 @@ export default function ArchivePage() {
         .then((r) => r.data ?? [])
         .catch(() => [] as Item[]);
     setLoading(true);
+    // An ADMIN only consults the archived ordres and décomptes of their structure.
     const [missions, decomptes, users, structures] = await Promise.all([
       get('/archive/missions', true),
       get('/archive/decomptes', true),
-      get('/archive/users', false),
-      get('/archive/structures', false),
+      isSuperAdmin ? get('/archive/users', false) : [],
+      isSuperAdmin ? get('/archive/structures', false) : [],
     ]);
     setData({ missions, decomptes, users, structures });
     setLoading(false);
-  }, [token, selectedYear]);
+  }, [token, selectedYear, isSuperAdmin]);
 
   useEffect(() => {
     void load();
@@ -248,7 +249,7 @@ export default function ArchivePage() {
   const rowActions = (item: Item): RowActions => ({
     primary: [
       { label: t('actions.details'), icon: <Eye />, onSelect: () => setViewing(item) },
-      { label: t('actions.unarchive'), icon: <ArchiveRestore />, onSelect: () => setRestoring(item) },
+      ...(isSuperAdmin ? [{ label: t('actions.unarchive'), icon: <ArchiveRestore />, onSelect: () => setRestoring(item) }] : []),
     ],
   });
 
@@ -260,8 +261,12 @@ export default function ArchivePage() {
       items={[
         { value: 'missions', label: t('nav.ordres'), count: data.missions.length },
         { value: 'decomptes', label: t('nav.decomptes'), count: data.decomptes.length },
-        { value: 'users', label: t('nav.users'), count: data.users.length },
-        { value: 'structures', label: t('nav.structures'), count: data.structures.length },
+        ...(isSuperAdmin
+          ? [
+              { value: 'users', label: t('nav.users'), count: data.users.length },
+              { value: 'structures', label: t('nav.structures'), count: data.structures.length },
+            ]
+          : []),
       ]}
     />
   );
@@ -284,16 +289,16 @@ export default function ArchivePage() {
       />
 
       {tab === 'missions' && (
-        <DataTable<Mission> key="missions" caption={t('archive:caption.missions')} tableId="archive-missions" columns={columns.missions} rows={data.missions as Mission[]} getRowId={(m) => m.n_mission} bulkActions={bulk.missions.actions} {...common} />
+        <DataTable<Mission> key="missions" caption={t('archive:caption.missions')} tableId="archive-missions" columns={columns.missions} rows={data.missions as Mission[]} getRowId={(m) => m.n_mission} bulkActions={isSuperAdmin ? bulk.missions.actions : undefined} {...common} />
       )}
       {tab === 'decomptes' && (
-        <DataTable<Decompte> key="decomptes" caption={t('archive:caption.decomptes')} tableId="archive-decomptes" columns={columns.decomptes} rows={data.decomptes as Decompte[]} getRowId={(d) => d.n_decompte} bulkActions={bulk.decomptes.actions} {...common} />
+        <DataTable<Decompte> key="decomptes" caption={t('archive:caption.decomptes')} tableId="archive-decomptes" columns={columns.decomptes} rows={data.decomptes as Decompte[]} getRowId={(d) => d.n_decompte} bulkActions={isSuperAdmin ? bulk.decomptes.actions : undefined} {...common} />
       )}
       {tab === 'users' && (
-        <DataTable<User> key="users" caption={t('archive:caption.users')} tableId="archive-users" columns={columns.users} rows={data.users as User[]} getRowId={(u) => u.matricule} bulkActions={bulk.users.actions} {...common} />
+        <DataTable<User> key="users" caption={t('archive:caption.users')} tableId="archive-users" columns={columns.users} rows={data.users as User[]} getRowId={(u) => u.matricule} bulkActions={isSuperAdmin ? bulk.users.actions : undefined} {...common} />
       )}
       {tab === 'structures' && (
-        <DataTable<Structure> key="structures" caption={t('archive:caption.structures')} tableId="archive-structures" columns={columns.structures} rows={data.structures as Structure[]} getRowId={(s) => s.code} bulkActions={bulk.structures.actions} {...common} />
+        <DataTable<Structure> key="structures" caption={t('archive:caption.structures')} tableId="archive-structures" columns={columns.structures} rows={data.structures as Structure[]} getRowId={(s) => s.code} bulkActions={isSuperAdmin ? bulk.structures.actions : undefined} {...common} />
       )}
 
       {bulk[tab].dialog}

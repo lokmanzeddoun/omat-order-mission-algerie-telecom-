@@ -20,6 +20,8 @@
     "test:e2e": "jest --config ./test/jest-e2e.json --runInBand",
     "db:seed": "ts-node prisma/seed.ts",
     "db:seed:demo": "ts-node prisma/seed-demo.ts",
+    "db:seed:hierarchy": "ts-node prisma/seed-hierarchy.ts",
+    "db:seed:big": "npm run db:seed && npm run db:seed:hierarchy && npm run db:seed:demo",
     "setup:db": "./setup-db.sh",
     "lint:fix": "eslint \"{src,test}/**/*.{ts,tsx}\" --fix"
   },

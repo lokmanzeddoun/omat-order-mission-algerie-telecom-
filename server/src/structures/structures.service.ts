@@ -2,12 +2,11 @@ import { DatabaseService } from '../database/database.service';
 import { archiveStamp } from 'src/archive/archive-stamp';
 import {
   BadRequestException,
-  ConflictException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, User } from '@prisma/client';
+import { User } from '@prisma/client';
 import { CreateStructureDto } from './dto/create-structure.dto';
 import { UpdateStructureDto } from './dto/update-structure.dto';
 import { MoveStructureDto } from './dto/move-structure.dto';
@@ -27,22 +26,28 @@ import { AccessPolicy } from 'src/common/policy/access-policy';
 import { AuditService } from 'src/audit/audit.service';
 import {
   MAX_STRUCTURE_DEPTH,
-  PATH_SEPARATOR,
-  StructurePathError,
-  childCode,
-  depthFromCode,
-  isDescendantCode,
-  isValidSegment,
-  parseStructurePath,
-  rekeyCode,
+  StructureForest,
+  inferParentCode,
+  nameParentMatches,
+  nameSegments,
   structureLabel,
-} from './structure-path';
+} from './structure-tree';
 
-/** Expected columns of the services spreadsheet, matched by header name (same as the export). */
+/**
+ * Expected columns of the structures spreadsheet, matched by header name: the
+ * HR extract ("Unité org.", "Lib long UO") or the export (Code, Name, Parent).
+ */
 const STRUCTURE_IMPORT_COLUMNS: ImportColumn[] = [
-  { field: 'code', headers: ['Code'], optional: true },
-  { field: 'name', headers: ['Name', 'Nom', 'Service'], optional: true },
-  { field: 'path', headers: ['Path', 'Chemin'], optional: true },
+  { field: 'code', headers: ['Code', 'Unité org.', 'Unité org'] },
+  {
+    field: 'name',
+    headers: ['Name', 'Lib long UO', 'Nom', 'Libellé', 'Service'],
+  },
+  {
+    field: 'parentCode',
+    headers: ['Parent', 'Code parent', 'Unité org. parente'],
+    optional: true,
+  },
 ];
 
 const STRUCTURE_INCLUDE = {
@@ -70,44 +75,37 @@ export class StructuresService {
     private readonly audit: AuditService,
   ) {}
 
-  /** Adds the label the UI shows: a root's full name, a child's path. */
-  private present<
-    T extends { code: string; name: string; parentCode: string | null },
-  >(s: T): T & { displayName: string } {
+  /** Adds the label the UI and the PDFs show. */
+  private present<T extends { name: string }>(
+    s: T,
+  ): T & { displayName: string } {
     return { ...s, displayName: structureLabel(s) };
   }
 
+  /** Every structure's code and parent, to check depths and cycles. */
+  private async forest() {
+    return new StructureForest(
+      await this.databaseService.structure.findMany({
+        select: { code: true, parentCode: true },
+      }),
+    );
+  }
+
   async create(createStructureDto: CreateStructureDto, actorId?: number) {
+    const code = createStructureDto.code.trim();
     const name = createStructureDto.name.trim();
-    let data: Prisma.StructureUncheckedCreateInput;
-    if (createStructureDto.parentCode) {
-      const parent = await this.activeStructure(createStructureDto.parentCode);
-      if (depthFromCode(parent.code) + 1 > MAX_STRUCTURE_DEPTH) {
+    const parentCode = createStructureDto.parentCode?.trim() || null;
+    if (!code) throw new BadRequestException('Le code est obligatoire');
+    if (parentCode) {
+      await this.activeStructure(parentCode);
+      if ((await this.forest()).depth(parentCode) + 1 > MAX_STRUCTURE_DEPTH) {
         throw new BadRequestException(
           `Profondeur maximale de ${MAX_STRUCTURE_DEPTH} niveaux dépassée`,
         );
       }
-      if (!isValidSegment(name)) {
-        throw new BadRequestException(
-          'Le nom d’une sous-structure ne peut pas contenir « / »',
-        );
-      }
-      data = {
-        code: childCode(parent.code, name),
-        name,
-        parentCode: parent.code,
-      };
-    } else {
-      const code = (createStructureDto.code ?? '').trim();
-      if (!isValidSegment(code)) {
-        throw new BadRequestException(
-          'Le code d’une racine ne peut pas être vide ni contenir « / »',
-        );
-      }
-      data = { code, name };
     }
     const created = await this.databaseService.structure.create({
-      data,
+      data: { code, name, parentCode },
       include: STRUCTURE_INCLUDE,
     });
     await this.audit.record({
@@ -115,7 +113,7 @@ export class StructuresService {
       action: 'structure.create',
       entity: 'Structure',
       entityId: created.code,
-      after: { code: created.code, name: created.name },
+      after: { code: created.code, name: created.name, parentCode },
     });
     return this.present(created);
   }
@@ -182,38 +180,22 @@ export class StructuresService {
     });
     if (!current) throw new NotFoundException('Structure not found');
 
-    let resultingCode = code;
     const name = updateStructureDto.name?.trim();
     if (name !== undefined && name !== current.name) {
-      if (current.parentCode) {
-        // A child's code is its path: renaming it re-keys its subtree.
-        if (!isValidSegment(name)) {
-          throw new BadRequestException(
-            'Le nom d’une sous-structure ne peut pas contenir « / »',
-          );
-        }
-        resultingCode = await this.rekey(
-          current.code,
-          current.parentCode,
-          childCode(current.parentCode, name),
-          name,
-        );
-      } else {
-        await this.databaseService.structure.update({
-          where: { code },
-          data: { name },
-        });
-      }
+      await this.databaseService.structure.update({
+        where: { code },
+        data: { name },
+      });
     }
 
     if (updateStructureDto.responsibleUserId !== undefined) {
       await this.setResponsible(
-        resultingCode,
+        code,
         updateStructureDto.responsibleUserId,
         actorId,
       );
     }
-    return this.getOne(resultingCode);
+    return this.getOne(code);
   }
 
   /** Sets or clears the responsible. They must belong to the structure and lead no other. */
@@ -265,7 +247,8 @@ export class StructuresService {
 
   /**
    * Moves a structure (and its subtree) under another parent, or to the root.
-   * Rejects cycles and any move that would make the subtree deeper than 3.
+   * Codes never change. Rejects cycles and any move that would make the
+   * subtree deeper than 3.
    */
   async move(code: string, dto: MoveStructureDto, actorId?: number) {
     const node = await this.databaseService.structure.findUnique({
@@ -273,115 +256,45 @@ export class StructuresService {
     });
     if (!node) throw new NotFoundException('Structure not found');
     const newParentCode = dto.parentCode ?? null;
-    if (newParentCode === node.parentCode && !dto.code) {
+    if (newParentCode === node.parentCode) {
       throw new BadRequestException('The structure is already there');
     }
 
-    const subtree = await this.subtreeOf(code);
-    const height =
-      Math.max(...subtree.map((s) => depthFromCode(s.code))) -
-      depthFromCode(code);
-
-    let newCode: string;
-    let newName = node.name;
+    const forest = await this.forest();
+    const height = forest.height(code);
     if (newParentCode === null) {
-      newCode = (dto.code ?? '').trim();
-      if (!isValidSegment(newCode)) {
-        throw new BadRequestException(
-          'Un code racine (sans « / ») est requis pour faire de cette structure une racine',
-        );
-      }
       if (1 + height > MAX_STRUCTURE_DEPTH) {
         throw new BadRequestException(
           `Profondeur maximale de ${MAX_STRUCTURE_DEPTH} niveaux dépassée`,
         );
       }
     } else {
-      if (newParentCode === code || isDescendantCode(code, newParentCode)) {
+      if (forest.isInSubtree(code, newParentCode)) {
         throw new BadRequestException(
           'A structure cannot be moved under itself or one of its descendants',
         );
       }
-      const parent = await this.activeStructure(newParentCode);
-      if (depthFromCode(parent.code) + 1 + height > MAX_STRUCTURE_DEPTH) {
+      await this.activeStructure(newParentCode);
+      if (forest.depth(newParentCode) + 1 + height > MAX_STRUCTURE_DEPTH) {
         throw new BadRequestException(
           `Profondeur maximale de ${MAX_STRUCTURE_DEPTH} niveaux dépassée`,
         );
       }
-      if (!isValidSegment(node.name)) {
-        throw new BadRequestException(
-          'Le nom de la structure ne peut pas contenir « / »',
-        );
-      }
-      newName = node.name.trim();
-      newCode = childCode(parent.code, newName);
     }
 
-    const before = { code, parentCode: node.parentCode };
-    const resulting = await this.rekey(code, newParentCode, newCode, newName);
+    await this.databaseService.structure.update({
+      where: { code },
+      data: { parentCode: newParentCode },
+    });
     await this.audit.record({
       actorMatricule: actorId,
       action: 'structure.move',
       entity: 'Structure',
       entityId: code,
-      before,
-      after: { code: resulting, parentCode: newParentCode },
+      before: { parentCode: node.parentCode },
+      after: { parentCode: newParentCode },
     });
-    return this.getOne(resulting);
-  }
-
-  private subtreeOf(code: string) {
-    return this.databaseService.structure.findMany({
-      where: {
-        OR: [{ code }, { code: { startsWith: code + PATH_SEPARATOR } }],
-      },
-    });
-  }
-
-  /**
-   * Gives the structure `oldCode` a new parent / code / name and re-keys every
-   * descendant in one transaction. Users' `serviceId` and the children's
-   * `parentCode` follow through the foreign keys' ON UPDATE CASCADE; parents
-   * are updated before their children so each cascade lands on the right row.
-   */
-  private async rekey(
-    oldCode: string,
-    newParentCode: string | null,
-    newCode: string,
-    newName: string,
-  ): Promise<string> {
-    const subtree = await this.subtreeOf(oldCode);
-    const renamed = new Map(
-      subtree.map((s) => [s.code, rekeyCode(s.code, oldCode, newCode)]),
-    );
-    const targets = [...renamed.values()];
-    const clash = await this.databaseService.structure.findFirst({
-      where: {
-        code: { in: targets },
-        NOT: { code: { in: subtree.map((s) => s.code) } },
-      },
-      select: { code: true },
-    });
-    if (clash) {
-      throw new ConflictException(`Structure '${clash.code}' already exists`);
-    }
-    const ordered = [...subtree].sort(
-      (a, b) => depthFromCode(a.code) - depthFromCode(b.code),
-    );
-    await this.databaseService.$transaction(async (tx) => {
-      for (const s of ordered) {
-        const to = renamed.get(s.code)!;
-        const top = s.code === oldCode;
-        if (!top && to === s.code) continue;
-        await tx.structure.update({
-          where: { code: s.code },
-          data: top
-            ? { code: to, name: newName, parentCode: newParentCode }
-            : { code: to },
-        });
-      }
-    });
-    return newCode;
+    return this.getOne(code);
   }
 
   async archive(code: string, actorId: number) {
@@ -403,10 +316,12 @@ export class StructuresService {
    * Validates every row of the spreadsheet against the tree and says what an
    * import would do. Nothing is written.
    *
-   * A root is declared with `code` + `name`. A child is declared with its
-   * `path`; its first segment must be the code of a root (already in the
-   * database, or declared in the same file), its parent must exist or be
-   * declared in the file, and the depth is at most 3.
+   * Every row declares a structure by its `code` and `name`. Its parent is the
+   * `parentCode` column when filled, otherwise the one its HR code implies
+   * (`inferParentCode`) among the structures in the database and in the file,
+   * otherwise the one its " / " name points to (`nameParentMatches`),
+   * otherwise its current parent if it already exists.
+   * The parent must exist or be declared in the file, and the depth is at most 3.
    */
   async planStructureImport(file: ImportExcel): Promise<ImportPlan> {
     const rows = await readRows(
@@ -421,101 +336,95 @@ export class StructuresService {
     );
 
     const existing = await this.databaseService.structure.findMany({
-      select: { code: true, parentCode: true, soft_delete: true },
+      select: { code: true, name: true, parentCode: true, soft_delete: true },
     });
     const existingByCode = new Map(existing.map((s) => [s.code, s]));
-    const roots = new Set<string>(
-      existing
-        .filter((s) => !s.parentCode && !s.soft_delete)
-        .map((s) => s.code),
-    );
-    // Roots declared by the file count as existing roots for the paths below.
-    for (const { value } of items) {
-      if (!value.path && value.code && isValidSegment(value.code)) {
-        roots.add(value.code);
-      }
-    }
 
-    interface Resolved {
+    const complete: {
       row: number;
       code: string;
       name: string;
-      parentCode: string | null;
-    }
-    const resolved: Resolved[] = [];
+      parent?: string;
+    }[] = [];
     for (const { row, value } of items) {
-      if (!value.path) {
-        if (!value.code || !value.name) {
-          errors.push({
-            row,
-            field: value.code ? 'Name' : 'Code',
-            message: 'Renseignez le chemin, ou le code et le nom d’une racine',
-          });
-        } else if (!isValidSegment(value.code)) {
-          errors.push({
-            row,
-            field: 'Code',
-            value: value.code,
-            message: 'Le code d’une racine ne peut pas contenir « / »',
-          });
-        } else {
-          resolved.push({
-            row,
-            code: value.code,
-            name: value.name,
-            parentCode: null,
-          });
-        }
-        continue;
-      }
-      try {
-        const parsed = parseStructurePath(value.path, roots);
-        if (value.code && value.code !== parsed.code) {
-          errors.push({
-            row,
-            field: 'Code',
-            value: value.code,
-            message: `Le code doit être vide ou égal au chemin « ${parsed.code} »`,
-          });
-          continue;
-        }
-        if (value.name && value.name !== parsed.name) {
-          errors.push({
-            row,
-            field: 'Name',
-            value: value.name,
-            message: `Le nom doit être vide ou égal au dernier segment « ${parsed.name} »`,
-          });
-          continue;
-        }
-        resolved.push({
-          row,
-          code: parsed.code,
-          name: parsed.name,
-          parentCode: parsed.parentCode,
-        });
-      } catch (e) {
-        if (!(e instanceof StructurePathError)) throw e;
+      if (!value.code || !value.name) {
         errors.push({
           row,
-          field: 'Path',
-          value: value.path,
-          message: e.message,
+          field: value.code ? 'Name' : 'Code',
+          message: 'Obligatoire',
+        });
+      } else {
+        complete.push({
+          row,
+          code: value.code,
+          name: value.name,
+          parent: value.parentCode,
         });
       }
     }
-
-    errors.push(
-      ...findDuplicates(
-        resolved.map((r) => ({ row: r.row, value: r })),
-        (r) => r.code,
-        'Code',
-      ),
+    const duplicates = findDuplicates(
+      complete.map((r) => ({ row: r.row, value: r })),
+      (r) => r.code,
+      'Code',
     );
+    errors.push(...duplicates);
+    const duplicateRows = new Set(duplicates.map((e) => e.row));
 
+    // Parents may be any active structure or any structure of the file.
+    const candidates = new Set([
+      ...existing.filter((s) => !s.soft_delete).map((s) => s.code),
+      ...complete.map((r) => r.code),
+    ]);
+    // A file row's name wins over the database's for the same code.
+    const named = new Map([
+      ...existing
+        .filter((s) => !s.soft_delete)
+        .map((s) => [s.code, s.name] as const),
+      ...complete.map((r) => [r.code, r.name] as const),
+    ]);
+    const nameErrors = new Set<number>();
+    const resolved = complete.map((r) => {
+      let parentCode =
+        r.parent ?? inferParentCode(r.code, candidates) ?? undefined;
+      if (parentCode === undefined) {
+        const matches = nameParentMatches(
+          r.name,
+          [...named].map(([code, name]) => ({ code, name })),
+        ).filter((code) => code !== r.code);
+        if (matches.length === 1) parentCode = matches[0];
+        // A new " / " name that points nowhere (or to several structures) must
+        // not silently become a root.
+        else if (
+          !existingByCode.has(r.code) &&
+          nameSegments(r.name).length > 1
+        ) {
+          nameErrors.add(r.row);
+          errors.push({
+            row: r.row,
+            field: 'Parent',
+            value: r.name,
+            message: matches.length
+              ? `Parent ambigu pour « ${r.name} » : ${matches.join(', ')} (indiquez la colonne Parent)`
+              : `Structure parente introuvable pour « ${r.name} » (indiquez la colonne Parent)`,
+          });
+        }
+      }
+      return {
+        ...r,
+        // An existing structure neither the code nor the name places keeps its parent.
+        parentCode:
+          parentCode ?? existingByCode.get(r.code)?.parentCode ?? null,
+      };
+    });
     const declared = new Set(resolved.map((r) => r.code));
+    const forest = new StructureForest([
+      ...existing.filter((s) => !declared.has(s.code)),
+      ...resolved,
+    ]);
+
     const plan: ImportPlanRow[] = [];
     for (const r of resolved) {
+      if (duplicateRows.has(r.row) || nameErrors.has(r.row)) continue;
       const found = existingByCode.get(r.code);
       if (found?.soft_delete) {
         errors.push({
@@ -529,31 +438,40 @@ export class StructuresService {
       if (found && (found.parentCode ?? null) !== r.parentCode) {
         errors.push({
           row: r.row,
-          field: r.parentCode ? 'Path' : 'Code',
+          field: 'Code',
           value: r.code,
-          message:
-            'Cette structure existe déjà ailleurs dans l’arbre (utilisez un déplacement)',
+          message: `Cette structure existe déjà sous « ${found.parentCode ?? 'la racine'} » (utilisez un déplacement)`,
         });
         continue;
       }
-      if (r.parentCode) {
-        const parent = existingByCode.get(r.parentCode);
-        const parentOk =
-          (parent && !parent.soft_delete) || declared.has(r.parentCode);
-        if (!parentOk) {
-          errors.push({
-            row: r.row,
-            field: 'Path',
-            value: r.code,
-            message: `Structure parente « ${r.parentCode} » introuvable`,
-          });
-          continue;
-        }
+      if (r.parentCode && !candidates.has(r.parentCode)) {
+        errors.push({
+          row: r.row,
+          field: 'Parent',
+          value: r.parentCode,
+          message: `Structure parente « ${r.parentCode} » introuvable`,
+        });
+        continue;
       }
-      plan.push({ ...r, action: found ? 'update' : 'create' });
+      if (forest.depth(r.code) > MAX_STRUCTURE_DEPTH) {
+        errors.push({
+          row: r.row,
+          field: 'Code',
+          value: r.code,
+          message: `Profondeur maximale de ${MAX_STRUCTURE_DEPTH} niveaux dépassée`,
+        });
+        continue;
+      }
+      plan.push({
+        row: r.row,
+        code: r.code,
+        name: r.name,
+        parentCode: r.parentCode,
+        action: found ? 'update' : 'create',
+      });
     }
     plan.sort(
-      (a, b) => depthFromCode(a.code) - depthFromCode(b.code) || a.row - b.row,
+      (a, b) => forest.depth(a.code) - forest.depth(b.code) || a.row - b.row,
     );
     errors.sort((a, b) => a.row - b.row);
     return { rows: plan, errors };
@@ -636,7 +554,7 @@ export class StructuresService {
       const structuresData = structures.map((structure) => ({
         Code: structure.code,
         Name: structure.name,
-        Path: structure.parentCode ? structure.code : '',
+        Parent: structure.parentCode ?? '',
         Responsible: structure.responsible?.matricule ?? '',
         'Number of Users': structure.users.length,
       }));

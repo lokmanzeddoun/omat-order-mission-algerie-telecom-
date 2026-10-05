@@ -21,6 +21,8 @@ import { User } from '@prisma/client';
 import { ReopenDto } from 'src/common/dto/reopen.dto';
 import { BulkAcceptDto, BulkRejectDto } from './dto/bulk-status.dto';
 import { Response } from 'express';
+import { BulkDownloadDto } from './dto/bulk-download.dto';
+import { CreateDecomptesBulkDto } from './dto/create-decomptes-bulk.dto';
 
 @Controller('decompte')
 export class DecompteController {
@@ -47,6 +49,25 @@ export class DecompteController {
       actor,
       body.message,
     );
+  }
+
+  @Post('bulk')
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  @UsePipes(new ValidationPipe({ transform: true }))
+  createMany(@Body() body: CreateDecomptesBulkDto, @GetUser() actor: User) {
+    return this.decompteService.createMany(body.ids, body.figures, actor);
+  }
+
+  // Anyone may download what they can see; the service scopes the ids.
+  @Post('bulk/download')
+  @Auth()
+  @UsePipes(new ValidationPipe({ transform: true }))
+  downloadMany(
+    @Body() body: BulkDownloadDto,
+    @Res() res: Response,
+    @GetUser() actor: User,
+  ) {
+    return this.decompteService.downloadMany(body.ids, res, actor);
   }
 
   @Auth('ADMIN', 'SUPER_ADMIN')

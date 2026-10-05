@@ -56,13 +56,6 @@ const userSlice = createSlice({
   },
 });
 
-export const {
-  fetchStructureError,
-  fetchStructuresStart,
-  fetchStructuresSuccess,
-  createStructure,
-  editStructure,
-  removeStructure,
-} = userSlice.actions;
+export const { fetchStructureError, fetchStructuresStart, fetchStructuresSuccess, createStructure, editStructure, removeStructure } = userSlice.actions;
 
 export default userSlice.reducer;

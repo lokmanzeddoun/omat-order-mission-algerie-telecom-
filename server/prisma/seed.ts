@@ -18,6 +18,7 @@ async function main() {
     await prisma.commentaire.deleteMany();
     await prisma.decompte.deleteMany();
     await prisma.mission.deleteMany();
+    await prisma.gradeAssignment.deleteMany();
     await prisma.user.deleteMany();
     await prisma.structure.deleteMany();
     await prisma.barem.deleteMany();

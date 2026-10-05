@@ -1,15 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UsersService } from './users.service';
 import { DatabaseService } from 'src/database/database.service';
-import { Role, User } from '@prisma/client';
 import ExcelJS from 'exceljs';
 import { AccessPolicy } from 'src/common/policy/access-policy';
-
-const SUPER_ADMIN = {
-  matricule: 999,
-  role: Role.SUPER_ADMIN,
-  serviceId: null,
-} as User;
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -28,52 +21,6 @@ describe('UsersService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
-  });
-});
-
-describe('UsersService.create (admin scope)', () => {
-  const ADMIN = { matricule: 1, role: Role.ADMIN, serviceId: 'DR1' } as User;
-  const dto = (over: object) =>
-    ({
-      matricule: 5,
-      nom: 'a',
-      prenom: 'b',
-      email: 'a@b.dz',
-      grade: 'g',
-      category: 'CADRE',
-      role: Role.USER,
-      serviceId: 'DR1',
-      ...over,
-    }) as never;
-  let service: UsersService;
-
-  beforeEach(async () => {
-    const module = await Test.createTestingModule({
-      providers: [
-        UsersService,
-        AccessPolicy,
-        { provide: DatabaseService, useValue: {} },
-      ],
-    }).compile();
-    service = module.get(UsersService);
-  });
-
-  it('rejects an admin creating a user in another service', async () => {
-    await expect(
-      service.create(dto({ serviceId: 'DR2' }), ADMIN),
-    ).rejects.toThrow('own structure');
-  });
-
-  it('rejects an admin creating a non-USER role', async () => {
-    await expect(
-      service.create(dto({ role: Role.ADMIN }), ADMIN),
-    ).rejects.toThrow('own structure');
-  });
-
-  it('rejects an admin without a service', async () => {
-    await expect(
-      service.create(dto({}), { ...ADMIN, serviceId: null } as User),
-    ).rejects.toThrow('own structure');
   });
 });
 
@@ -132,7 +79,6 @@ describe('UsersService.uploadUsers', () => {
         [1, 'A', 'B', 'a@x.dz', 'secret1', 'user', 'cadre', 'G', 'S1'],
         [2, 'C', 'D', 'c@x.dz', '', 'ADMIN', 'CADRE', 'G', ''],
       ),
-      SUPER_ADMIN,
     );
     expect(result).toMatchObject({ created: 1, updated: 1 });
     expect(result.temporaryPasswords).toEqual([
@@ -163,7 +109,6 @@ describe('UsersService.uploadUsers', () => {
           [3, 'A', 'B', 'taken@x.dz', '', 'USER', 'CADRE', 'G', 'NOPE'],
           [3, 'A', 'B', 'z@x.dz', 'secret1', 'USER', 'CADRE', 'G', ''],
         ),
-        SUPER_ADMIN,
       ),
     );
     expect(errors.map((e: any) => [e.row, e.field])).toEqual(

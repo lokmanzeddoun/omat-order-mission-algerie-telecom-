@@ -12,7 +12,7 @@ import { setAlert } from 'components/alert/alert.reducer';
 import { AlertTypes } from 'constants/alert';
 import { ConfirmDialog, type MenuAction, type RowActions } from 'components/ui';
 import { archiveMission, deleteOrder, updateMission } from './orderthunk';
-import { addDecompte } from './decompte.thunk';
+import { addDecompte, addDecomptes } from './decompte.thunk';
 import type { IMission } from './orderReducer';
 import MissionFormDialog from './MissionFormDialog';
 import ValidateMissionForm from './ValidateMissionForm';
@@ -42,8 +42,11 @@ export function useMissionDownload() {
 }
 
 type Pending =
-  | { kind: 'edit' | 'view' | 'validate' | 'archive' | 'cancel'; mission: IMission }
+  | { kind: 'edit' | 'view' | 'archive' | 'cancel'; mission: IMission }
+  | { kind: 'validate'; missions: IMission[] }
   | null;
+
+const NONE: IMission[] = [];
 
 interface Options {
   /** Called after any change so the caller can refetch. */
@@ -63,6 +66,7 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const token = useSelector((s: RootState) => s.auth.token);
+  const me = useSelector((s: RootState) => s.auth.user) as IUser | null;
   const download = useMissionDownload();
   const [pending, setPending] = useState<Pending>(null);
   const close = () => setPending(null);
@@ -77,7 +81,7 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
     const primary: MenuAction[] = [{ id: 'download', label: t('actions.download'), icon: <Download />, onSelect: () => download(m) }];
     if (detailPath) primary.push({ id: 'details', label: t('actions.details'), icon: <Eye />, onSelect: () => navigate(detailPath(m)) });
     const menu: MenuAction[] = [
-      { id: 'validate', label: t('actions.validate'), icon: <CheckCircle2 />, hidden: !admin || validated, onSelect: () => setPending({ kind: 'validate', mission: m }) },
+      { id: 'validate', label: t('actions.validate'), icon: <CheckCircle2 />, hidden: !admin || validated, onSelect: () => setPending({ kind: 'validate', missions: [m] }) },
       { id: 'edit', label: t('actions.edit'), icon: <Pencil />, hidden: validated, onSelect: () => setPending({ kind: 'edit', mission: m }) },
       { id: 'archive', label: t('actions.archive'), icon: <Archive />, hidden: !admin || !validated, onSelect: () => setPending({ kind: 'archive', mission: m }) },
       { id: 'cancel', label: t('ordres:cancelOrder'), icon: <XCircle />, tone: 'danger', hidden: validated, onSelect: () => setPending({ kind: 'cancel', mission: m }) },
@@ -87,7 +91,19 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
 
   const openView = (m: IMission) => setPending({ kind: 'view', mission: m });
 
-  const m = pending?.mission ?? null;
+  /**
+   * "Valider (n)" for the selected ordres still in progress, one shared form
+   * for all; the actor's own ordres are left out (no self-validation).
+   */
+  const bulkActions = (selected: IMission[]): MenuAction[] => {
+    if (!admin) return [];
+    const ownerOf = (x: IMission) => (x as IMission & { user?: { matricule?: number } }).user?.matricule ?? x.userId;
+    const rows = selected.filter((x) => x.status === 'INPROGRESS' && ownerOf(x) !== me?.matricule);
+    if (rows.length === 0) return [];
+    return [{ label: `${t('actions.validate')} (${rows.length})`, icon: <CheckCircle2 />, onSelect: () => setPending({ kind: 'validate', missions: rows }) }];
+  };
+
+  const m = pending && 'mission' in pending ? pending.mission : null;
   const dialogs: ReactNode = (
     <>
       <MissionFormDialog
@@ -102,11 +118,15 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
       />
       <ValidateMissionForm
         open={pending?.kind === 'validate'}
-        mission={pending?.kind === 'validate' ? m : null}
+        missions={pending?.kind === 'validate' ? pending.missions : NONE}
         onClose={close}
-        onSubmit={async (figures) => {
-          await dispatch(addDecompte(figures, m, token));
-          await done();
+        onSubmit={async (figures, missions) => {
+          if (missions.length === 1) {
+            await dispatch(addDecompte(figures, missions[0], token));
+            await done();
+          } else if (await dispatch(addDecomptes(figures, missions))) {
+            await done();
+          }
         }}
       />
       <ConfirmDialog
@@ -137,5 +157,5 @@ export function useMissionActions({ onChanged, detailPath, admin }: Options) {
     </>
   );
 
-  return { actionsFor, openView, dialogs, download };
+  return { actionsFor, bulkActions, openView, dialogs, download };
 }

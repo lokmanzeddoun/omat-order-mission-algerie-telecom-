@@ -59,6 +59,12 @@ describe('PdfService (rendered in node)', () => {
     expect(pageCount(pdf)).toBe(1);
   });
 
+  it('renders a batch of 3 décomptes on 3 pages (1 per décompte)', () => {
+    const pdf = read('decomptes-batch.pdf');
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    expect(pageCount(pdf)).toBe(3);
+  });
+
   it('keeps the décompte on one page with long values', () => {
     expect(pageCount(read('decompte-long.pdf'))).toBe(1);
   });

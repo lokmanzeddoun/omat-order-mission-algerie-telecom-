@@ -17,6 +17,7 @@
   "commentsCount": "التعليقات ({{count}})",
   "viewComments": "عرض التعليقات",
   "accept": "قبول",
+  "bulkDownloadTooMany": "حدّد {{count}} كشفًا على الأكثر للتنزيل في مرة واحدة.",
   "reject": "رفض",
   "acceptTitle": "قبول كشف المصاريف رقم {{n}}؟",
   "acceptHint": "سيتم إعلام الموظف بالقبول.",

@@ -45,17 +45,29 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         createdAt: true,
         category: true,
         serviceId: true,
-        structure: { select: { responsibleUserId: true } },
+        structure: {
+          select: {
+            responsibleUserId: true,
+            children: {
+              select: { code: true, children: { select: { code: true } } },
+            },
+          },
+        },
         mustChangePassword: true,
         passwordChangedAt: true,
       },
     });
     if (!user) throw new UnauthorizedException('Invalid token');
     const { passwordChangedAt, structure, ...rest } = user;
-    // Whether the user's own structure has a responsible (AccessPolicy, ADR 0005).
+    // Whether the user's own structure has a responsible, and its descendants
+    // (AccessPolicy, ADR 0005 / 0006).
     const current = {
       ...rest,
       serviceHasResponsible: structure?.responsibleUserId != null,
+      descendantCodes: (structure?.children ?? []).flatMap((c) => [
+        c.code,
+        ...c.children.map((g) => g.code),
+      ]),
     };
     if (
       passwordChangedAt &&

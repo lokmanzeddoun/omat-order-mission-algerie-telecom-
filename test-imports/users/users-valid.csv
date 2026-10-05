@@ -1,0 +1,7 @@
+Matricule,Nom,Prenom,Email,Category,Grade,ServiceId
+9001,Test,Amine,amine.test@example.dz,CADRE,Ingénieur,99T0000000
+9002,Test,Sara,sara.test@example.dz,cadre_superieur,Chef de section,99TS000000
+9003,Test,Yacine,yacine.test@example.dz,EXECUTION_MAITRISE,Technicien,99TS100000
+9004,Test,Nadia,nadia.test@example.dz,CADRE,Chargée de clientèle,99TA010000
+9005,Test,Karima,karima.test@example.dz,EXECUTION_MAITRISE,Agent commercial,99OA010000
+9006,Test,Walid,walid.test@example.dz,CADRE,Analyste,

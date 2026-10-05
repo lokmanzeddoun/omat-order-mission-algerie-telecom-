@@ -83,7 +83,7 @@ export class StructuresController {
   @ApiOperation({
     summary: 'MOVE STRUCTURE',
     description:
-      'Moves a structure and its subtree under another parent (or to the root). Rejects cycles and depths above 3; re-keys the codes of the subtree.',
+      'Moves a structure and its subtree under another parent (or to the root). Rejects cycles and depths above 3; codes never change.',
   })
   @ApiResponse({ status: 400, description: 'Cycle or depth above 3' })
   move(

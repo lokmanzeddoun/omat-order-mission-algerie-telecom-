@@ -50,3 +50,13 @@ test('archive tabs list each kind', async ({ page }) => {
     await expect(page.getByRole('table', { name: caption })).toBeVisible();
   }
 });
+
+test('an admin sees only the ordres and décomptes tabs, without restore', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('dashboard/admins/archive');
+  await expect(page.getByRole('radio', { name: /Ordres de mission/ })).toBeVisible();
+  await expect(page.getByRole('radio', { name: /Décomptes/ })).toBeVisible();
+  await expect(page.getByRole('radio', { name: /Utilisateurs/ })).toHaveCount(0);
+  await expect(page.getByRole('radio', { name: /Services/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Désarchiver' })).toHaveCount(0);
+});

@@ -1,4 +1,0 @@
-Matricule,Nom,Prenom,Email,Password,Role,Category,Grade,ServiceId
-9001,Test,Amine,amine.test@example.dz,secret123,user,cadre,Ingénieur,TST1
-9002,Test,Sara,sara.test@example.dz,secret123,ADMIN,CADRE_SUPERIEUR,Chef de service,DRH
-9003,Test,Yacine,yacine.test@example.dz,secret123,USER,EXECUTION_MAITRISE,Technicien,

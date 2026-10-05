@@ -5,9 +5,9 @@ const toText = ({ value }: { value: unknown }) =>
   value === undefined || value === null ? value : String(value).trim();
 
 /**
- * One row of the services (structures) spreadsheet. A root is declared with
- * `code` + `name`; a child with its `path` ("SDC / ERSTC / Section ...").
- * Which of the two is required is checked by the service, not here.
+ * One row of the structures spreadsheet: `code` ("Unité org."), `name`
+ * ("Lib long UO") and an optional `parentCode` (otherwise implied by the code).
+ * Required cells are checked by the service, not here.
  */
 export class ImportStructureDto {
   @IsOptional()
@@ -23,5 +23,5 @@ export class ImportStructureDto {
   @IsOptional()
   @Transform(toText)
   @IsString()
-  path?: string;
+  parentCode?: string;
 }

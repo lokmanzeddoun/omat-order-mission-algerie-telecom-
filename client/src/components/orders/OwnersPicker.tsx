@@ -14,10 +14,14 @@ export interface OwnerOption {
   /** Structure display name. */
   service?: string | null;
   status?: string;
+  /** Codes of the structure's parent and grandparent (the tree is at most 3 levels deep). */
+  ancestors?: string[];
 }
 
 /** The users endpoint nests the structure name; flatten it into an option. */
-type ApiUser = OwnerOption & { structure?: { name?: string | null } | null };
+type ApiUser = OwnerOption & {
+  structure?: { name?: string | null; parentCode?: string | null; parent?: { parentCode?: string | null } | null } | null;
+};
 
 interface Props {
   /** Signed-in user: always offered first as "Vous-même". */
@@ -53,7 +57,13 @@ export default function OwnersPicker({ me, value, onChange, errors = {} }: Props
       .then((res) => {
         if (cancelled) return;
         const list = Array.isArray(res.data) ? res.data : [];
-        setUsers(list.map((u) => ({ ...u, service: u.service ?? u.structure?.name ?? null })));
+        setUsers(
+          list.map((u) => ({
+            ...u,
+            service: u.service ?? u.structure?.name ?? null,
+            ancestors: [u.structure?.parentCode, u.structure?.parent?.parentCode].filter((c): c is string => !!c),
+          })),
+        );
       })
       .catch(() => !cancelled && setFailed(true));
     return () => {
@@ -79,9 +89,11 @@ export default function OwnersPicker({ me, value, onChange, errors = {} }: Props
   const toggle = (matricule: number) =>
     onChange(selected.has(matricule) ? value.filter((m) => m !== matricule) : [...value, matricule]);
 
-  // "My structure": the signed-in user's own structure, as known from the list.
+  // "My structure": the signed-in user's own structure and all its sub-structures.
   const myServiceId = everyone[0]?.serviceId ?? null;
-  const inMyStructure = myServiceId ? everyone.filter((u) => u.serviceId === myServiceId) : [];
+  const inMyStructure = myServiceId
+    ? everyone.filter((u) => u.serviceId === myServiceId || u.ancestors?.includes(myServiceId))
+    : [];
   const selectStructure = () => onChange([...new Set([...value, ...inMyStructure.map((u) => u.matricule)])]);
 
   return (
@@ -89,7 +101,7 @@ export default function OwnersPicker({ me, value, onChange, errors = {} }: Props
       <legend className="text-sm font-medium text-fg">{t('ordres:form.forWhom')}</legend>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" size="sm" onClick={selectStructure} disabled={inMyStructure.length === 0}>
-          {t('ordres:form.selectMyStructure')}
+          {t('ordres:form.selectMyStructure', { count: inMyStructure.length })}
         </Button>
         <Button type="button" size="sm" onClick={() => onChange([])} disabled={value.length === 0}>
           {t('ordres:form.clearSelection')}

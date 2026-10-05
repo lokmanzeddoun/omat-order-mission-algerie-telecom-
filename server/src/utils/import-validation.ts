@@ -55,6 +55,19 @@ const clean = (v: unknown) => {
 };
 
 /**
+ * The separator of a CSV file, guessed from its header line: Excel writes ";"
+ * in a French locale, HR extracts are often tab-separated.
+ */
+function csvDelimiter(text: string): string {
+  const header = text.split(/\r?\n/, 1)[0];
+  const count = (c: string) => header.split(c).length - 1;
+  return [';', '\t'].reduce(
+    (best, c) => (count(c) > count(best) ? c : best),
+    ',',
+  );
+}
+
+/**
  * Reads the first sheet of an .xlsx or .csv file: finds each of `columns` in the header row,
  * then returns the non-empty rows keyed by DTO field.
  */
@@ -67,10 +80,11 @@ export async function readRows(
   const isCsv = /\.csv$/i.test(filename);
   try {
     if (isCsv) {
-      await workbook.csv.read(
-        Readable.from(buffer.toString('utf8').replace(/^\uFEFF/, '')),
-        { map: (value) => value },
-      );
+      const text = buffer.toString('utf8').replace(/^\uFEFF/, '');
+      await workbook.csv.read(Readable.from(text), {
+        map: (value) => value,
+        parserOptions: { delimiter: csvDelimiter(text) },
+      });
     } else {
       if (
         buffer.length < 4 ||

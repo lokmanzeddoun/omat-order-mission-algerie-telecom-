@@ -1,4 +1,4 @@
-import { structureLabel } from 'src/structures/structure-path';
+import { structureLabel } from 'src/structures/structure-tree';
 import { Decompte, Direction, TransportType } from '@prisma/client';
 import { fmtAmount, fmtCount, fmtDate, missionDays, text } from '../format';
 import { gradeLabel, MissionWithOwner, Moment, momentOf } from './ordre.mapper';

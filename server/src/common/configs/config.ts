@@ -50,7 +50,7 @@ export default (): Config => {
       secureCookies: env === 'production',
       mfaRequired: process.env.AUTH_MFA_REQUIRED !== 'false',
       allowedOrigins: [...originOf(process.env.APP_PUBLIC_URL), ...corsOrigins],
-      allowLocalhostOrigins: env !== 'production',
+      allowDevOrigins: env !== 'production',
     },
   };
 };

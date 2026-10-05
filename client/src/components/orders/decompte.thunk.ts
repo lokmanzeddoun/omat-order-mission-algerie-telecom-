@@ -7,6 +7,40 @@ import { AppDispatch } from 'store';
 import { IDecompte } from './decompte.reducer';
 import { IMission } from './orderReducer';
 import { fetchDecompteFailure, fetchDecompteSuccess, fetchDecompteStart } from './decompte.reducer';
+/** The form's figures as the API expects them (distance_km → parcours, transport_cost → fees_transport). */
+const toDecomptePayload = (decompte: IDecompte) => {
+  const parcours = typeof decompte.distance_km === 'number'
+    ? decompte.distance_km
+    : (decompte.distance_km ? Number(decompte.distance_km) : 0);
+  const fees_transport = typeof decompte.transport_cost === 'number'
+    ? decompte.transport_cost
+    : (decompte.transport_cost ? Number(decompte.transport_cost) : 0);
+  const payload = { ...decompte, parcours, fees_transport };
+  delete (payload as any).distance_km;
+  delete (payload as any).transport_cost;
+  delete (payload as any).missionId;
+  return payload;
+};
+
+/**
+ * Validates several ordres with the same figures. All or nothing: on refusal
+ * nothing is validated and the error names each ordre at fault. Resolves true
+ * on success so the form can stay open otherwise.
+ */
+export const addDecomptes =
+  (decompte: IDecompte, orders: IMission[]) =>
+    async (dispatch: AppDispatch): Promise<boolean> => {
+      const ids = orders.map((o) => o.n_mission).filter((n): n is number => n != null);
+      try {
+        await http.post('/decompte/bulk', { ids, figures: toDecomptePayload(decompte) });
+        dispatch(setAlert({ msg: i18n.t('ordres:validate.bulkDone', { count: ids.length }), type: AlertTypes.SUCCESS }));
+        return true;
+      } catch (error) {
+        dispatch(setAlert({ msg: extractErrorMessage(error), type: AlertTypes.ERROR }));
+        return false;
+      }
+    };
+
 export const addDecompte =
   (decompte: IDecompte, order: IMission | null, token: string | null) =>
     async (dispatch: AppDispatch) => {
@@ -15,26 +49,7 @@ export const addDecompte =
         const missionId = order?.n_mission;
         if (missionId == null) throw new Error('Mission ID is required');
 
-        // Transform distance_km to parcours for backend
-        // Ensure parcours is always a valid number (default to 0 if undefined/null)
-        const parcours = typeof decompte.distance_km === 'number'
-          ? decompte.distance_km
-          : (decompte.distance_km ? Number(decompte.distance_km) : 0);
-
-        // Transform transport_cost to fees_transport for backend
-        const fees_transport = typeof decompte.transport_cost === 'number'
-          ? decompte.transport_cost
-          : (decompte.transport_cost ? Number(decompte.transport_cost) : 0);
-
-        const payload = {
-          ...decompte,
-          parcours,
-          fees_transport,
-        };
-        // Remove distance_km and transport_cost as backend expects parcours and fees_transport
-        delete (payload as any).distance_km;
-        delete (payload as any).transport_cost;
-        delete (payload as any).missionId;
+        const payload = toDecomptePayload(decompte);
 
         const res = await http.post(`/decompte/${missionId}`, payload, {
           headers: {

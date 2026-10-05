@@ -12,9 +12,23 @@ export interface ApiErrorResponse {
   path?: string;
 }
 
+/** "2027-02-11" (server day) → "11/02/2027". */
+const frDay = (iso: string) => iso.split('-').reverse().join('/');
+
 // Known backend messages (English or French, not localized by the API) mapped to
-// translated keys. Anything else falls back to a message chosen from the HTTP status.
-const KNOWN_SERVER_MESSAGES: [RegExp, string][] = [
+// translated keys, with values captured from the message when the text needs them.
+// Anything else falls back to a message chosen from the HTTP status.
+const KNOWN_SERVER_MESSAGES: [RegExp, string, ((m: RegExpMatchArray) => Record<string, string>)?][] = [
+  [
+    /dépasser (\d+) mois : elle doit se terminer au plus tard le (\d{4}-\d{2}-\d{2}) \(début de la période continue : (\d{4}-\d{2}-\d{2})\)/,
+    'errors:gradeCap',
+    (m) => ({ months: m[1], maxEnd: frDay(m[2]), chainStart: frDay(m[3]) }),
+  ],
+  [/chevauche la période n° (\d+)/, 'errors:gradeOverlap', (m) => ({ id: m[1] })],
+  [/catégorie visée doit être strictement supérieure/, 'errors:gradeNotHigher'],
+  [/date de fin doit être postérieure ou égale/, 'errors:gradeEndBeforeStart'],
+  [/période est déjà terminée/, 'errors:gradeAlreadyEnded'],
+  [/période est déjà échue/, 'errors:gradeAlreadyExpired'],
   [/pending password reset/i, 'errors:pendingReset'],
   [/wrong credentials|invalid password/i, 'errors:invalidCredentials'],
   [/contenir votre nom/i, 'errors:passwordPersonal'],
@@ -25,6 +39,11 @@ const KNOWN_SERVER_MESSAGES: [RegExp, string][] = [
   [/another structure/i, 'errors:otherStructure'],
   [/already exists|existe déjà|cette email exist/i, 'errors:alreadyExists'],
   [/date_retour must be strictly after/i, 'errors:returnBeforeDeparture'],
+  [
+    /nombre de repas.*compte (\d+) repas et (\d+) nuitée/i,
+    'errors:invalidMealsCountExpected',
+    (m) => ({ meals: m[1], nights: m[2] }),
+  ],
   [/nombre de repas/i, 'errors:invalidMealsCount'],
   [/not in PENDING status/i, 'errors:decompteNotPending'],
   [/unsupported file type|correct file name/i, 'errors:unsupportedFile'],
@@ -80,8 +99,10 @@ export const extractErrorMessage = (error: unknown): string => {
     if (data && typeof data === 'object' && typeof data.normalizedMessage === 'string') return data.normalizedMessage;
 
     const raw = serverMessage(error);
-    const known = KNOWN_SERVER_MESSAGES.find(([pattern]) => pattern.test(raw));
-    if (known) return i18n.t(known[1]);
+    for (const [pattern, key, params] of KNOWN_SERVER_MESSAGES) {
+      const match = raw.match(pattern);
+      if (match) return i18n.t(key, params?.(match));
+    }
 
     const status = axiosError.response.status;
     const statusKey = STATUS_KEYS[status] ?? (status >= 500 ? 'errors:server' : undefined);

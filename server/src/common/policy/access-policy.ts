@@ -6,10 +6,7 @@ import {
   Role,
   User,
 } from '@prisma/client';
-import {
-  PATH_SEPARATOR,
-  isDescendantCode,
-} from 'src/structures/structure-path';
+import { descendantsWhere } from 'src/structures/structure-tree';
 
 /**
  * A structure code no real structure can have. An ADMIN with no assigned
@@ -26,6 +23,11 @@ export type Actor = Pick<User, 'matricule' | 'role' | 'serviceId'> & {
    * admins and super admins (ADR 0005). Absent means no.
    */
   serviceHasResponsible?: boolean;
+  /**
+   * Codes of the strict descendants of the actor's own structure (set by the
+   * JWT strategy), so `canActInStructure` stays synchronous. Absent means none.
+   */
+  descendantCodes?: string[];
 };
 
 /**
@@ -44,8 +46,8 @@ export type Actor = Pick<User, 'matricule' | 'role' | 'serviceId'> & {
  *                 structure counts only if it has a responsible.
  *   SUPER_ADMIN → everything.
  *
- * A descendant's code always starts with its ancestor's code + " / "
- * (structures/structure-path.ts), so "in my subtree" needs no recursive query.
+ * The tree is at most 3 levels deep (structures/structure-tree.ts), so "in my
+ * subtree" is a child or a grandchild and needs no recursive query.
  */
 @Injectable()
 export class AccessPolicy {
@@ -65,7 +67,7 @@ export class AccessPolicy {
     const own = a.serviceId ?? NO_STRUCTURE;
     return {
       OR: [
-        { code: { startsWith: own + PATH_SEPARATOR } },
+        ...descendantsWhere(own).OR!,
         { code: own, responsibleUserId: { not: null } },
       ],
     };
@@ -124,7 +126,7 @@ export class AccessPolicy {
       return false;
     if (targetServiceId === actor.serviceId)
       return Boolean(actor.serviceHasResponsible);
-    return isDescendantCode(actor.serviceId, targetServiceId);
+    return (actor.descendantCodes ?? []).includes(targetServiceId);
   }
 
   canAccessUser(

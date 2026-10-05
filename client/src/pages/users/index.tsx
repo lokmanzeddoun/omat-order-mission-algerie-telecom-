@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Archive, Download, FilePlus2, KeyRound, Pencil, RefreshCw, UserPlus } from 'lucide-react';
+import { Archive, Download, Eye, FilePlus2, KeyRound, Pencil, RefreshCw, UserPlus } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import {
@@ -102,6 +102,9 @@ export default function UsersPage() {
   const users = useSelector((s: RootState) => s.users.users) as unknown as UserRow[];
   const loading = useSelector((s: RootState) => s.users.loading);
   const token = useSelector((s: RootState) => s.auth.token);
+  // Only a super admin manages accounts; an admin consults the users of their
+  // structure and creates ordres for them (the API enforces it too).
+  const canManage = useSelector((s: RootState) => s.auth.user?.role) === 'SUPER_ADMIN';
 
   const [tab, setTab] = useState<Tab>('all');
   const columns = useMemo(() => userColumns(t), [t]);
@@ -172,22 +175,26 @@ export default function UsersPage() {
         actions={
           <>
             <IconButton label={t('actions.refresh')} icon={<RefreshCw />} variant="secondary" onClick={refresh} />
-            <FileImportButton
-              accept=".xlsx,.csv"
-              onFile={async (file) => {
-                const result = await dispatch(uploadUsers(file));
-                if (result && !result.ok) setImportErrors(result.errors);
-                else if (result) await refresh();
-              }}
-            />
+            {canManage && (
+              <FileImportButton
+                accept=".xlsx,.csv"
+                onFile={async (file) => {
+                  const result = await dispatch(uploadUsers(file));
+                  if (result && !result.ok) setImportErrors(result.errors);
+                  else if (result) await refresh();
+                }}
+              />
+            )}
             <Button onClick={() => dispatch(exportUsers())}>
               <Download />
               {t('actions.export')}
             </Button>
-            <Button variant="primary" onClick={() => setForm({ mode: 'create', user: null })}>
-              <UserPlus />
-              {t('users:add')}
-            </Button>
+            {canManage && (
+              <Button variant="primary" onClick={() => setForm({ mode: 'create', user: null })}>
+                <UserPlus />
+                {t('users:add')}
+              </Button>
+            )}
           </>
         }
       />
@@ -222,15 +229,24 @@ export default function UsersPage() {
           />
         }
         onRowDoubleClick={(u) => setForm({ mode: 'view', user: u })}
-        rowActions={(u) => ({
-          primary: [{ label: t('actions.edit'), icon: <Pencil />, onSelect: () => setForm({ mode: 'edit', user: u }) }],
-          menu: [
-            { label: t('actions.addMission'), icon: <FilePlus2 />, onSelect: () => setMissionFor(u) },
-            { label: t('users:resetPassword'), icon: <KeyRound />, onSelect: () => setToReset(u) },
-            { label: t('actions.archive'), icon: <Archive />, tone: 'danger', onSelect: () => setToArchive(u) },
-          ],
-        })}
-        bulkActions={bulk.actions}
+        rowActions={(u) =>
+          canManage
+            ? {
+                primary: [{ label: t('actions.edit'), icon: <Pencil />, onSelect: () => setForm({ mode: 'edit', user: u }) }],
+                menu: [
+                  { label: t('actions.addMission'), icon: <FilePlus2 />, onSelect: () => setMissionFor(u) },
+                  { label: t('users:resetPassword'), icon: <KeyRound />, onSelect: () => setToReset(u) },
+                  { label: t('actions.archive'), icon: <Archive />, tone: 'danger', onSelect: () => setToArchive(u) },
+                ],
+              }
+            : {
+                primary: [
+                  { label: t('actions.details'), icon: <Eye />, onSelect: () => setForm({ mode: 'view', user: u }) },
+                  { label: t('actions.addMission'), icon: <FilePlus2 />, onSelect: () => setMissionFor(u) },
+                ],
+              }
+        }
+        bulkActions={canManage ? bulk.actions : undefined}
       />
       {bulk.dialog}
 

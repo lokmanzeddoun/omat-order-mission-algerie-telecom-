@@ -8,6 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { User } from '@prisma/client';
 import { ArchiveService } from './archive.service';
 import { Auth } from 'src/auth/guards/auth-role.guard';
 import { GetUser } from 'src/auth/decorators/getUser.decorator';
@@ -120,16 +121,17 @@ export class ArchiveController {
     return this.archive.bulkStructures(body.ids, false, actorId);
   }
 
+  // An ADMIN may consult these two lists, scoped to their structure.
   @Get('missions')
-  @Auth('SUPER_ADMIN')
-  listMissions(@Query('year') year?: string) {
-    return this.archive.listMissions(year ? +year : undefined);
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  listMissions(@GetUser() actor: User, @Query('year') year?: string) {
+    return this.archive.listMissions(actor, year ? +year : undefined);
   }
 
   @Get('decomptes')
-  @Auth('SUPER_ADMIN')
-  listDecomptes(@Query('year') year?: string) {
-    return this.archive.listDecomptes(year ? +year : undefined);
+  @Auth('ADMIN', 'SUPER_ADMIN')
+  listDecomptes(@GetUser() actor: User, @Query('year') year?: string) {
+    return this.archive.listDecomptes(actor, year ? +year : undefined);
   }
 
   @Patch('missions/:id')

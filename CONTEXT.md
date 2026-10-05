@@ -47,11 +47,11 @@ The fiscal year that scopes ordres de mission and décomptes; one exercice is al
 _Avoid_: Year, Année (as a free-standing filter)
 
 **Structure** (also Service):
-A unit of the organisation an agent belongs to. Structures form a tree of at most 3 levels: a root is shown by its full name (code = its abbreviation, e.g. `SDC`), a sub-structure by its path (code = the path, e.g. `SDC / ERSTC / Section Réseau Intranet AT`).
+A unit of the organisation an agent belongs to. Its code is the HR **Unité org.** number (e.g. `13CA010000`), which never changes; its name is the HR **Lib long UO** (e.g. `SDC / ACTEL TLEMCEN`). Structures form a tree of at most 3 levels, given by each structure's parent.
 _Avoid_: Direction (that is the Nord/Sud zone), Département
 
 **Sous-structure**:
-A structure with a parent. Its code is its full path, so renaming or moving it changes the code of everything below it.
+A structure with a parent. Renaming or moving it never changes any code.
 _Avoid_: Child service in UI text
 
 **Responsable**:

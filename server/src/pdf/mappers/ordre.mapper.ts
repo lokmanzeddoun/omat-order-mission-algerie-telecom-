@@ -1,4 +1,4 @@
-import { structureLabel } from 'src/structures/structure-path';
+import { structureLabel } from 'src/structures/structure-tree';
 import {
   GradeAssignmentKind,
   Mission,

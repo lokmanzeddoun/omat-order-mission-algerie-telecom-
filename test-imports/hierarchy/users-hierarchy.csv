@@ -1,0 +1,15 @@
+Matricule,Nom,Prenom,Email,Category,Grade,ServiceId
+9501,Racine,Directeur,directeur.racine@example.dz,CADRE_SUPERIEUR,Directeur,98H0000000
+9502,Racine,Assistante,assistante.racine@example.dz,EXECUTION_MAITRISE,Assistante de direction,98H0000000
+9511,Nord,Chef,chef.nord@example.dz,CADRE_SUPERIEUR,Chef de département,98HN000000
+9512,Nord,Adjoint,adjoint.nord@example.dz,CADRE,Chef de département adjoint,98HN000000
+9513,Nord,Agent,agent.nord@example.dz,EXECUTION_MAITRISE,Agent administratif,98HN000000
+9521,Reseau,Chef,chef.reseau-nord@example.dz,CADRE,Chef de service,98HN100000
+9522,Reseau,Ingenieur,ingenieur.reseau-nord@example.dz,CADRE,Ingénieur réseau,98HN100000
+9523,Reseau,Technicien,technicien.reseau-nord@example.dz,EXECUTION_MAITRISE,Technicien réseau,98HN100000
+9531,Clients,Conseiller,conseiller.clients-nord@example.dz,EXECUTION_MAITRISE,Conseiller clientèle,98HN200000
+9532,Clients,Superviseur,superviseur.clients-nord@example.dz,CADRE,Superviseur,98HN200000
+9541,Sud,Chef,chef.sud@example.dz,CADRE_SUPERIEUR,Chef de département,98HS000000
+9542,Sud,Agent,agent.sud@example.dz,EXECUTION_MAITRISE,Agent administratif,98HS000000
+9551,ReseauSud,Ingenieur,ingenieur.reseau-sud@example.dz,CADRE,Ingénieur réseau,98HS100000
+9552,ReseauSud,Technicien,technicien.reseau-sud@example.dz,EXECUTION_MAITRISE,Technicien réseau,98HS100000

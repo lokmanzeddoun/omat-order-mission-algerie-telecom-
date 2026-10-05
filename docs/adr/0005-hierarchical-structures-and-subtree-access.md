@@ -1,6 +1,6 @@
 # 0005 — Structures form a tree, and an admin acts on their subtree
 
-Status: accepted (2026-10-01)
+Status: accepted (2026-10-01); partly superseded by [ADR 0006](0006-structure-codes-are-hr-org-unit-numbers.md): codes are HR org-unit numbers, not paths, and the tree is given by `parentCode`.
 
 ## Context
 
@@ -31,7 +31,7 @@ Structures were flat, and ADR 0001 scoped an ADMIN to their own structure (`User
 
 - Never upwards, never sideways.
 - It covers ordres de mission, décomptes, commentaires, users and structures (`scopeMissions/Decomptes/Comments/Users/Structures`), user creation and edition (`canActInStructure`, `canAccessUser`), and the validation of ordres and décomptes by an ancestor's admin.
-- An admin may create users in, and move users between, any structure of their subtree.
+- An admin may consult the users of their subtree and create ordres for them, but never create, edit, archive or reset the password of a user: account management is SUPER_ADMIN only. In the Archive, an admin consults (read-only) the archived ordres and décomptes of their subtree; archived users and structures, and every restore or delete, are SUPER_ADMIN only.
 - **Structures without a responsible** are visible only to the admins of their ancestors and to super admins: an admin's own structure counts only if it has a responsible. Its descendants stay in scope.
 - Unchanged from ADR 0001: a USER sees only their own records; **no self-approval** (an ancestor's admin cannot validate their own ordre either); an ADMIN cannot change roles; a SUPER_ADMIN sees everything.
 - The policy stays query-level and synchronous. It needs no recursion because a subtree is `code = mine OR code LIKE mine || ' / %'`. The request user carries `serviceHasResponsible` (set by the JWT strategy) for the check on their own structure.

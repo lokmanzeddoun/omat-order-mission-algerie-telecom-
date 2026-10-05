@@ -96,3 +96,14 @@ test.describe('utilisateurs', () => {
     await chooser;
   });
 });
+
+test('an admin only consults users and creates ordres for them', async ({ page }) => {
+  await login(page, 'admin');
+  await page.goto('dashboard/admins/users');
+  await expect(page.getByRole('heading', { name: 'Utilisateurs', level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Ajouter un utilisateur' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /importer/i })).toHaveCount(0);
+  const row = page.getByRole('table', { name: 'Liste des utilisateurs' }).locator('tbody tr').first();
+  await expect(row.getByRole('button', { name: 'Modifier' })).toHaveCount(0);
+  await expect(row.getByRole('button', { name: 'Nouvel ordre de mission' })).toBeVisible();
+});

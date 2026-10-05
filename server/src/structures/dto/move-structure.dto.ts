@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class MoveStructureDto {
   @IsOptional()
@@ -10,14 +10,4 @@ export class MoveStructureDto {
     nullable: true,
   })
   parentCode?: string | null;
-
-  @IsOptional()
-  @IsNotEmpty()
-  @IsString()
-  @ApiPropertyOptional({
-    description:
-      'Abbreviation the structure takes as a root (required when parentCode is null)',
-    type: 'string',
-  })
-  code?: string;
 }

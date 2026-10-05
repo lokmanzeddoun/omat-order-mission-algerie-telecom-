@@ -33,6 +33,7 @@ import {
   MIN_PARCOURS_KM,
 } from './montant';
 import { assertMissionDuration } from '../missions/mission-duration';
+import { algiersDay } from 'src/grade-assignments/grade-assignment.rules';
 import { AccessPolicy } from 'src/common/policy/access-policy';
 import { AuditService } from 'src/audit/audit.service';
 
@@ -52,6 +53,14 @@ const directionLabel: Record<Direction, string> = {
 };
 
 /** Comment titles written when a décompte is accepted or rejected. */
+/** Why an ordre of a bulk validation can't be validated. */
+const bulkValidateReason: Record<string, string> = {
+  not_found: 'ordre introuvable',
+  self_owned: 'vous ne pouvez pas valider votre propre ordre',
+  not_inprogress:
+    'seul un ordre en cours, non archivé et sans décompte peut être validé',
+};
+
 export const statusCommentTitle = {
   accepted: (id: number, message: string) =>
     `Decompte #${id} accepted: ${message}`,
@@ -136,15 +145,16 @@ export class DecompteService {
         `Les repas et nuitées doivent être déclarés dans la direction de l'ordre de mission (${directionLabel[mission.direction]})`,
       );
     }
+    // The departure day as the agent sees it on the ordre (an Algiers day, like
+    // the UI): a midnight departure is stored as 23:00 UTC the day before.
+    const departureDay = algiersDay(mission.date_sortie);
     // Validating or editing the décompte sets the real return: the trip stays within the limit.
     assertMissionDuration(
-      new Date(
-        `${mission.date_sortie.toISOString().split('T')[0]}T${dto.heure_sortie}:00`,
-      ),
+      new Date(`${departureDay}T${dto.heure_sortie}:00`),
       new Date(`${dto.date_retour}T${dto.heure_retour}:00`),
     );
     const { meals, accommodations } = calculateMealsAndAccommodation(
-      mission.date_sortie.toISOString().split('T')[0],
+      departureDay,
       dto.heure_sortie,
       dto.date_retour,
       dto.heure_retour,
@@ -154,7 +164,7 @@ export class DecompteService {
       accommodations !== totalNights(counts)
     ) {
       throw new BadRequestException(
-        'Le nombre de repas et hebergement non valid',
+        `Le nombre de repas et hebergement non valid : le trajet compte ${meals} repas et ${accommodations} nuitée(s).`,
       );
     }
     // The barème comes from the category frozen on the ordre (the agent's own,
@@ -209,10 +219,77 @@ export class DecompteService {
         'Seul un ordre de mission en cours, non archivé et sans décompte peut être validé',
       );
     }
-    const { counts, montant, rates } = await this.settle(
-      createDecompteDto,
-      mission,
+    const settled = await this.settle(createDecompteDto, mission);
+    const exerciceId = await this.getCurrentExerciceId();
+    return this.databaseService.$transaction(
+      this.validationOps(id, createDecompteDto, settled, exerciceId),
     );
+  }
+
+  /**
+   * Validates several ordres with the same figures (one shared form), all or
+   * nothing: every ordre must be validatable and its trip must match the
+   * declared meals and nights, or none is validated and the error names each
+   * ordre at fault.
+   */
+  async createMany(ids: number[], dto: CreateDecompteDto, actor: User) {
+    const unique = [...new Set(ids)];
+    const missions = await this.databaseService.mission.findMany({
+      where: { n_mission: { in: unique } },
+      include: { user: true, _count: { select: { decompte: true } } },
+    });
+    const byId = new Map(missions.map((m) => [m.n_mission, m]));
+    const { done, skipped } = partitionIds(unique, byId, (m) =>
+      // Out of scope reads as not found (ADR 0001).
+      !this.accessPolicy.canActInStructure(actor, m.user.serviceId)
+        ? 'not_found'
+        : // Separation of duties: never validate one's own ordre.
+          m.userId === actor.matricule
+          ? 'self_owned'
+          : m.soft_delete ||
+              m.status !== MissionStatus.INPROGRESS ||
+              m._count.decompte > 0
+            ? 'not_inprogress'
+            : null,
+    );
+    const problems = skipped.map(
+      ({ id, reason }) => `N° ${id} : ${bulkValidateReason[reason]}`,
+    );
+
+    const settled: {
+      id: number;
+      result: Awaited<ReturnType<DecompteService['settle']>>;
+    }[] = [];
+    for (const id of done) {
+      try {
+        settled.push({ id, result: await this.settle(dto, byId.get(id)!) });
+      } catch (e) {
+        if (!(e instanceof BadRequestException)) throw e;
+        problems.push(`N° ${id} : ${e.message}`);
+      }
+    }
+    if (problems.length > 0) {
+      throw new BadRequestException(
+        `Aucun ordre n'a été validé. ${problems.join(' ; ')}`,
+      );
+    }
+
+    const exerciceId = await this.getCurrentExerciceId();
+    await this.databaseService.$transaction(
+      settled.flatMap(({ id, result }) =>
+        this.validationOps(id, dto, result, exerciceId),
+      ),
+    );
+    return { done: settled.map(({ id }) => id) };
+  }
+
+  /** Completes the ordre with its real return and records its décompte. */
+  private validationOps(
+    id: number,
+    dto: CreateDecompteDto,
+    { counts, montant, rates }: Awaited<ReturnType<DecompteService['settle']>>,
+    exerciceId: number | null,
+  ) {
     const updateMission = this.databaseService.mission.update({
       where: {
         n_mission: id,
@@ -221,29 +298,24 @@ export class DecompteService {
         status: MissionStatus.COMPLETED,
         // Combine provided date_retour and heure_retour into a single DateTime
         date_retour: new Date(
-          `${createDecompteDto.date_retour}T${createDecompteDto.heure_retour}:00`,
+          `${dto.date_retour}T${dto.heure_retour}:00`,
         ).toISOString(),
       },
     });
-    const exerciceId = await this.getCurrentExerciceId();
     const createDecomte = this.databaseService.decompte.create({
       data: {
         ...toColumns(counts),
         ...rates,
         montant: montant,
-        parcours: createDecompteDto.parcours
-          ? createDecompteDto.parcours
-          : null,
-        fees_transport: createDecompteDto.fees_transport
-          ? createDecompteDto.fees_transport
-          : 0,
+        parcours: dto.parcours ? dto.parcours : null,
+        fees_transport: dto.fees_transport ? dto.fees_transport : 0,
         mission: {
           connect: { n_mission: id },
         },
         ...(exerciceId ? { exercice: { connect: { id: exerciceId } } } : {}),
       },
     });
-    return this.databaseService.$transaction([updateMission, createDecomte]);
+    return [updateMission, createDecomte];
   }
 
   async findAll(
@@ -562,6 +634,52 @@ export class DecompteService {
     res.set({
       'Content-Type': 'application/pdf',
       'Content-Disposition': `attachment; filename=decompte-${id}.pdf`,
+    });
+    return res.send(pdf);
+  }
+
+  /**
+   * One PDF holding every listed décompte, in the requested order. Like the
+   * single download, any id missing or outside the caller's scope is a 404.
+   */
+  async downloadMany(ids: number[], res: ExpressResponse, actor: User) {
+    const unique = [...new Set(ids)];
+    const decomptes = await this.databaseService.decompte.findMany({
+      where: {
+        n_decompte: { in: unique },
+        ...this.accessPolicy.scopeDecomptes(actor),
+      },
+      include: {
+        mission: {
+          include: {
+            user: { include: { structure: true } },
+            gradeAssignment: { select: { kind: true } },
+          },
+        },
+      },
+    });
+    const byId = new Map(decomptes.map((d) => [d.n_decompte, d]));
+    const missing = unique.filter((id) => !byId.has(id));
+    if (missing.length > 0) {
+      throw new NotFoundException(
+        `Décompte(s) ${missing.join(', ')} introuvable(s).`,
+      );
+    }
+
+    let pdf: Buffer;
+    try {
+      pdf = await this.pdfService.renderDecomptes(
+        unique.map((id) => toDecomptePdfData(byId.get(id)!)),
+      );
+    } catch (e) {
+      this.logger.error('Failed to render décomptes batch', (e as Error).stack);
+      throw new InternalServerErrorException(
+        'Impossible de générer le PDF des décomptes.',
+      );
+    }
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename=decomptes-${unique.length}.pdf`,
     });
     return res.send(pdf);
   }

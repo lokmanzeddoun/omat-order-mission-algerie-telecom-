@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import type { DocumentProps } from '@react-pdf/renderer';
 import { ReactElement, createElement } from 'react';
-import { DecompteDocument } from './documents/decompte-document';
+import {
+  DecompteDocument,
+  DecomptesBatchDocument,
+} from './documents/decompte-document';
 import { OrdreDocument, OrdresBatchDocument } from './documents/ordre-document';
 import { DecomptePdfData } from './mappers/decompte.mapper';
 import { OrdrePdfData } from './mappers/ordre.mapper';
@@ -32,5 +35,10 @@ export class PdfService {
 
   renderDecompte(data: DecomptePdfData): Promise<Buffer> {
     return this.render(createElement(DecompteDocument, { data }));
+  }
+
+  /** Several décomptes in one PDF, in the given order. */
+  renderDecomptes(items: DecomptePdfData[]): Promise<Buffer> {
+    return this.render(createElement(DecomptesBatchDocument, { items }));
   }
 }

@@ -10,7 +10,6 @@
  * upserted, so the base accounts keep working.
  */
 import {
-  Barem,
   Category,
   DecompteStatus,
   Direction,
@@ -356,8 +355,10 @@ const REJECTION_REASONS = [
   'Ordre de mission non visé par la structure d’accueil',
 ];
 
-// Missions per exercice. 2025 is the full reference year; 2026 runs to TODAY and a bit beyond.
-const VOLUME: Record<number, number> = {
+// Missions per exercice for the base dataset (~50 agents). 2025 is the full
+// reference year; 2026 runs to TODAY and a bit beyond. Scaled up to about three
+// ordres per agent when more agents exist (the hierarchy seed).
+const BASE_VOLUME: Record<number, number> = {
   2023: 30,
   2024: 55,
   2025: 120,
@@ -513,6 +514,58 @@ async function main() {
 
   const users = await prisma.user.findMany();
   const admins = users.filter((u) => u.role !== 'USER' && !u.soft_delete);
+  const baseTotal = Object.values(BASE_VOLUME).reduce((a, b) => a + b, 0);
+  const scale = Math.max(1, (3 * users.length) / baseTotal);
+  const VOLUME: Record<number, number> = Object.fromEntries(
+    Object.entries(BASE_VOLUME).map(([y, n]) => [y, Math.round(n * scale)]),
+  );
+
+  // A décompte is reviewed by an admin of the traveller's structure or of an
+  // ancestor (nearest first, ADR 0005), else by a super admin.
+  const structures = await prisma.structure.findMany({
+    select: {
+      code: true,
+      name: true,
+      parentCode: true,
+      responsibleUserId: true,
+    },
+  });
+  const structureOf = new Map(structures.map((s) => [s.code, s]));
+  const ancestry = (code: string | null) => {
+    const chain: string[] = [];
+    for (
+      let c = code;
+      c && !chain.includes(c);
+      c = structureOf.get(c)?.parentCode ?? null
+    )
+      chain.push(c);
+    return chain;
+  };
+  const superAdmins = admins.filter((u) => u.role === 'SUPER_ADMIN');
+  const reviewerFor = (traveller: User) => {
+    for (const [i, code] of ancestry(traveller.serviceId).entries()) {
+      // An admin acts on their own structure only when it has a responsable.
+      if (i === 0 && structureOf.get(code)?.responsibleUserId == null) continue;
+      const here = admins.filter(
+        (a) =>
+          a.role === 'ADMIN' &&
+          a.serviceId === code &&
+          a.matricule !== traveller.matricule,
+      );
+      if (here.length) return pick(here);
+    }
+    return pick(superAdmins.length ? superAdmins : admins);
+  };
+  // Motifs by kind of work for the hierarchy's structures (ACTEL → commercial, centre → technique).
+  const motifsFor = (u: User) => {
+    if (u.serviceId && MOTIFS[u.serviceId]) return MOTIFS[u.serviceId];
+    const name = structureOf.get(u.serviceId ?? '')?.name ?? '';
+    if (/ACTEL|Vente|Corporate|Commercial/i.test(name)) return MOTIFS.DC;
+    if (/Section|Technique|Transmissions|CTR|CRT|ERSTC/i.test(name))
+      return MOTIFS.DT;
+    if (/Ressources Humaines/i.test(name)) return MOTIFS.DRH;
+    return MOTIFS.DG;
+  };
   // Field agents travel far more than directors; admins travel occasionally.
   const travellerWeights: [User, number][] = users.map((u) => [
     u,
@@ -555,7 +608,8 @@ async function main() {
   const plans: Plan[] = [];
   for (const [yearStr, count] of Object.entries(VOLUME)) {
     const year = Number(yearStr);
-    while (plans.filter((p) => p.year === year).length < count) {
+    let planned = 0;
+    while (planned < count) {
       const user = weighted(travellerWeights);
       const since = user.userSince ?? new Date(2010, 0, 1);
       const start = departureDate(year);
@@ -579,7 +633,8 @@ async function main() {
         );
       else end.setHours(hour, pick([0, 15, 30, 45]), 0, 0);
 
-      const motifs = MOTIFS[user.serviceId ?? 'DG'] ?? MOTIFS.DG;
+      const motifs = motifsFor(user);
+      planned++;
       plans.push({
         user,
         start,
@@ -731,7 +786,7 @@ async function main() {
 
     if (status === 'PENDING') continue;
     const reviewedAt = addDays(decompteCreated, int(1, 10));
-    const reviewer = pick(admins);
+    const reviewer = reviewerFor(p.user);
     if (status === 'REGECTED') {
       await prisma.commentaire.create({
         data: {

@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ArchiveService, partitionBulk } from './archive.service';
 import { DatabaseService } from 'src/database/database.service';
+import { AccessPolicy } from 'src/common/policy/access-policy';
 
 describe('partitionBulk', () => {
   const states = new Map<number, boolean>([
@@ -60,7 +61,11 @@ describe('ArchiveService bulk', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module: TestingModule = await Test.createTestingModule({
-      providers: [ArchiveService, { provide: DatabaseService, useValue: db }],
+      providers: [
+        ArchiveService,
+        AccessPolicy,
+        { provide: DatabaseService, useValue: db },
+      ],
     }).compile();
     service = module.get(ArchiveService);
   });

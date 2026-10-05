@@ -82,9 +82,9 @@ model Structure {
   archivedBy User? @relation("StructureArchivedBy", fields: [archivedById], references: [matricule], onDelete: SetNull)
   archivedById Int?
   users User[]
-  // Hierarchy (ADR 0005). A root's code is its abbreviation; a child's code is its
-  // full path ("SDC / ERSTC / Section ..."), so a descendant's code always starts
-  // with its ancestor's code + " / ". `name` is the structure's own segment.
+  // Hierarchy (ADR 0005, 0006). `code` is an opaque identifier (the HR "Unité org."
+  // number, e.g. 13CA010000) that never changes; the tree is given by `parentCode`
+  // alone, at most 3 levels deep. `name` is what is shown ("SDC / ACTEL TLEMCEN").
   parentCode String?
   parent Structure? @relation("StructureTree", fields: [parentCode], references: [code], onUpdate: Cascade, onDelete: NoAction)
   children Structure[] @relation("StructureTree")

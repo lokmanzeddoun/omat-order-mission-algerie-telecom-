@@ -69,6 +69,15 @@ async function main() {
           toDecomptePdfData({ ...decompte, barem_montant_km: 10 }),
         ),
     ],
+    [
+      'decomptes-batch.pdf',
+      () =>
+        pdf.renderDecomptes(
+          [1, 2, 3].map((n) =>
+            toDecomptePdfData({ ...decompte, n_decompte: n } as any),
+          ),
+        ),
+    ],
     // Overflow check: long free text must not push the décompte to a 2nd page.
     [
       'decompte-long.pdf',

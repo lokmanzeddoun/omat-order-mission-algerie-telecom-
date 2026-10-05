@@ -156,6 +156,16 @@ describe('DecompteService', () => {
       expect(db.$transaction).toHaveBeenCalledTimes(1);
     });
 
+    it('reads the departure day in Algiers, not in UTC', async () => {
+      // An ordre leaving at midnight on the 10th in Algiers is stored as
+      // 23:00 UTC on the 9th: the trip still starts on the 10th.
+      db.mission.findUnique.mockResolvedValue(
+        mission({ date_sortie: new Date('2026-03-09T23:00:00Z') }),
+      );
+      await runCreate(overnightDto(), N_MISSION);
+      expect(db.$transaction).toHaveBeenCalledTimes(1);
+    });
+
     it.each([
       ['back during lunch (13:00)', { heure_retour: '13:00' }, 2, 1],
       ['back at the end of lunch (14:00)', { heure_retour: '14:00' }, 3, 1],
@@ -709,6 +719,88 @@ describe('DecompteService', () => {
       await service.downloadDecompte(1, res, user);
       expect(db.barem.findFirst).not.toHaveBeenCalled();
       expect(renderDecompte.mock.calls[0][0].indemnite).toBe('800,00');
+    });
+  });
+
+  describe('createMany (one form, several ordres)', () => {
+    const many = (...overrides: object[]) =>
+      overrides.map((o, i) => mission({ n_mission: 10 + i, userId: 1, ...o }));
+
+    beforeEach(() => {
+      db.mission.findMany = jest.fn();
+    });
+
+    it('validates every ordre in one transaction with the shared figures', async () => {
+      db.mission.findMany.mockResolvedValue(many({}, {}));
+      const result = await service.createMany([10, 11], overnightDto(), user);
+      expect(result).toEqual({ done: [10, 11] });
+      const ops = db.$transaction.mock.calls[0][0];
+      expect(ops.map((o: any) => o.op)).toEqual([
+        'mission.update',
+        'decompte.create',
+        'mission.update',
+        'decompte.create',
+      ]);
+      expect(ops[1].args.data.montant).toBe(NORD_OVERNIGHT);
+      expect(ops[3].args.data.mission.connect).toEqual({ n_mission: 11 });
+    });
+
+    it('validates none when one ordre is not entitled to the declared figures', async () => {
+      db.mission.findMany.mockResolvedValue(
+        many({}, { date_sortie: new Date('2026-03-09T12:00:00Z') }),
+      );
+      await expect(
+        service.createMany([10, 11], overnightDto(), user),
+      ).rejects.toThrow(/N° 11 : Le nombre de repas/);
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
+
+    it("validates none when an ordre is missing, already validated or the actor's own", async () => {
+      db.mission.findMany.mockResolvedValue(
+        many({}, { status: MissionStatus.COMPLETED }, { userId: 42 }),
+      );
+      const err = await service
+        .createMany([10, 11, 12, 99], overnightDto(), user)
+        .catch((e) => e);
+      expect(err).toBeInstanceOf(BadRequestException);
+      expect(err.message).toMatch(/N° 11 : seul un ordre en cours/);
+      expect(err.message).toMatch(/N° 12 : vous ne pouvez pas/);
+      expect(err.message).toMatch(/N° 99 : ordre introuvable/);
+      expect(db.$transaction).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('downloadMany', () => {
+    const row = (n: number) => ({
+      n_decompte: n,
+      createdAt: new Date(),
+      montant: 0,
+      mission: mission(),
+    });
+
+    it('renders one PDF in the requested order, whatever the status', async () => {
+      const renderDecomptes = jest.fn().mockResolvedValue(Buffer.from('%PDF'));
+      (service as any).pdfService = { renderDecomptes };
+      db.decompte.findMany = jest.fn().mockResolvedValue([
+        { ...row(1), status: DecompteStatus.ACCEPTED },
+        { ...row(2), status: DecompteStatus.REGECTED },
+      ]);
+      const res = { set: jest.fn(), send: jest.fn() } as any;
+      await service.downloadMany([2, 1, 2], res, user);
+      expect(
+        renderDecomptes.mock.calls[0][0].map((d: any) => d.numero),
+      ).toEqual(['2', '1']);
+      expect(res.send).toHaveBeenCalled();
+    });
+
+    it('is a 404 when an id is missing or out of scope', async () => {
+      (service as any).pdfService = { renderDecomptes: jest.fn() };
+      db.decompte.findMany = jest.fn().mockResolvedValue([row(1)]);
+      const res = { set: jest.fn(), send: jest.fn() } as any;
+      await expect(service.downloadMany([1, 3], res, user)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(res.send).not.toHaveBeenCalled();
     });
   });
 });

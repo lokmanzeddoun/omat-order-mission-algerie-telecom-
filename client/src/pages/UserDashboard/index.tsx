@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { MessageSquare, MessageSquarePlus, RefreshCw } from 'lucide-react';
+import { Download, MessageSquare, MessageSquarePlus, RefreshCw } from 'lucide-react';
 import type { AppDispatch } from 'store';
 import type { RootState } from 'store/rootReducer';
 import { fetchUserOrders } from 'components/orders/orderthunk';
@@ -11,6 +11,8 @@ import { addCommentToDecompte, fetchUserDecompte } from 'components/orders/decom
 import type { IMission } from 'components/orders/orderReducer';
 import type { IDecompte } from 'components/orders/decompte.reducer';
 import { useMissionActions } from 'components/orders/useMissionActions';
+import { useDecompteDownload } from 'components/decomptes/useDecompteActions';
+import { useBulkDecompteDownload } from 'components/decomptes/useBulkDecompteDownload';
 import { formatDate, formatDateTime, missionDuration } from 'components/orders/format';
 import CommentFormDialog from 'components/comments/CommentFormDialog';
 import CommentsPanel, { type CommentMessage } from 'components/comments/CommentsPanel';
@@ -76,6 +78,8 @@ export default function UserDashboard() {
 
   const detailPath = (m: IMission) => `${paths.users}/ordres/${m.n_mission}`;
   const { actionsFor, dialogs } = useMissionActions({ admin: false, onChanged: refresh, detailPath });
+  const downloadDecompte = useDecompteDownload();
+  const bulkDownload = useBulkDecompteDownload();
 
   const rows = useMemo(() => (status ? orders.filter((m) => m.status === status) : orders), [orders, status]);
   const rejected = decomptes.filter((d) => d.status === 'REGECTED');
@@ -167,8 +171,13 @@ export default function UserDashboard() {
           emptyHint={t('dashboard:emptyDecomptesHint')}
           initialPageSize={10}
           onRowDoubleClick={(d) => setThread(d)}
+          bulkActions={bulkDownload}
           rowActions={(d) => ({
-            primary: [{ label: t('decomptes:viewComments'), icon: <MessageSquare />, onSelect: () => setThread(d) }],
+            // Every décompte can be downloaded, a refused one included.
+            primary: [
+              { label: t('actions.download'), icon: <Download />, onSelect: () => downloadDecompte(d) },
+              { label: t('decomptes:viewComments'), icon: <MessageSquare />, onSelect: () => setThread(d) },
+            ],
             menu:
               d.status === 'REGECTED'
                 ? [{ label: t('dashboard:commentDecompte'), icon: <MessageSquarePlus />, onSelect: () => setCommentFor({ decompteId: d.n_decompte ?? null }) }]

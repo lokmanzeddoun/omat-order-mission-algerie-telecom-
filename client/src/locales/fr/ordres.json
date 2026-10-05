@@ -53,6 +53,9 @@
     "choose": "— Choisir —",
     "errors": {
       "departureRequired": "La date de départ est obligatoire.",
+      "departureTimeRequired": "L’heure de départ est obligatoire.",
+      "returnTimeRequired": "Indiquez l’heure de retour.",
+      "returnDateRequired": "Indiquez la date de retour.",
       "motifRequired": "Le motif est obligatoire.",
       "transportRequired": "Choisissez un moyen de transport.",
       "returnAfterDeparture": "Le retour doit être postérieur au départ.",
@@ -65,7 +68,7 @@
     "destinationWilaya": "Wilaya",
     "destinationNoMatch": "Aucune wilaya ou commune trouvée.",
     "destinationLegacy": "L’ancienne destination « {{value}} » n’est pas reconnue : choisissez-la à nouveau dans la liste.",
-    "selectMyStructure": "Sélectionner toute ma structure",
+    "selectMyStructure": "Sélectionner toute ma structure ({{count}})",
     "clearSelection": "Tout désélectionner",
     "selectedCount": "Employés sélectionnés : {{count}}"
   },
@@ -77,6 +80,14 @@
     "split": "Répartition",
     "entitlements": "Droits calculés : <b>{{meals}}</b> repas et <b>{{nights}}</b> nuitée(s).",
     "distanceKm": "Distance parcourue (km)",
+    "bulkTitle": "Valider {{count}} ordres de mission",
+    "bulkDescription": "Les mêmes horaires et la même répartition sont appliqués à chaque ordre ; un décompte est créé pour chacun.",
+    "ordres": "Ordres à valider ({{count}})",
+    "mismatch": "Ces ordres n’ont pas les mêmes droits (nuitées / repas).",
+    "mismatchHint": "Ils ne peuvent pas partager la même répartition, la même direction ou le même moyen de transport. Retirez les ordres signalés pour continuer, puis validez-les séparément.",
+    "rowEntitlements": "{{meals}} repas · {{nights}} nuitée(s)",
+    "remove": "Retirer",
+    "bulkDone": "{{count}} ordres validés, décomptes créés.",
     "transportCost": "Frais de transport engagés (DA)",
     "errors": {
       "wholeNumber": "{{label}} : nombre entier positif attendu.",

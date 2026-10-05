@@ -5,7 +5,7 @@ import type { TFunction } from 'i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import http from 'helpers/http';
-import { parentCandidates, PATH_SEPARATOR, structureLabel } from 'helpers/structureTree';
+import { parentCandidates, structureLabel } from 'helpers/structureTree';
 import { Button, Dialog, Field, FormGrid, Input, Select } from 'components/ui';
 import type { IStructure } from './structure.reducer';
 
@@ -20,8 +20,7 @@ const schemaFor = (t: TFunction, mode: StructureFormMode) =>
       responsibleUserId: z.string().optional(),
     })
     .superRefine((v, ctx) => {
-      // A root is identified by its abbreviation; a child's code is derived from its parent's path.
-      if (mode === 'create' && !v.parentCode && !v.code) ctx.addIssue({ code: 'custom', path: ['code'], message: t('structures:errors.codeRequired') });
+      if (mode === 'create' && !v.code) ctx.addIssue({ code: 'custom', path: ['code'], message: t('structures:errors.codeRequired') });
     });
 
 type FormState = z.infer<ReturnType<typeof schemaFor>>;
@@ -46,8 +45,8 @@ interface Member {
 const EMPTY: FormState = { code: '', name: '', parentCode: '', responsibleUserId: '' };
 
 /**
- * Create / edit / view a service (structure). The code and the parent cannot change once created
- * (a move is a separate action). Renaming a sub-service re-keys its path.
+ * Create / edit / view a structure. The code (the HR "Unité org." number) and the parent cannot
+ * change once created (a move is a separate action).
  */
 export default function StructureFormDialog({ open, mode, initial, structures, onClose, onSubmit }: Props) {
   const { t } = useTranslation();
@@ -64,9 +63,8 @@ export default function StructureFormDialog({ open, mode, initial, structures, o
   } = useForm<FormState>({ resolver: zodResolver(schema), defaultValues: EMPTY });
 
   const parentCode = mode === 'create' ? watch('parentCode') : (initial?.parentCode ?? '');
-  const name = watch('name');
   const parents = useMemo(() => parentCandidates(structures), [structures]);
-  const childCode = parentCode ? `${parentCode}${PATH_SEPARATOR}${name.trim() || '…'}` : '';
+  const parent = structures.find((s) => s.code === parentCode);
 
   useEffect(() => {
     if (open)
@@ -150,18 +148,12 @@ export default function StructureFormDialog({ open, mode, initial, structures, o
                 ))}
               </Select>
             ) : (
-              <Input readOnly dir="ltr" value={parentCode || t('structures:form.parentNone')} />
+              <Input readOnly value={parent ? structureLabel(parent) : parentCode || t('structures:form.parentNone')} />
             )}
           </Field>
-          {parentCode ? (
-            <Field label={t('structures:field.path')} hint={mode === 'edit' ? t('structures:form.renameHint') : undefined}>
-              <Input readOnly dir="ltr" value={mode === 'create' ? childCode : (initial?.code ?? '')} />
-            </Field>
-          ) : (
-            <Field label={t('structures:field.code')} error={errors.code?.message} required={!readOnly}>
-              <Input autoFocus={mode === 'create'} readOnly={mode !== 'create'} dir="ltr" {...register('code')} />
-            </Field>
-          )}
+          <Field label={t('structures:field.code')} hint={mode === 'create' ? t('structures:form.codeHint') : undefined} error={errors.code?.message} required={!readOnly}>
+            <Input autoFocus={mode === 'create'} readOnly={mode !== 'create'} dir="ltr" {...register('code')} />
+          </Field>
           <Field label={t('structures:field.name')} error={errors.name?.message} required={!readOnly}>
             <Input autoFocus={mode === 'edit'} readOnly={readOnly} {...register('name')} />
           </Field>

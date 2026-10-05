@@ -70,7 +70,7 @@ export default function OrdresPage() {
   }, [refresh, selectedYear]);
 
   const detailPath = (m: IMission) => `${paths.admins}/ordres/${m.n_mission}`;
-  const { actionsFor, dialogs } = useMissionActions({ admin: isAdmin, onChanged: refresh, detailPath });
+  const { actionsFor, bulkActions: validateActions, dialogs } = useMissionActions({ admin: isAdmin, onChanged: refresh, detailPath });
   const bulk = useBulkArchive<MissionRow>({
     entity: 'missions',
     mode: 'archive',
@@ -130,7 +130,7 @@ export default function OrdresPage() {
         }
         onRowDoubleClick={(m) => navigate(detailPath(m))}
         rowActions={actionsFor}
-        bulkActions={isAdmin ? bulk.actions : undefined}
+        bulkActions={isAdmin ? (rows) => [...validateActions(rows), ...bulk.actions(rows)] : undefined}
       />
       {dialogs}
       {bulk.dialog}

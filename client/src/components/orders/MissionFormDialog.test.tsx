@@ -17,6 +17,7 @@ describe('MissionFormDialog destination', () => {
     );
     await userEvent.type(screen.getByLabelText(/^Motif de la mission/), 'Audit');
     await userEvent.type(screen.getByLabelText(/^Date de départ/), '10032026');
+    await userEvent.type(screen.getByLabelText(/^Heure de départ/), '0800');
     await userEvent.selectOptions(screen.getByLabelText(/^Moyen de transport/), 'SERVICE_CAR');
 
     await userEvent.type(screen.getByLabelText(/^Destination/), 'tl');
@@ -39,5 +40,43 @@ describe('MissionFormDialog destination', () => {
     await userEvent.type(screen.getByLabelText(/^Destination/), 'Atlantis');
     await userEvent.click(screen.getByRole('button', { name: 'Créer l’ordre de mission' }));
     expect(await screen.findByText('Choisissez au moins une destination dans la liste.')).toBeInTheDocument();
+  });
+});
+
+describe('MissionFormDialog hours', () => {
+  const fill = async (sortie: string, retour?: string) => {
+    render(
+      <Provider store={store}>
+        <MissionFormDialog open mode="create" onClose={() => {}} onSubmit={onSubmit} />
+      </Provider>,
+    );
+    await userEvent.type(screen.getByLabelText(/^Date de départ/), '10032026');
+    if (sortie) await userEvent.type(screen.getByLabelText(/^Heure de départ/), sortie);
+    await userEvent.type(screen.getByLabelText(/^Date de retour/), '10032026');
+    if (retour) await userEvent.type(screen.getByLabelText(/^Heure de retour/), retour);
+    await userEvent.click(screen.getByRole('button', { name: 'Créer l’ordre de mission' }));
+  };
+  const onSubmit = vi.fn();
+
+  it('asks for the return hour instead of assuming 00:00 on a same-day return', async () => {
+    await fill('0800');
+    expect(await screen.findByText('Indiquez l’heure de retour.')).toBeInTheDocument();
+    expect(screen.queryByText('Le retour doit être postérieur au départ.')).not.toBeInTheDocument();
+  });
+
+  it('asks for the departure hour instead of assuming 00:00', async () => {
+    await fill('', '1700');
+    expect(await screen.findByText('L’heure de départ est obligatoire.')).toBeInTheDocument();
+    expect(screen.queryByText('Le retour doit être postérieur au départ.')).not.toBeInTheDocument();
+  });
+
+  it('accepts a same-day return later than the departure', async () => {
+    await fill('0800', '1700');
+    expect(screen.queryByText('Le retour doit être postérieur au départ.')).not.toBeInTheDocument();
+  });
+
+  it('refuses a same-day return before the departure', async () => {
+    await fill('1700', '0800');
+    expect(await screen.findByText('Le retour doit être postérieur au départ.')).toBeInTheDocument();
   });
 });

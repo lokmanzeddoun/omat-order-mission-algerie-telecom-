@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { Actor, AccessPolicy } from 'src/common/policy/access-policy';
 import { DatabaseService } from 'src/database/database.service';
 import { archiveStamp, restoreStamp } from './archive-stamp';
 import { BulkResult, partitionIds } from 'src/common/bulk';
@@ -33,12 +34,18 @@ type Tx = Prisma.TransactionClient;
 
 @Injectable()
 export class ArchiveService {
-  constructor(private readonly db: DatabaseService) {}
+  constructor(
+    private readonly db: DatabaseService,
+    private readonly accessPolicy: AccessPolicy,
+  ) {}
 
-  async listMissions(exerciceYear?: number) {
+  // An ADMIN consults the archived ordres and décomptes of their structure's
+  // subtree; every other archive action is SUPER_ADMIN only.
+  async listMissions(actor: Actor, exerciceYear?: number) {
     return this.db.mission.findMany({
       where: {
         soft_delete: true,
+        ...this.accessPolicy.scopeMissions(actor),
         ...(exerciceYear ? { exercice: { year: exerciceYear } } : {}),
       },
       orderBy: { updatedAt: 'desc' },
@@ -46,10 +53,11 @@ export class ArchiveService {
     });
   }
 
-  async listDecomptes(exerciceYear?: number) {
+  async listDecomptes(actor: Actor, exerciceYear?: number) {
     return this.db.decompte.findMany({
       where: {
         soft_delete: true,
+        ...this.accessPolicy.scopeDecomptes(actor),
         ...(exerciceYear ? { exercice: { year: exerciceYear } } : {}),
       },
       orderBy: { updatedAt: 'desc' },

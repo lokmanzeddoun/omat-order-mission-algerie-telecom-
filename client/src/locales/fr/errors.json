@@ -25,8 +25,15 @@
   "alreadyExists": "Un élément avec ces informations existe déjà.",
   "returnBeforeDeparture": "La date de retour doit être postérieure à la date de sortie.",
   "invalidMealsCount": "Le nombre de repas et d'hébergements n'est pas valide.",
+  "invalidMealsCountExpected": "Le nombre de repas et d'hébergements n'est pas valide : le trajet compte {{meals}} repas et {{nights}} nuitée(s).",
   "decompteNotPending": "Ce décompte a déjà été traité.",
   "unsupportedFile": "Type de fichier non pris en charge.",
   "emptyFile": "Le fichier est vide.",
-  "pdfFailed": "Impossible de générer le PDF."
+  "pdfFailed": "Impossible de générer le PDF.",
+  "gradeCap": "Une période continue ne peut pas dépasser {{months}} mois : elle doit se terminer au plus tard le {{maxEnd}} (début de la période continue : {{chainStart}}).",
+  "gradeOverlap": "Cette période chevauche la période n° {{id}} du même employé.",
+  "gradeNotHigher": "La catégorie visée doit être strictement supérieure à celle de l'employé.",
+  "gradeEndBeforeStart": "La date de fin doit être postérieure ou égale à la date de début.",
+  "gradeAlreadyEnded": "Cette période est déjà terminée.",
+  "gradeAlreadyExpired": "Cette période est déjà échue."
 }

@@ -1,0 +1,75 @@
+Code;Name;Parent;Niveau;Responsable;Admins;Utilisateurs
+13C0000000;Sous Direction Commerciale;;1;resp.13c0000000@algérietelecom.dz;resp.13c0000000@algérietelecom.dz adjoint.13c0000000@algérietelecom.dz;18
+13CA010000;SDC / ACTEL TLEMCEN;13C0000000;2;resp.13ca010000@algérietelecom.dz;resp.13ca010000@algérietelecom.dz;13
+13CA011000;SDC / ACTEL TLEMCEN / P.P BENSEKRANE;13CA010000;3;resp.13ca011000@algérietelecom.dz;resp.13ca011000@algérietelecom.dz;13
+13CA020000;SDC / ACTEL GHAZAOUET;13C0000000;2;resp.13ca020000@algérietelecom.dz;resp.13ca020000@algérietelecom.dz;17
+13CA021000;SDC / ACTEL GHAZAOUET / P.P BAB EL ASSA;13CA020000;3;resp.13ca021000@algérietelecom.dz;resp.13ca021000@algérietelecom.dz;11
+13CA030000;SDC / ACTEL IMAMA;13C0000000;2;resp.13ca030000@algérietelecom.dz;resp.13ca030000@algérietelecom.dz;12
+13CA033000;SDC / ACTEL IMAMA / P.P OUDJLIDA;13CA030000;3;(aucun);;12
+13CA040000;SDC / ACTEL MAGHNIA;13C0000000;2;resp.13ca040000@algérietelecom.dz;resp.13ca040000@algérietelecom.dz;17
+13CA041000;SDC / ACTEL MAGHNIA / P.P SABRA;13CA040000;3;resp.13ca041000@algérietelecom.dz;resp.13ca041000@algérietelecom.dz;10
+13CA050000;SDC / ACTEL NEDROUMA;13C0000000;2;resp.13ca050000@algérietelecom.dz;resp.13ca050000@algérietelecom.dz;13
+13CA060000;SDC / ACTEL OULED MIMOUN;13C0000000;2;resp.13ca060000@algérietelecom.dz;resp.13ca060000@algérietelecom.dz;16
+13CA070000;SDC / ACTEL REMCHI;13C0000000;2;resp.13ca070000@algérietelecom.dz;resp.13ca070000@algérietelecom.dz;19
+13CA071000;SDC / ACTEL REMCHI / P.P HENNAYA;13CA070000;3;resp.13ca071000@algérietelecom.dz;resp.13ca071000@algérietelecom.dz;13
+13CA072000;SDC / ACTEL REMCHI / P.P HOUNAINE;13CA070000;3;(aucun);;7
+13CA080000;SDC / ACTEL SEBDOU;13C0000000;2;(aucun);adjoint.13ca080000@algérietelecom.dz;17
+13CA081000;SDC / ACTEL SEBDOU / P.P EL FAHS;13CA080000;3;resp.13ca081000@algérietelecom.dz;resp.13ca081000@algérietelecom.dz;14
+13CC000000;SDC / Département Corporate;13C0000000;2;resp.13cc000000@algérietelecom.dz;resp.13cc000000@algérietelecom.dz;15
+13CG000000;SDC / Département Vente Grand Public;13C0000000;2;resp.13cg000000@algérietelecom.dz;resp.13cg000000@algérietelecom.dz;13
+13CS000000;SDC / Département Support Commercial;13C0000000;2;(aucun);;12
+13CT000000;SDC / Etablissement Régional Support Technique au Commercial;13C0000000;2;resp.13ct000000@algérietelecom.dz;resp.13ct000000@algérietelecom.dz;11
+13CT100000;SDC / ERSTC /  Section Realisation et intervention;13CT000000;3;resp.13ct100000@algérietelecom.dz;resp.13ct100000@algérietelecom.dz;13
+13CT200000;SDC / ERSTC /  Section Réseaux LANS et WIFI;13CT000000;3;(aucun);;12
+13CT300000;SDC / ERSTC /  Section Suivi Traitement des Incidents;13CT000000;3;resp.13ct300000@algérietelecom.dz;resp.13ct300000@algérietelecom.dz;8
+13CT400000;SDC / ERSTC / Section Maintenance des Equipement Corporate;13CT000000;3;resp.13ct400000@algérietelecom.dz;resp.13ct400000@algérietelecom.dz;9
+13CT500000;SDC / ERSTC / Section Réseau Intranet AT;13CT000000;3;(aucun);;14
+31C0000000;Direction Opérationnelle Oran;;1;resp.31c0000000@algérietelecom.dz;resp.31c0000000@algérietelecom.dz adjoint.31c0000000@algérietelecom.dz;20
+31CA010000;DOO / ACTEL ORAN EST;31C0000000;2;resp.31ca010000@algérietelecom.dz;resp.31ca010000@algérietelecom.dz;17
+31CA011000;DOO / ACTEL ORAN EST / P.P BELGAID;31CA010000;3;resp.31ca011000@algérietelecom.dz;resp.31ca011000@algérietelecom.dz;11
+31CA012000;DOO / ACTEL ORAN EST / P.P HAI SABAH;31CA010000;3;resp.31ca012000@algérietelecom.dz;resp.31ca012000@algérietelecom.dz;9
+31CA020000;DOO / ACTEL ORAN OUEST;31C0000000;2;resp.31ca020000@algérietelecom.dz;resp.31ca020000@algérietelecom.dz;11
+31CA021000;DOO / ACTEL ORAN OUEST / P.P EL HAMRI;31CA020000;3;(aucun);;10
+31CA030000;DOO / ACTEL ES SENIA;31C0000000;2;resp.31ca030000@algérietelecom.dz;resp.31ca030000@algérietelecom.dz;14
+31CA031000;DOO / ACTEL ES SENIA / P.P SIDI CHAHMI;31CA030000;3;resp.31ca031000@algérietelecom.dz;resp.31ca031000@algérietelecom.dz;9
+31CA032000;DOO / ACTEL ES SENIA / P.P EL KERMA;31CA030000;3;resp.31ca032000@algérietelecom.dz;resp.31ca032000@algérietelecom.dz;13
+31CA040000;DOO / ACTEL BIR EL DJIR;31C0000000;2;resp.31ca040000@algérietelecom.dz;resp.31ca040000@algérietelecom.dz;16
+31CA050000;DOO / ACTEL ARZEW;31C0000000;2;resp.31ca050000@algérietelecom.dz;resp.31ca050000@algérietelecom.dz;13
+31CA051000;DOO / ACTEL ARZEW / P.P BETHIOUA;31CA050000;3;(aucun);;12
+31CA060000;DOO / ACTEL AIN EL TURK;31C0000000;2;resp.31ca060000@algérietelecom.dz;resp.31ca060000@algérietelecom.dz;13
+31CA061000;DOO / ACTEL AIN EL TURK / P.P BOUSFER;31CA060000;3;resp.31ca061000@algérietelecom.dz;resp.31ca061000@algérietelecom.dz;7
+31CA070000;DOO / ACTEL GDYEL;31C0000000;2;resp.31ca070000@algérietelecom.dz;resp.31ca070000@algérietelecom.dz;17
+31CA080000;DOO / ACTEL BOUTLELIS;31C0000000;2;(aucun);adjoint.31ca080000@algérietelecom.dz;11
+31CA081000;DOO / ACTEL BOUTLELIS / P.P MISSERGHIN;31CA080000;3;resp.31ca081000@algérietelecom.dz;resp.31ca081000@algérietelecom.dz;14
+31CC000000;DOO / Département Corporate;31C0000000;2;resp.31cc000000@algérietelecom.dz;resp.31cc000000@algérietelecom.dz;16
+31CG000000;DOO / Département Vente Grand Public;31C0000000;2;resp.31cg000000@algérietelecom.dz;resp.31cg000000@algérietelecom.dz;18
+31CS000000;DOO / Département Support Commercial;31C0000000;2;(aucun);;18
+31CT000000;DOO / Centre Technique Régional;31C0000000;2;resp.31ct000000@algérietelecom.dz;resp.31ct000000@algérietelecom.dz;13
+31CT100000;DOO / CTR / Section Transmission;31CT000000;3;(aucun);;7
+31CT200000;DOO / CTR / Section Commutation;31CT000000;3;resp.31ct200000@algérietelecom.dz;resp.31ct200000@algérietelecom.dz;9
+31CT300000;DOO / CTR / Section Energie et Climatisation;31CT000000;3;resp.31ct300000@algérietelecom.dz;resp.31ct300000@algérietelecom.dz;11
+31CT400000;DOO / CTR / Section Réseau d’Accès;31CT000000;3;(aucun);;13
+16C0000000;Direction Opérationnelle Alger Centre;;1;resp.16c0000000@algérietelecom.dz;resp.16c0000000@algérietelecom.dz adjoint.16c0000000@algérietelecom.dz;23
+16CA010000;DOAC / ACTEL ALGER CENTRE;16C0000000;2;resp.16ca010000@algérietelecom.dz;resp.16ca010000@algérietelecom.dz;17
+16CA011000;DOAC / ACTEL ALGER CENTRE / P.P DIDOUCHE MOURAD;16CA010000;3;resp.16ca011000@algérietelecom.dz;resp.16ca011000@algérietelecom.dz;12
+16CA012000;DOAC / ACTEL ALGER CENTRE / P.P TAFOURAH;16CA010000;3;resp.16ca012000@algérietelecom.dz;resp.16ca012000@algérietelecom.dz;15
+16CA020000;DOAC / ACTEL BAB EL OUED;16C0000000;2;resp.16ca020000@algérietelecom.dz;resp.16ca020000@algérietelecom.dz;18
+16CA021000;DOAC / ACTEL BAB EL OUED / P.P BOLOGHINE;16CA020000;3;(aucun);;10
+16CA030000;DOAC / ACTEL HUSSEIN DEY;16C0000000;2;resp.16ca030000@algérietelecom.dz;resp.16ca030000@algérietelecom.dz;17
+16CA031000;DOAC / ACTEL HUSSEIN DEY / P.P KOUBA;16CA030000;3;resp.16ca031000@algérietelecom.dz;resp.16ca031000@algérietelecom.dz;10
+16CA040000;DOAC / ACTEL EL HARRACH;16C0000000;2;resp.16ca040000@algérietelecom.dz;resp.16ca040000@algérietelecom.dz;11
+16CA041000;DOAC / ACTEL EL HARRACH / P.P BOURROUBA;16CA040000;3;resp.16ca041000@algérietelecom.dz;resp.16ca041000@algérietelecom.dz;12
+16CA042000;DOAC / ACTEL EL HARRACH / P.P OUED SMAR;16CA040000;3;(aucun);;14
+16CA050000;DOAC / ACTEL BIR MOURAD RAIS;16C0000000;2;resp.16ca050000@algérietelecom.dz;resp.16ca050000@algérietelecom.dz;15
+16CA051000;DOAC / ACTEL BIR MOURAD RAIS / P.P HYDRA;16CA050000;3;resp.16ca051000@algérietelecom.dz;resp.16ca051000@algérietelecom.dz;12
+16CA060000;DOAC / ACTEL CHERAGA;16C0000000;2;(aucun);adjoint.16ca060000@algérietelecom.dz;16
+16CA061000;DOAC / ACTEL CHERAGA / P.P DELY IBRAHIM;16CA060000;3;resp.16ca061000@algérietelecom.dz;resp.16ca061000@algérietelecom.dz;12
+16CA062000;DOAC / ACTEL CHERAGA / P.P OULED FAYET;16CA060000;3;(aucun);;12
+16CA070000;DOAC / ACTEL BAB EZZOUAR;16C0000000;2;resp.16ca070000@algérietelecom.dz;resp.16ca070000@algérietelecom.dz;15
+16CC000000;DOAC / Département Corporate;16C0000000;2;resp.16cc000000@algérietelecom.dz;resp.16cc000000@algérietelecom.dz;17
+16CG000000;DOAC / Département Vente Grand Public;16C0000000;2;resp.16cg000000@algérietelecom.dz;resp.16cg000000@algérietelecom.dz;16
+16CS000000;DOAC / Département Support Commercial;16C0000000;2;(aucun);;10
+16CT000000;DOAC / Centre Régional des Transmissions;16C0000000;2;resp.16ct000000@algérietelecom.dz;resp.16ct000000@algérietelecom.dz;13
+16CT100000;DOAC / CRT / Section Fibre Optique;16CT000000;3;resp.16ct100000@algérietelecom.dz;resp.16ct100000@algérietelecom.dz;8
+16CT200000;DOAC / CRT / Section Faisceaux Hertziens;16CT000000;3;resp.16ct200000@algérietelecom.dz;resp.16ct200000@algérietelecom.dz;13
+16CT300000;DOAC / CRT / Section Data Center;16CT000000;3;(aucun);;9

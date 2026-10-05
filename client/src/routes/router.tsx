@@ -117,7 +117,14 @@ const router = createBrowserRouter(
             { path: 'decomptes/:id', element: <DecompteDetail /> },
             { path: 'support', element: <AdminComments /> },
             { path: 'archive', element: <Archive /> },
-            { path: 'analytics', element: <AnalyticsDashboard /> },
+            {
+              path: 'analytics',
+              element: (
+                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <AnalyticsDashboard />
+                </ProtectedRoute>
+              ),
+            },
           ],
         },
         {

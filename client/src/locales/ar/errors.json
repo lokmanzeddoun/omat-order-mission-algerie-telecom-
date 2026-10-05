@@ -25,8 +25,15 @@
   "alreadyExists": "يوجد عنصر بهذه المعلومات مسبقًا.",
   "returnBeforeDeparture": "يجب أن يكون تاريخ العودة بعد تاريخ الخروج.",
   "invalidMealsCount": "عدد الوجبات والمبيت غير صالح.",
+  "invalidMealsCountExpected": "عدد الوجبات والمبيت غير صالح: تتضمن الرحلة {{meals}} وجبة و{{nights}} ليلة.",
   "decompteNotPending": "تمت معالجة كشف المصاريف هذا مسبقًا.",
   "unsupportedFile": "نوع الملف غير مدعوم.",
   "emptyFile": "الملف فارغ.",
-  "pdfFailed": "تعذّر توليد ملف PDF."
+  "pdfFailed": "تعذّر توليد ملف PDF.",
+  "gradeCap": "لا يمكن أن تتجاوز الفترة المتواصلة {{months}} أشهر: يجب أن تنتهي في أجل أقصاه {{maxEnd}} (بداية الفترة المتواصلة: {{chainStart}}).",
+  "gradeOverlap": "تتداخل هذه الفترة مع الفترة رقم {{id}} لنفس الموظف.",
+  "gradeNotHigher": "يجب أن تكون الفئة المستهدفة أعلى من فئة الموظف.",
+  "gradeEndBeforeStart": "يجب أن يكون تاريخ النهاية مساويًا لتاريخ البداية أو بعده.",
+  "gradeAlreadyEnded": "هذه الفترة منتهية مسبقًا.",
+  "gradeAlreadyExpired": "هذه الفترة منقضية مسبقًا."
 }

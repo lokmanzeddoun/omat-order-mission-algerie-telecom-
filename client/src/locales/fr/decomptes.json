@@ -19,6 +19,7 @@
   "commentsCount_other": "Commentaires ({{count}})",
   "viewComments": "Voir les commentaires",
   "accept": "Accepter",
+  "bulkDownloadTooMany": "Sélectionnez au plus {{count}} décomptes à télécharger à la fois.",
   "reject": "Rejeter",
   "acceptTitle": "Accepter le décompte N° {{n}} ?",
   "acceptHint": "L’employé sera informé de l’acceptation.",

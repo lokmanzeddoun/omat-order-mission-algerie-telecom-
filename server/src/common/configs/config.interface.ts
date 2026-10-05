@@ -17,7 +17,8 @@ export interface AuthConfig {
   mfaRequired: boolean;
   /** Origins allowed to call the cookie-authenticated auth routes. */
   allowedOrigins: string[];
-  allowLocalhostOrigins: boolean;
+  /** Outside production, allow every Origin (LAN, tunnels, localhost). */
+  allowDevOrigins: boolean;
 }
 
 export interface NestConfig {

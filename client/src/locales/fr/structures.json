@@ -10,7 +10,6 @@
     "name": "Nom de la structure",
     "parent": "Structure parente",
     "responsible": "Responsable",
-    "path": "Chemin",
     "users": "Utilisateurs"
   },
   "form": {
@@ -23,9 +22,8 @@
     "responsibleNone": "Aucun responsable",
     "responsibleHint": "Le responsable doit appartenir à la structure. Sans responsable, la structure n’est visible que des administrateurs de ses structures parentes et des super administrateurs.",
     "responsibleAfterCreate": "Le responsable se choisit après l’ajout d’un utilisateur à la structure.",
-    "childCodeHint": "Le code d’un sous-structure est son chemin complet : {{path}}",
-    "renameHint": "Renommer un sous-structure change le chemin de tous ses sous-structures.",
-    "maxDepth": "Trois niveaux au maximum."
+    "maxDepth": "Trois niveaux au maximum.",
+    "codeHint": "Le numéro d’unité organisationnelle (ex. 13CA010000). Il ne change plus ensuite."
   },
   "errors": {
     "codeRequired": "Le code est obligatoire.",
@@ -35,18 +33,16 @@
   "move": {
     "action": "Déplacer",
     "title": "Déplacer la structure",
-    "description": "La structure <b>{{name}}</b> et tous ses sous-structures seront déplacées ; leurs codes (chemins) changent, les utilisateurs suivent.",
+    "description": "La structure <b>{{name}}</b> et toutes ses sous-structures seront déplacées ; leurs codes ne changent pas, les utilisateurs suivent.",
     "target": "Nouvelle structure parente",
     "choose": "— Choisir un emplacement —",
     "asRoot": "Faire de cette structure une racine",
-    "rootCode": "Code de la racine (abréviation)",
-    "rootCodeRequired": "Le code de la racine est obligatoire.",
     "none": "Aucun emplacement possible : cette structure et ses sous-structures ne tiendraient pas dans trois niveaux.",
     "confirm": "Déplacer"
   },
   "import": {
     "title": "Aperçu de l’import",
-    "description": "Rien n’a encore été enregistré. Colonnes acceptées : Code et Nom pour une racine, Chemin (« SDC / ERSTC / Section ») pour un sous-structure.",
+    "description": "Rien n’a encore été enregistré. Colonnes acceptées : « Unité org. » (ou Code) et « Lib long UO » (ou Nom), et une colonne Parent facultative. Sans Parent, la structure parente se déduit du code (13CA011000 → 13CA010000 → 13C0000000).",
     "willCreate": "À créer : {{count}}",
     "willUpdate": "À mettre à jour : {{count}}",
     "errors": "Erreurs : {{count}}",

@@ -67,6 +67,17 @@ npx ts-node prisma/seed.ts
 | User        | leila.hamidi@algérietelecom.dz    | password123 | DF         |
 | User        | youcef.benaissa@algérietelecom.dz | password123 | DI         |
 
+## Big hierarchy dataset (`npm run db:seed:big`)
+
+`db:seed` + `db:seed:hierarchy` + `db:seed:demo` in one go (~40 s). On top of the base data above:
+
+- **74 structures** in 3 directions of 3 levels, with HR-style codes: `13C…` Sous Direction Commerciale Tlemcen (the real extract in `test-imports/structures/structures-hr.csv`), `31C…` Direction Opérationnelle Oran (`DOO / …`), `16C…` Direction Opérationnelle Alger Centre (`DOAC / …`).
+- **~1,000 users** (matricules from 10001), 7–25 per structure, a few inactive or archived.
+- **Responsables**: most structures have one, with role ADMIN and email `resp.<code>@algérietelecom.dz` (e.g. `resp.13c0000000@…` for Tlemcen, `resp.31ca010000@…` for ACTEL ORAN EST). Left without one on purpose: each Support Commercial department, one ACTEL per direction and every third leaf (visible only to the admins above). `adjoint.<code>@…` are ADMINs who are not responsables (one per direction root, one in the ACTEL without a responsable).
+- **~3,000 ordres de mission** and their décomptes, reviewed by an admin above the traveller.
+
+The full list (structure, parent, responsable, admins, user count) is written to `test-imports/hierarchy-seed/accounts.csv`. Every password is `password123`. `db:seed:hierarchy` alone is re-runnable: it replaces its own structures and users.
+
 ## Important Notes:
 
 ⚠️ **Warning**: The seed script will **DELETE ALL EXISTING DATA** before inserting new data. Only run this in development environments!

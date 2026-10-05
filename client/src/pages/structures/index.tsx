@@ -28,13 +28,13 @@ import { useBulkArchive } from 'components/common/useBulkArchive';
 import { Button, ConfirmDialog, DataTable, IconButton, PageHeader, SummaryStrip, type DataColumn } from 'components/ui';
 import paths from 'routes/paths';
 
-const structureColumns = (t: TFunction): DataColumn<IStructure>[] => [
+const structureColumns = (t: TFunction, all: IStructure[]): DataColumn<IStructure>[] => [
   {
     id: 'name',
     header: t('structures:field.name'),
-    // The tree: each level is indented; a root shows its full name, a child its own segment.
+    // The tree: each level is indented.
     cell: (s) => (
-      <span className="inline-block" style={{ paddingInlineStart: `${(depthOf(s.code) - 1) * 1.25}rem` }}>
+      <span className="inline-block" style={{ paddingInlineStart: `${(depthOf(s.code, all) - 1) * 1.25}rem` }}>
         {s.name}
       </span>
     ),
@@ -59,7 +59,7 @@ export default function StructuresPage() {
   const [toMove, setToMove] = useState<IStructure | null>(null);
   const [preview, setPreview] = useState<{ report: StructureImportReport; file: File } | null>(null);
   const tree = useMemo(() => sortTree(structures), [structures]);
-  const columns = useMemo(() => structureColumns(t), [t]);
+  const columns = useMemo(() => structureColumns(t, structures), [t, structures]);
 
   useEffect(() => {
     void dispatch(getAllStructures());

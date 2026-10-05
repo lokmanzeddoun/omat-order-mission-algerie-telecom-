@@ -11,6 +11,7 @@ import { decompteColumns } from 'components/decomptes/columns';
 import { agentName } from 'components/orders/format';
 import { useBulkArchive } from 'components/common/useBulkArchive';
 import { useBulkDecompteStatus } from 'components/common/useBulkDecompteStatus';
+import { useBulkDecompteDownload } from 'components/decomptes/useBulkDecompteDownload';
 import { DataTable, IconButton, PageHeader, SummaryStrip, Tabs } from 'components/ui';
 import paths from 'routes/paths';
 
@@ -43,6 +44,7 @@ export default function DecomptesPage() {
     isPending: (d) => d.status === 'PENDING',
     onDone: refresh,
   });
+  const bulkDownload = useBulkDecompteDownload();
   const bulk = useBulkArchive<DecompteRow>({
     entity: 'decomptes',
     mode: 'archive',
@@ -103,7 +105,7 @@ export default function DecomptesPage() {
         }
         onRowDoubleClick={(d) => navigate(detailPath(d))}
         rowActions={actionsFor}
-        bulkActions={isAdmin ? (rows) => [...bulkStatus.actions(rows), ...bulk.actions(rows)] : undefined}
+        bulkActions={(rows) => [...bulkDownload(rows), ...(isAdmin ? [...bulkStatus.actions(rows), ...bulk.actions(rows)] : [])]}
       />
       {dialogs}
       {bulk.dialog}
